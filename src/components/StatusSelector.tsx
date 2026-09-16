@@ -40,11 +40,6 @@ export default function StatusSelector({
 
   useEffect(() => {
     async function loadStatus() {
-      if (!user) {
-        setCurrentStatus(null);
-        setUserRating(null);
-        return;
-      }
       const item = await getUserMediaItem(tmdbId, mediaType);
       if (item) {
         setCurrentStatus(item.status);
@@ -85,20 +80,13 @@ export default function StatusSelector({
   const handleButtonClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    if (!user) {
-      openAuthModal('signup');
-      return;
-    }
     setIsOpen(true);
   };
 
   const handleStatusChange = async (status: WatchStatus) => {
-    if (!user) {
-      openAuthModal('signup');
-      return;
-    }
-
     setLoading(true);
+    setCurrentStatus(status);
+    setIsOpen(false);
     try {
       await saveUserMedia({
         tmdb_id: tmdbId,
@@ -109,32 +97,28 @@ export default function StatusSelector({
         status,
         user_rating: userRating,
       });
-      setCurrentStatus(status);
-      setIsOpen(false);
+    } catch (err) {
+      console.error('Error saving status:', err);
     } finally {
       setLoading(false);
     }
   };
 
   const handleRemove = async () => {
-    if (!user) return;
     setLoading(true);
+    setCurrentStatus(null);
+    setUserRating(null);
+    setIsOpen(false);
     try {
       await removeUserMedia(tmdbId, mediaType);
-      setCurrentStatus(null);
-      setUserRating(null);
-      setIsOpen(false);
+    } catch (err) {
+      console.error('Error removing media:', err);
     } finally {
       setLoading(false);
     }
   };
 
   const handleRatingChange = async (rating: number) => {
-    if (!user) {
-      openAuthModal('signup');
-      return;
-    }
-
     const newRating = userRating === rating ? null : rating;
     setUserRating(newRating);
     if (currentStatus) {

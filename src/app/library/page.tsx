@@ -120,11 +120,6 @@ function LibraryContent() {
   };
 
   useEffect(() => {
-    if (!user) {
-      setIsLoading(false);
-      setItems([]);
-      return;
-    }
     loadData();
     const handleStorageChange = () => loadData();
     window.addEventListener('bingelog_storage_changed', handleStorageChange);
@@ -208,7 +203,7 @@ function LibraryContent() {
     dropped: items.filter((i) => i.status === 'dropped').length,
   };
 
-  if (authLoading) {
+  if (authLoading || isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] text-[#8D97A8]">
         <div className="w-8 h-8 border-2 border-[#E9A23B] border-t-transparent rounded-full animate-spin mb-4" />
@@ -217,7 +212,7 @@ function LibraryContent() {
     );
   }
 
-  if (!user) {
+  if (!user && items.length === 0) {
     return (
       <div className="max-w-3xl mx-auto py-8 sm:py-16 px-4 text-center">
         {/* Brand & Badge */}
@@ -302,13 +297,37 @@ function LibraryContent() {
 
   return (
     <div className="space-y-8 pb-16">
+      {/* Guest Banner if items exist but user not logged in */}
+      {!user && (
+        <div className="p-4 rounded-2xl bg-[#171C25] border border-[#2B3443] flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-[#E9A23B]/15 text-[#E9A23B] flex-shrink-0">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div className="text-left">
+              <h4 className="text-xs sm:text-sm font-bold text-[#ECE9E3]">Gästläge (sparas lokalt i webbläsaren)</h4>
+              <p className="text-xs text-[#8D97A8] mt-0.5">
+                Skapa ett gratis konto för att säkerhetskopiera ditt bibliotek till molnet och synka mellan enheter.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => openAuthModal('signup')}
+            className="w-full sm:w-auto px-4 py-2 rounded-xl bg-[#E9A23B] hover:bg-[#F2B04E] text-[#0F1218] text-xs font-bold whitespace-nowrap shadow-md shadow-[#E9A23B]/20 transition-all cursor-pointer flex-shrink-0"
+          >
+            Skapa gratis konto
+          </button>
+        </div>
+      )}
+
       {/* 1. Header with Stats */}
       <div>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-black text-[#ECE9E3] tracking-tight flex items-center gap-2.5">
               <Bookmark className="w-7 h-7 text-[#E9A23B]" />
-              <span>{displayName}s bibliotek</span>
+              <span>{user ? `${displayName}s bibliotek` : 'Ditt bibliotek'}</span>
             </h1>
             <p className="text-sm text-[#8D97A8] mt-1">
               Din samling, dina sedda avsnitt och din historik samlad på ett ställe.

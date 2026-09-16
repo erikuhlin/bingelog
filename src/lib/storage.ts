@@ -5,7 +5,7 @@ const LOCAL_STORAGE_MEDIA_KEY = 'bingelog_user_media';
 const LOCAL_STORAGE_EPISODES_KEY = 'bingelog_watched_episodes';
 
 // Helper for local state
-function getLocalMedia(): UserMediaRecord[] {
+export function getLocalMedia(): UserMediaRecord[] {
   if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_MEDIA_KEY);
@@ -15,17 +15,19 @@ function getLocalMedia(): UserMediaRecord[] {
   }
 }
 
-function saveLocalMedia(items: UserMediaRecord[]): void {
+function saveLocalMedia(items: UserMediaRecord[], emitEvent: boolean = true): void {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(LOCAL_STORAGE_MEDIA_KEY, JSON.stringify(items));
-    window.dispatchEvent(new Event('bingelog_storage_changed'));
+    if (emitEvent) {
+      window.dispatchEvent(new Event('bingelog_storage_changed'));
+    }
   } catch (err) {
     console.error('Failed to save to localStorage:', err);
   }
 }
 
-function getLocalWatchedEpisodes(): WatchedEpisodeRecord[] {
+export function getLocalWatchedEpisodes(): WatchedEpisodeRecord[] {
   if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_EPISODES_KEY);
@@ -35,17 +37,20 @@ function getLocalWatchedEpisodes(): WatchedEpisodeRecord[] {
   }
 }
 
-function saveLocalWatchedEpisodes(episodes: WatchedEpisodeRecord[]): void {
+function saveLocalWatchedEpisodes(episodes: WatchedEpisodeRecord[], emitEvent: boolean = true): void {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(LOCAL_STORAGE_EPISODES_KEY, JSON.stringify(episodes));
-    window.dispatchEvent(new Event('bingelog_storage_changed'));
+    if (emitEvent) {
+      window.dispatchEvent(new Event('bingelog_storage_changed'));
+    }
   } catch (err) {
     console.error('Failed to save watched episodes to localStorage:', err);
   }
 }
 
 export async function getUserMediaList(): Promise<UserMediaRecord[]> {
+  const localItems = getLocalMedia();
   const supabase = getSupabaseClient();
   if (supabase) {
     try {
@@ -59,19 +64,56 @@ export async function getUserMediaList(): Promise<UserMediaRecord[]> {
         if (error) {
           console.error('Supabase getUserMediaList error:', error);
         } else if (data) {
-          // Mirror cloud state to local storage so device stays synchronized
-          saveLocalMedia(data as UserMediaRecord[]);
-          return data as UserMediaRecord[];
+          // Merge cloud data with local items to avoid wiping out recent optimistic local writes
+          const cloudMap = new Map<string, UserMediaRecord>();
+          (data as UserMediaRecord[]).forEach((item) => {
+            cloudMap.set(`${item.media_type}-${item.tmdb_id}`, item);
+          });
+
+          // Keep local record if it was updated more recently than cloud, or if newly added
+          const merged: UserMediaRecord[] = [];
+          const seen = new Set<string>();
+
+          localItems.forEach((local) => {
+            const key = `${local.media_type}-${local.tmdb_id}`;
+            seen.add(key);
+            const cloud = cloudMap.get(key);
+            if (!cloud) {
+              merged.push(local);
+            } else {
+              const localTime = new Date(local.updated_at || 0).getTime();
+              const cloudTime = new Date(cloud.updated_at || 0).getTime();
+              merged.push(localTime >= cloudTime ? local : cloud);
+            }
+          });
+
+          // Add any remaining cloud items
+          cloudMap.forEach((cloud, key) => {
+            if (!seen.has(key)) {
+              merged.push(cloud);
+            }
+          });
+
+          // Save merged cache WITHOUT firing storage event (prevents infinite loop)
+          saveLocalMedia(merged, false);
+          return merged;
         }
       }
     } catch (err) {
       console.error('Error fetching media list from Supabase:', err);
     }
   }
-  return getLocalMedia();
+  return localItems;
+}
+
+export function getLocalMediaItem(tmdbId: number, mediaType: MediaType): UserMediaRecord | null {
+  const list = getLocalMedia();
+  return list.find((m) => m.tmdb_id === tmdbId && m.media_type === mediaType) || null;
 }
 
 export async function getUserMediaItem(tmdbId: number, mediaType: MediaType): Promise<UserMediaRecord | null> {
+  const localItem = getLocalMediaItem(tmdbId, mediaType);
+  if (localItem) return localItem;
   const list = await getUserMediaList();
   return list.find((m) => m.tmdb_id === tmdbId && m.media_type === mediaType) || null;
 }
@@ -99,7 +141,7 @@ export async function saveUserMedia(
   } else {
     current.unshift(updatedRecord);
   }
-  saveLocalMedia(current);
+  saveLocalMedia(current, true);
 
   // 2. Persist to Supabase if logged in
   if (supabase) {
@@ -126,8 +168,8 @@ export async function saveUserMedia(
             (m) => m.tmdb_id === item.tmdb_id && m.media_type === item.media_type
           );
           if (rIdx >= 0) {
-            refreshed[rIdx] = data as UserMediaRecord;
-            saveLocalMedia(refreshed);
+            refreshed[rIdx] = { ...refreshed[rIdx], id: data.id };
+            saveLocalMedia(refreshed, false);
           }
           return data as UserMediaRecord;
         }
@@ -147,7 +189,13 @@ export async function removeUserMedia(tmdbId: number, mediaType: MediaType): Pro
   const current = getLocalMedia().filter(
     (m) => !(m.tmdb_id === tmdbId && m.media_type === mediaType)
   );
-  saveLocalMedia(current);
+  saveLocalMedia(current, true);
+
+  // Also remove local watched episodes if TV
+  if (mediaType === 'tv') {
+    const localEps = getLocalWatchedEpisodes().filter((ep) => ep.tmdb_id !== tmdbId);
+    saveLocalWatchedEpisodes(localEps, false);
+  }
 
   // 2. Also remove from Supabase if logged in
   if (supabase) {
@@ -175,17 +223,12 @@ export async function removeUserMedia(tmdbId: number, mediaType: MediaType): Pro
       console.error('Error removing media from Supabase:', err);
     }
   }
-
-  // Also remove local watched episodes if TV
-  if (mediaType === 'tv') {
-    const localEps = getLocalWatchedEpisodes().filter((ep) => ep.tmdb_id !== tmdbId);
-    saveLocalWatchedEpisodes(localEps);
-  }
-
-  window.dispatchEvent(new Event('bingelog_storage_changed'));
 }
 
 export async function getWatchedEpisodes(tmdbId: number): Promise<{ season_number: number; episode_number: number }[]> {
+  const allLocal = getLocalWatchedEpisodes();
+  const localShow = allLocal.filter((ep) => ep.tmdb_id === tmdbId);
+
   const supabase = getSupabaseClient();
   if (supabase) {
     try {
@@ -200,18 +243,28 @@ export async function getWatchedEpisodes(tmdbId: number): Promise<{ season_numbe
         if (error) {
           console.error('Supabase getWatchedEpisodes error:', error);
         } else if (data) {
-          // Merge into local cache for offline/instant speed
-          let local = getLocalWatchedEpisodes().filter((ep) => ep.tmdb_id !== tmdbId);
-          data.forEach((d) => {
-            local.push({
+          // Merge cloud with local episodes so we don't wipe out recent toggles
+          const set = new Set<string>();
+          localShow.forEach((e) => set.add(`${e.season_number}-${e.episode_number}`));
+          data.forEach((d) => set.add(`${d.season_number}-${d.episode_number}`));
+
+          const mergedShow: WatchedEpisodeRecord[] = Array.from(set).map((key) => {
+            const [s, ep] = key.split('-');
+            return {
               tmdb_id: tmdbId,
-              season_number: d.season_number,
-              episode_number: d.episode_number,
+              season_number: parseInt(s, 10),
+              episode_number: parseInt(ep, 10),
               watched_at: new Date().toISOString(),
-            });
+            };
           });
-          saveLocalWatchedEpisodes(local);
-          return data;
+
+          const otherShows = allLocal.filter((ep) => ep.tmdb_id !== tmdbId);
+          saveLocalWatchedEpisodes([...otherShows, ...mergedShow], false);
+
+          return mergedShow.map((ep) => ({
+            season_number: ep.season_number,
+            episode_number: ep.episode_number,
+          }));
         }
       }
     } catch (err) {
@@ -219,10 +272,21 @@ export async function getWatchedEpisodes(tmdbId: number): Promise<{ season_numbe
     }
   }
 
-  const all = getLocalWatchedEpisodes();
-  return all
-    .filter((ep) => ep.tmdb_id === tmdbId)
-    .map((ep) => ({ season_number: ep.season_number, episode_number: ep.episode_number }));
+  return localShow.map((ep) => ({ season_number: ep.season_number, episode_number: ep.episode_number }));
+}
+
+export async function isEpisodeWatched(
+  tmdbId: number,
+  seasonNumber: number,
+  episodeNumber: number
+): Promise<boolean> {
+  const local = getLocalWatchedEpisodes();
+  return local.some(
+    (ep) =>
+      ep.tmdb_id === tmdbId &&
+      ep.season_number === seasonNumber &&
+      ep.episode_number === episodeNumber
+  );
 }
 
 export async function toggleEpisodeWatched(
@@ -254,7 +318,7 @@ export async function toggleEpisodeWatched(
       watched_at: now,
     });
   }
-  saveLocalWatchedEpisodes(all);
+  saveLocalWatchedEpisodes(all, true);
 
   // 2. Persist to Supabase if logged in
   if (supabase) {
@@ -288,19 +352,7 @@ export async function toggleEpisodeWatched(
     }
   }
 
-  window.dispatchEvent(new Event('bingelog_storage_changed'));
   return nextWatched;
-}
-
-export async function isEpisodeWatched(
-  tmdbId: number,
-  seasonNumber: number,
-  episodeNumber: number
-): Promise<boolean> {
-  const watched = await getWatchedEpisodes(tmdbId);
-  return watched.some(
-    (ep) => ep.season_number === seasonNumber && ep.episode_number === episodeNumber
-  );
 }
 
 export async function markSeasonWatched(
@@ -325,7 +377,7 @@ export async function markSeasonWatched(
       });
     }
   }
-  saveLocalWatchedEpisodes(all);
+  saveLocalWatchedEpisodes(all, true);
 
   // 2. Persist to Supabase
   if (supabase) {
@@ -356,8 +408,6 @@ export async function markSeasonWatched(
       console.error('Error updating season in Supabase:', err);
     }
   }
-
-  window.dispatchEvent(new Event('bingelog_storage_changed'));
 }
 
 export async function markNextEpisodeWatched(
@@ -370,47 +420,7 @@ export async function markNextEpisodeWatched(
   const supabase = getSupabaseClient();
   const now = new Date().toISOString();
 
-  // 1. Mark episode in watched_episodes
-  if (supabase) {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase.from('watched_episodes').upsert({
-          user_id: user.id,
-          tmdb_id: tmdbId,
-          season_number: seasonNumber,
-          episode_number: episodeNumber,
-          watched_at: now,
-        }, { onConflict: 'user_id,tmdb_id,season_number,episode_number' });
-
-        // Determine next status
-        let nextStatus: WatchStatus = 'watching';
-        if (isEndedSeries && isLastEpisodeInShow) {
-          nextStatus = 'completed';
-        }
-
-        // Update user_media current position
-        const { data } = await supabase
-          .from('user_media')
-          .update({
-            current_season: seasonNumber,
-            current_episode: episodeNumber,
-            status: nextStatus,
-            updated_at: now,
-          })
-          .match({ user_id: user.id, tmdb_id: tmdbId, media_type: 'tv' })
-          .select()
-          .single();
-
-        window.dispatchEvent(new Event('bingelog_storage_changed'));
-        return (data as UserMediaRecord) || null;
-      }
-    } catch (err) {
-      console.error('Error in markNextEpisodeWatched:', err);
-    }
-  }
-
-  // Local storage fallback
+  // 1. Optimistically update local watched episodes
   let allEps = getLocalWatchedEpisodes();
   const exists = allEps.some(
     (ep) => ep.tmdb_id === tmdbId && ep.season_number === seasonNumber && ep.episode_number === episodeNumber
@@ -422,15 +432,17 @@ export async function markNextEpisodeWatched(
       episode_number: episodeNumber,
       watched_at: now,
     });
-    saveLocalWatchedEpisodes(allEps);
+    saveLocalWatchedEpisodes(allEps, false);
   }
 
+  // 2. Optimistically update local user_media record
   const mediaList = getLocalMedia();
   const idx = mediaList.findIndex((m) => m.tmdb_id === tmdbId && m.media_type === 'tv');
   let updatedRecord: UserMediaRecord | null = null;
+  let nextStatus: WatchStatus = 'watching';
 
   if (idx >= 0) {
-    let nextStatus = mediaList[idx].status;
+    nextStatus = mediaList[idx].status;
     if (nextStatus === 'watchlist') {
       nextStatus = 'watching';
     }
@@ -446,7 +458,44 @@ export async function markNextEpisodeWatched(
       updated_at: now,
     };
     mediaList[idx] = updatedRecord;
-    saveLocalMedia(mediaList);
+    saveLocalMedia(mediaList, true);
+  } else {
+    // If not yet in mediaList, trigger storage change for episodes
+    window.dispatchEvent(new Event('bingelog_storage_changed'));
+  }
+
+  // 3. Persist to Supabase in background if logged in
+  if (supabase) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('watched_episodes').upsert({
+          user_id: user.id,
+          tmdb_id: tmdbId,
+          season_number: seasonNumber,
+          episode_number: episodeNumber,
+          watched_at: now,
+        }, { onConflict: 'user_id,tmdb_id,season_number,episode_number' });
+
+        const { data } = await supabase
+          .from('user_media')
+          .update({
+            current_season: seasonNumber,
+            current_episode: episodeNumber,
+            status: nextStatus,
+            updated_at: now,
+          })
+          .match({ user_id: user.id, tmdb_id: tmdbId, media_type: 'tv' })
+          .select()
+          .single();
+
+        if (data) {
+          return data as UserMediaRecord;
+        }
+      }
+    } catch (err) {
+      console.error('Error in markNextEpisodeWatched:', err);
+    }
   }
 
   return updatedRecord;
