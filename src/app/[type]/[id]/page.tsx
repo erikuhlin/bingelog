@@ -197,7 +197,7 @@ export default async function MediaDetailPage({ params }: PageProps) {
       </div>
 
       {/* Swedish Watch Providers (Stream, Hyr, Köp) */}
-      <WatchProvidersSection providers={media.watch_providers} />
+      <WatchProvidersSection providers={media.streaming_info} />
 
       {/* Episode Tracker if TV Show */}
       {media.media_type === 'tv' && media.seasons && media.seasons.length > 0 && (

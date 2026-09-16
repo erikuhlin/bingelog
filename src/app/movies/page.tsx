@@ -1,13 +1,10 @@
 import React from 'react';
 import { Film } from 'lucide-react';
-import { getPopularMovies, getGenres } from '@/lib/tmdb';
-import MediaCard from '@/components/MediaCard';
+import { getPopularMovies } from '@/lib/tmdb';
+import ExploreFeed from '@/components/ExploreFeed';
 
 export default async function MoviesPage() {
-  const [movies, genres] = await Promise.all([
-    getPopularMovies(),
-    getGenres(),
-  ]);
+  const movies = await getPopularMovies();
 
   return (
     <div className="space-y-8">
@@ -17,28 +14,15 @@ export default async function MoviesPage() {
           <span>Utforska Filmer</span>
         </h1>
         <p className="text-sm text-zinc-400 mt-1">
-          Hitta de mest populära och hyllade långfilmerna just nu.
+          Hitta de mest populära långfilmerna och filtrera efter streamingtjänst.
         </p>
       </div>
 
-      {/* Genres Chips */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-        {genres.slice(0, 10).map((genre) => (
-          <span
-            key={genre.id}
-            className="px-3.5 py-1.5 rounded-xl bg-zinc-900 border border-zinc-800 text-xs font-medium text-zinc-300 whitespace-nowrap"
-          >
-            {genre.name}
-          </span>
-        ))}
-      </div>
-
-      {/* Movies Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
-        {movies.map((movie) => (
-          <MediaCard key={`movie-page-${movie.id}`} item={movie} />
-        ))}
-      </div>
+      <ExploreFeed
+        initialTrending={movies}
+        defaultMediaType="movie"
+        title="Populära filmer"
+      />
     </div>
   );
 }

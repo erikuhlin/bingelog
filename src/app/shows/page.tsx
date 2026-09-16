@@ -1,13 +1,10 @@
 import React from 'react';
 import { Tv } from 'lucide-react';
-import { getPopularShows, getGenres } from '@/lib/tmdb';
-import MediaCard from '@/components/MediaCard';
+import { getPopularShows } from '@/lib/tmdb';
+import ExploreFeed from '@/components/ExploreFeed';
 
 export default async function ShowsPage() {
-  const [shows, genres] = await Promise.all([
-    getPopularShows(),
-    getGenres(),
-  ]);
+  const shows = await getPopularShows();
 
   return (
     <div className="space-y-8">
@@ -17,28 +14,15 @@ export default async function ShowsPage() {
           <span>Utforska Serier</span>
         </h1>
         <p className="text-sm text-zinc-400 mt-1">
-          Hitta nästa serie att sträckkolla på och håll koll på alla dina avsnitt.
+          Hitta nästa serie att sträckkolla på och filtrera efter streamingtjänst.
         </p>
       </div>
 
-      {/* Genres Chips */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-        {genres.slice(0, 10).map((genre) => (
-          <span
-            key={genre.id}
-            className="px-3.5 py-1.5 rounded-xl bg-zinc-900 border border-zinc-800 text-xs font-medium text-zinc-300 whitespace-nowrap"
-          >
-            {genre.name}
-          </span>
-        ))}
-      </div>
-
-      {/* Shows Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
-        {shows.map((show) => (
-          <MediaCard key={`show-page-${show.id}`} item={show} />
-        ))}
-      </div>
+      <ExploreFeed
+        initialTrending={shows}
+        defaultMediaType="tv"
+        title="Populära serier"
+      />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import HeroBanner from '@/components/HeroBanner';
 import MediaCard from '@/components/MediaCard';
 import ContinueWatchingSection from '@/components/ContinueWatchingSection';
 import UserWelcomeBanner from '@/components/UserWelcomeBanner';
+import ExploreFeed from '@/components/ExploreFeed';
 
 export default async function HomePage() {
   const trending = await getTrendingMedia();
@@ -13,7 +14,7 @@ export default async function HomePage() {
   const popularShows = await getPopularShows();
 
   const featuredItem = trending[0];
-  const trendingList = trending.slice(1, 9);
+  const trendingList = trending.slice(1, 13);
 
   return (
     <div>
@@ -26,23 +27,8 @@ export default async function HomePage() {
       {/* Continue Watching Section (Active Series) */}
       <ContinueWatchingSection />
 
-      {/* Trending Section */}
-      <section className="mb-14">
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-rose-500" />
-            <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight">
-              Trendar i veckan
-            </h2>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4 md:gap-6">
-          {trendingList.map((item) => (
-            <MediaCard key={`trending-${item.id}`} item={item} />
-          ))}
-        </div>
-      </section>
+      {/* Dynamic Explore & Streaming Filter Feed */}
+      <ExploreFeed initialTrending={trendingList} />
 
       {/* Popular Movies Section */}
       <section className="mb-14">

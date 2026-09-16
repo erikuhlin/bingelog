@@ -54,12 +54,52 @@ async function tmdbFetch<T>(endpoint: string, params: Record<string, string | nu
   }
 }
 
+export const SWEDISH_STREAMING_PROVIDERS = [
+  { id: 8, name: 'Netflix', logo_path: '/rK1KljqmbvO9HQa1PBFLILWah72.png', bg: 'bg-red-600' },
+  { id: 1899, name: 'Max', logo_path: '/fksCUZ9QDWZMUwL2LgfqII0M6UV.jpg', bg: 'bg-blue-600' },
+  { id: 337, name: 'Disney+', logo_path: '/97yvRBw1GzX7fXprcF80419ONCS.jpg', bg: 'bg-indigo-700' },
+  { id: 119, name: 'Prime Video', logo_path: '/pvske1MyAofH67cw4M6b2sYh6FS.jpg', bg: 'bg-sky-600' },
+  { id: 350, name: 'Apple TV+', logo_path: '/2E03nojritEup79Rs7hZ2928v6l.jpg', bg: 'bg-zinc-700' },
+  { id: 56, name: 'Viaplay', logo_path: '/wA0n96B7L6L82bFfE9QjM3J8V2.jpg', bg: 'bg-rose-700' },
+  { id: 426, name: 'TV4 Play', logo_path: '/3v9m1k2l5p8q4w7e9r0t1y2u3i.png', bg: 'bg-red-700' },
+  { id: 383, name: 'SVT Play', logo_path: '/8qK8fQ2Q5m3e4w7v9b0n1m2l3k.png', bg: 'bg-emerald-600' },
+];
+
+export async function getItemWatchProviders(mediaType: MediaType, id: number): Promise<any[]> {
+  const data = await tmdbFetch<any>(`/${mediaType}/${id}/watch/providers`);
+  return data?.results?.SE?.flatrate || [];
+}
+
+export async function enrichItemsWithProviders(items: MediaItem[]): Promise<MediaItem[]> {
+  // Fetch providers for items in parallel
+  const enriched = await Promise.all(
+    items.map(async (item) => {
+      if (item.watch_providers && item.watch_providers.length > 0) return item;
+      try {
+        const providers = await getItemWatchProviders(item.media_type, item.id);
+        return {
+          ...item,
+          watch_providers: providers.map((p: any) => ({
+            provider_id: p.provider_id,
+            provider_name: p.provider_name,
+            logo_path: p.logo_path,
+          })),
+        };
+      } catch {
+        return item;
+      }
+    })
+  );
+  return enriched;
+}
+
 export async function getTrendingMedia(): Promise<MediaItem[]> {
   const data = await tmdbFetch<{ results: any[] }>('/trending/all/week');
   if (data?.results) {
-    return data.results
+    const list = data.results
       .filter((item) => item.media_type === 'movie' || item.media_type === 'tv')
       .map(normalizeMediaItem);
+    return enrichItemsWithProviders(list);
   }
   return MOCK_TRENDING;
 }
@@ -67,7 +107,8 @@ export async function getTrendingMedia(): Promise<MediaItem[]> {
 export async function getPopularMovies(): Promise<MediaItem[]> {
   const data = await tmdbFetch<{ results: any[] }>('/movie/popular');
   if (data?.results) {
-    return data.results.map((item) => normalizeMediaItem({ ...item, media_type: 'movie' }));
+    const list = data.results.map((item) => normalizeMediaItem({ ...item, media_type: 'movie' }));
+    return enrichItemsWithProviders(list);
   }
   return MOCK_TRENDING.filter((item) => item.media_type === 'movie');
 }
@@ -75,9 +116,93 @@ export async function getPopularMovies(): Promise<MediaItem[]> {
 export async function getPopularShows(): Promise<MediaItem[]> {
   const data = await tmdbFetch<{ results: any[] }>('/tv/popular');
   if (data?.results) {
-    return data.results.map((item) => normalizeMediaItem({ ...item, media_type: 'tv' }));
+    const list = data.results.map((item) => normalizeMediaItem({ ...item, media_type: 'tv' }));
+    return enrichItemsWithProviders(list);
   }
   return MOCK_TRENDING.filter((item) => item.media_type === 'tv');
+}
+
+export async function discoverMedia(filters: import('./types').DiscoverFilters): Promise<MediaItem[]> {
+  const {
+    mediaType = 'all',
+    providerId,
+    genreId,
+    minRating,
+    year,
+    sortBy = 'popularity.desc',
+    page = 1,
+  } = filters;
+
+  const baseParams: Record<string, string | number> = {
+    page,
+    sort_by: sortBy,
+    'vote_count.gte': 10,
+  };
+
+  if (genreId) {
+    baseParams.with_genres = genreId;
+  }
+  if (minRating) {
+    baseParams['vote_average.gte'] = minRating;
+  }
+  if (providerId) {
+    baseParams.watch_region = 'SE';
+    baseParams.with_watch_providers = providerId;
+    baseParams.with_watch_monetization_types = 'flatrate';
+  }
+
+  const selectedProvider = providerId
+    ? SWEDISH_STREAMING_PROVIDERS.find((p) => p.id === providerId)
+    : null;
+
+  const attachSelectedProvider = (items: MediaItem[]) => {
+    if (!selectedProvider) return items;
+    return items.map((item) => ({
+      ...item,
+      watch_providers: [
+        {
+          provider_id: selectedProvider.id,
+          provider_name: selectedProvider.name,
+          logo_path: selectedProvider.logo_path,
+        },
+      ],
+    }));
+  };
+
+  if (mediaType === 'movie') {
+    const params = { ...baseParams };
+    if (year) params.primary_release_year = year;
+    const data = await tmdbFetch<{ results: any[] }>('/discover/movie', params);
+    const items = (data?.results || []).map((m) => normalizeMediaItem({ ...m, media_type: 'movie' }));
+    return attachSelectedProvider(items);
+  }
+
+  if (mediaType === 'tv') {
+    const params = { ...baseParams };
+    if (year) params.first_air_date_year = year;
+    const data = await tmdbFetch<{ results: any[] }>('/discover/tv', params);
+    const items = (data?.results || []).map((t) => normalizeMediaItem({ ...t, media_type: 'tv' }));
+    return attachSelectedProvider(items);
+  }
+
+  // If 'all': fetch movie and tv in parallel
+  const movieParams = { ...baseParams };
+  const tvParams = { ...baseParams };
+  if (year) {
+    movieParams.primary_release_year = year;
+    tvParams.first_air_date_year = year;
+  }
+
+  const [movieRes, tvRes] = await Promise.all([
+    tmdbFetch<{ results: any[] }>('/discover/movie', movieParams),
+    tmdbFetch<{ results: any[] }>('/discover/tv', tvParams),
+  ]);
+
+  const movies = (movieRes?.results || []).map((m) => normalizeMediaItem({ ...m, media_type: 'movie' }));
+  const tvs = (tvRes?.results || []).map((t) => normalizeMediaItem({ ...t, media_type: 'tv' }));
+
+  const merged = [...movies, ...tvs].sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+  return attachSelectedProvider(merged.slice(0, 20));
 }
 
 export async function searchMedia(query: string): Promise<MediaItem[]> {
@@ -85,9 +210,10 @@ export async function searchMedia(query: string): Promise<MediaItem[]> {
 
   const data = await tmdbFetch<{ results: any[] }>('/search/multi', { query: query.trim() });
   if (data?.results) {
-    return data.results
+    const list = data.results
       .filter((item) => item.media_type === 'movie' || item.media_type === 'tv')
       .map(normalizeMediaItem);
+    return enrichItemsWithProviders(list);
   }
 
   // Fallback search in mock data
@@ -157,7 +283,12 @@ export async function getMediaDetails(mediaType: MediaType, id: number): Promise
         })) || []
       } : undefined,
       videos: trailers.length > 0 ? trailers : undefined,
-      watch_providers: swedishProviders ? {
+      watch_providers: swedishProviders?.flatrate?.map((p: any) => ({
+        provider_id: p.provider_id,
+        provider_name: p.provider_name,
+        logo_path: p.logo_path,
+      })) || [],
+      streaming_info: swedishProviders ? {
         link: swedishProviders.link,
         flatrate: swedishProviders.flatrate?.map((p: any) => ({
           provider_id: p.provider_id,

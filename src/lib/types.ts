@@ -19,6 +19,17 @@ export interface MediaItem {
   popularity?: number;
   origin_country?: string[];
   original_language?: string;
+  watch_providers?: WatchProvider[];
+}
+
+export interface DiscoverFilters {
+  mediaType?: 'all' | 'movie' | 'tv';
+  providerId?: number;
+  genreId?: number;
+  minRating?: number;
+  year?: number;
+  sortBy?: string;
+  page?: number;
 }
 
 export interface Episode {
@@ -83,7 +94,7 @@ export interface MediaDetail extends MediaItem {
     }[];
   };
   videos?: Video[];
-  watch_providers?: {
+  streaming_info?: {
     link?: string;
     flatrate?: WatchProvider[];
     rent?: WatchProvider[];

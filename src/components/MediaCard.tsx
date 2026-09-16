@@ -52,8 +52,32 @@ export default function MediaCard({ item }: MediaCardProps) {
           )}
         </div>
 
+        {/* Streaming provider badges on bottom-left of cover */}
+        {item.watch_providers && item.watch_providers.length > 0 && (
+          <div className="absolute bottom-2.5 left-2.5 flex items-center -space-x-1.5 z-10 pointer-events-none">
+            {item.watch_providers.slice(0, 3).map((provider) => (
+              <div
+                key={provider.provider_id}
+                title={provider.provider_name}
+                className="w-6 h-6 rounded-md overflow-hidden border border-zinc-900 shadow-lg bg-zinc-900 flex-shrink-0"
+              >
+                <img
+                  src={getImageUrl(provider.logo_path, 'w300')}
+                  alt={provider.provider_name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ))}
+            {item.watch_providers.length > 3 && (
+              <span className="w-5 h-5 rounded-md bg-zinc-950/90 text-zinc-300 border border-zinc-800 text-[9px] font-bold flex items-center justify-center">
+                +{item.watch_providers.length - 3}
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Quick status button floating at bottom of poster on hover/focus */}
-        <div className="absolute bottom-2.5 right-2.5 opacity-90 group-hover:opacity-100 transition-opacity">
+        <div className="absolute bottom-2.5 right-2.5 opacity-90 group-hover:opacity-100 transition-opacity z-10">
           <StatusSelector
             tmdbId={item.id}
             mediaType={item.media_type}
