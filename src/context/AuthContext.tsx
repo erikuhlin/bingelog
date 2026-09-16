@@ -10,7 +10,11 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   signIn: (email: string, pass: string) => Promise<{ error?: string }>;
-  signUp: (email: string, pass: string, username?: string) => Promise<{ error?: string }>;
+  signUp: (
+    email: string,
+    pass: string,
+    username?: string
+  ) => Promise<{ error?: string; needsEmailVerification?: boolean }>;
   signOut: () => Promise<void>;
   openAuthModal: (mode?: 'login' | 'signup') => void;
   closeAuthModal: () => void;
@@ -82,6 +86,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     if (error) {
+      if (error.message.toLowerCase().includes('email not confirmed')) {
+        return {
+          error:
+            'Din e-postadress har inte bekräftats än. Vänligen klicka på länken i bekräftelsemejlet från Bingelog.',
+        };
+      }
       return { error: error.message };
     }
 
@@ -89,14 +99,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return {};
   };
 
-  const signUp = async (email: string, pass: string, username?: string) => {
+  const signUp = async (
+    email: string,
+    pass: string,
+    username?: string
+  ): Promise<{ error?: string; needsEmailVerification?: boolean }> => {
     const supabase = getSupabaseClient();
     if (!supabase) return { error: 'Supabase är inte konfigurerat.' };
+
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const emailRedirectTo = origin ? `${origin}/auth/callback` : undefined;
 
     const { error, data } = await supabase.auth.signUp({
       email,
       password: pass,
       options: {
+        emailRedirectTo,
         data: {
           username: username || email.split('@')[0],
           full_name: username || email.split('@')[0],
@@ -108,10 +126,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: error.message };
     }
 
-    // If session was directly established (email confirmation disabled or auto-confirm)
+    // If session was directly established (email confirmation disabled in Supabase)
     if (data?.session) {
       closeAuthModal();
+      return { needsEmailVerification: false };
     }
+
+    // Check if user already exists (Supabase returns empty identities array when user already exists)
+    if (data?.user && data.user.identities && data.user.identities.length === 0) {
+      return {
+        error: 'Ett konto med denna e-postadress finns redan. Vänligen logga in istället.',
+      };
+    }
+
+    // User was created and email verification is needed
+    if (data?.user) {
+      return { needsEmailVerification: true };
+    }
+
     return {};
   };
 

@@ -10,6 +10,7 @@ export default function AuthModal() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
+  const [verificationSentEmail, setVerificationSentEmail] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -18,6 +19,7 @@ export default function AuthModal() {
     if (authModalOpen) {
       setError(null);
       setSuccessMessage(null);
+      setVerificationSentEmail(null);
     }
   }, [authModalOpen, authModalMode]);
 
@@ -56,14 +58,25 @@ export default function AuthModal() {
       if (isLogin) {
         const res = await signIn(email, password);
         if (res.error) {
-          setError(res.error === 'Invalid login credentials' ? 'Felaktig e-post eller lösenord.' : res.error);
+          setError(
+            res.error === 'Invalid login credentials'
+              ? 'Felaktig e-post eller lösenord.'
+              : res.error
+          );
         }
       } else {
         const res = await signUp(email, password, username);
         if (res.error) {
-          setError(res.error);
+          setError(
+            res.error.toLowerCase().includes('already registered')
+              ? 'Ett konto med denna e-postadress finns redan. Vänligen logga in istället.'
+              : res.error
+          );
+        } else if (res.needsEmailVerification) {
+          setVerificationSentEmail(email);
         } else {
           setSuccessMessage('Ditt konto har skapats! Du är nu inloggad och ditt bibliotek synkas.');
+          setTimeout(() => closeAuthModal(), 1500);
         }
       }
     } finally {
@@ -86,159 +99,210 @@ export default function AuthModal() {
           <X className="w-5 h-5" />
         </button>
 
-        {/* Header with Logo */}
-        <div className="text-center mb-6">
-          <div className="flex justify-center mb-3">
-            <BrandLogo size="lg" className="shadow-lg shadow-[#E9A23B]/10" />
-          </div>
-          <h2 className="text-2xl font-black text-[#ECE9E3] tracking-tight">
-            {isLogin ? 'Välkommen tillbaka' : 'Skapa ditt konto'}
-          </h2>
-          <p className="text-xs text-[#8D97A8] mt-1 max-w-xs mx-auto leading-relaxed">
-            {isLogin
-              ? 'Logga in för att komma åt ditt personliga bibliotek och sedda avsnitt.'
-              : 'Spara din historik och få full tillgång till ditt bibliotek på alla enheter.'}
-          </p>
-        </div>
+        {verificationSentEmail ? (
+          <div className="text-center py-4 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 rounded-2xl bg-[#E9A23B]/15 border border-[#E9A23B]/30 flex items-center justify-center mx-auto text-[#E9A23B] shadow-lg shadow-[#E9A23B]/10">
+              <Mail className="w-8 h-8" />
+            </div>
 
-        {/* Mode Switch Tabs */}
-        <div className="flex bg-[#0F1218] p-1 rounded-xl mb-6 border border-[#2B3443]">
-          <button
-            type="button"
-            onClick={() => openAuthModal('login')}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-              isLogin
-                ? 'bg-[#1E2531] text-[#ECE9E3] border border-[#2B3443] shadow-sm'
-                : 'text-[#8D97A8] hover:text-[#ECE9E3]'
-            }`}
-          >
-            Logga in
-          </button>
-          <button
-            type="button"
-            onClick={() => openAuthModal('signup')}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-              !isLogin
-                ? 'bg-[#E9A23B] text-[#0F1218] shadow-sm'
-                : 'text-[#8D97A8] hover:text-[#ECE9E3]'
-            }`}
-          >
-            Skapa konto
-          </button>
-        </div>
-
-        {/* Alerts */}
-        {error && (
-          <div className="mb-4 p-3 rounded-xl bg-red-950/40 border border-red-800/60 flex items-start gap-2.5 text-xs text-red-300">
-            <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {successMessage && (
-          <div className="mb-4 p-3 rounded-xl bg-[#6FA98A]/15 border border-[#6FA98A]/30 flex items-start gap-2.5 text-xs text-[#6FA98A]">
-            <CheckCircle2 className="w-4 h-4 text-[#6FA98A] flex-shrink-0 mt-0.5" />
-            <span>{successMessage}</span>
-          </div>
-        )}
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {!isLogin && (
             <div>
-              <label className="block text-xs font-semibold text-[#ECE9E3] mb-1.5">
-                Visningsnamn / Användarnamn
-              </label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8D97A8]" />
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="t.ex. Filmälskaren"
-                  className="w-full bg-[#0F1218] border border-[#2B3443] rounded-xl pl-9 pr-4 py-2.5 text-sm text-[#ECE9E3] placeholder-[#8D97A8]/60 focus:outline-none focus:border-[#E9A23B] focus:ring-1 focus:ring-[#E9A23B] transition-colors"
-                />
-              </div>
+              <h2 className="text-2xl font-black text-[#ECE9E3] tracking-tight">
+                Bekräfta din e-postadress
+              </h2>
+              <p className="text-xs sm:text-sm text-[#8D97A8] mt-2 leading-relaxed max-w-sm mx-auto">
+                Vi har skickat ett bekräftelsemejl till{' '}
+                <strong className="text-[#ECE9E3] font-semibold">{verificationSentEmail}</strong>.
+              </p>
             </div>
-          )}
 
-          <div>
-            <label className="block text-xs font-semibold text-[#ECE9E3] mb-1.5">
-              E-postadress
-            </label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8D97A8]" />
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="namn@exempel.se"
-                className="w-full bg-[#0F1218] border border-[#2B3443] rounded-xl pl-9 pr-4 py-2.5 text-sm text-[#ECE9E3] placeholder-[#8D97A8]/60 focus:outline-none focus:border-[#E9A23B] focus:ring-1 focus:ring-[#E9A23B] transition-colors"
-              />
+            <div className="p-4 rounded-2xl bg-[#1E2531] border border-[#2B3443] text-left text-xs text-[#8D97A8] space-y-2.5">
+              <p className="flex items-start gap-2 text-[#ECE9E3]">
+                <CheckCircle2 className="w-4 h-4 text-[#6FA98A] flex-shrink-0 mt-0.5" />
+                <span>Klicka på länken i mejlet för att aktivera ditt konto och logga in.</span>
+              </p>
+              <p className="flex items-start gap-2 text-[11px] text-[#8D97A8] pt-1.5 border-t border-[#2B3443]/60">
+                <AlertCircle className="w-3.5 h-3.5 text-[#E9A23B] flex-shrink-0 mt-0.5" />
+                <span>Hittar du inte mejlet? Kontrollera din skräppostmapp (spam) eller vänta någon minut.</span>
+              </p>
             </div>
-          </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-[#ECE9E3] mb-1.5">
-              Lösenord
-            </label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8D97A8]" />
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Minst 6 tecken"
-                className="w-full bg-[#0F1218] border border-[#2B3443] rounded-xl pl-9 pr-4 py-2.5 text-sm text-[#ECE9E3] placeholder-[#8D97A8]/60 focus:outline-none focus:border-[#E9A23B] focus:ring-1 focus:ring-[#E9A23B] transition-colors"
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full mt-2 py-3 rounded-xl bg-[#E9A23B] hover:bg-[#F2B04E] text-[#0F1218] font-bold text-sm shadow-lg shadow-[#E9A23B]/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer active:scale-95"
-          >
-            {loading ? (
-              <span>Vänligen vänta...</span>
-            ) : isLogin ? (
-              <span>Logga in</span>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4" />
-                <span>Skapa mitt konto</span>
-              </>
-            )}
-          </button>
-        </form>
-
-        <div className="mt-6 text-center text-xs text-[#8D97A8]">
-          {isLogin ? (
-            <p>
-              Har du inget konto än?{' '}
+            <div className="pt-2 flex flex-col gap-2.5">
               <button
                 type="button"
-                onClick={() => openAuthModal('signup')}
-                className="text-[#E9A23B] hover:underline font-semibold cursor-pointer"
+                onClick={() => {
+                  setVerificationSentEmail(null);
+                  openAuthModal('login');
+                }}
+                className="w-full py-3 rounded-xl bg-[#E9A23B] hover:bg-[#F2B04E] text-[#0F1218] font-bold text-xs shadow-lg shadow-[#E9A23B]/20 transition-all cursor-pointer active:scale-95"
               >
-                Skapa ett här
+                Gå till inloggning
               </button>
-            </p>
-          ) : (
-            <p>
-              Har du redan ett konto?{' '}
+              <button
+                type="button"
+                onClick={closeAuthModal}
+                className="w-full py-2 rounded-xl text-xs text-[#8D97A8] hover:text-[#ECE9E3] transition-colors cursor-pointer"
+              >
+                Stäng rutan
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Header with Logo */}
+            <div className="text-center mb-6">
+              <div className="flex justify-center mb-3">
+                <BrandLogo size="lg" className="shadow-lg shadow-[#E9A23B]/10" />
+              </div>
+              <h2 className="text-2xl font-black text-[#ECE9E3] tracking-tight">
+                {isLogin ? 'Välkommen tillbaka' : 'Skapa ditt konto'}
+              </h2>
+              <p className="text-xs text-[#8D97A8] mt-1 max-w-xs mx-auto leading-relaxed">
+                {isLogin
+                  ? 'Logga in för att komma åt ditt personliga bibliotek och sedda avsnitt.'
+                  : 'Spara din historik och få full tillgång till ditt bibliotek på alla enheter.'}
+              </p>
+            </div>
+
+            {/* Mode Switch Tabs */}
+            <div className="flex bg-[#0F1218] p-1 rounded-xl mb-6 border border-[#2B3443]">
               <button
                 type="button"
                 onClick={() => openAuthModal('login')}
-                className="text-[#E9A23B] hover:underline font-semibold cursor-pointer"
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  isLogin
+                    ? 'bg-[#1E2531] text-[#ECE9E3] border border-[#2B3443] shadow-sm'
+                    : 'text-[#8D97A8] hover:text-[#ECE9E3]'
+                }`}
               >
                 Logga in
               </button>
-            </p>
-          )}
-        </div>
+              <button
+                type="button"
+                onClick={() => openAuthModal('signup')}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  !isLogin
+                    ? 'bg-[#E9A23B] text-[#0F1218] shadow-sm'
+                    : 'text-[#8D97A8] hover:text-[#ECE9E3]'
+                }`}
+              >
+                Skapa konto
+              </button>
+            </div>
+
+            {/* Alerts */}
+            {error && (
+              <div className="mb-4 p-3 rounded-xl bg-red-950/40 border border-red-800/60 flex items-start gap-2.5 text-xs text-red-300">
+                <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            {successMessage && (
+              <div className="mb-4 p-3 rounded-xl bg-[#6FA98A]/15 border border-[#6FA98A]/30 flex items-start gap-2.5 text-xs text-[#6FA98A]">
+                <CheckCircle2 className="w-4 h-4 text-[#6FA98A] flex-shrink-0 mt-0.5" />
+                <span>{successMessage}</span>
+              </div>
+            )}
+
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {!isLogin && (
+                <div>
+                  <label className="block text-xs font-semibold text-[#ECE9E3] mb-1.5">
+                    Visningsnamn / Användarnamn
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8D97A8]" />
+                    <input
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="t.ex. Filmälskaren"
+                      className="w-full bg-[#0F1218] border border-[#2B3443] rounded-xl pl-9 pr-4 py-2.5 text-sm text-[#ECE9E3] placeholder-[#8D97A8]/60 focus:outline-none focus:border-[#E9A23B] focus:ring-1 focus:ring-[#E9A23B] transition-colors"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-[#ECE9E3] mb-1.5">
+                  E-postadress
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8D97A8]" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="namn@exempel.se"
+                    className="w-full bg-[#0F1218] border border-[#2B3443] rounded-xl pl-9 pr-4 py-2.5 text-sm text-[#ECE9E3] placeholder-[#8D97A8]/60 focus:outline-none focus:border-[#E9A23B] focus:ring-1 focus:ring-[#E9A23B] transition-colors"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#ECE9E3] mb-1.5">
+                  Lösenord
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8D97A8]" />
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Minst 6 tecken"
+                    className="w-full bg-[#0F1218] border border-[#2B3443] rounded-xl pl-9 pr-4 py-2.5 text-sm text-[#ECE9E3] placeholder-[#8D97A8]/60 focus:outline-none focus:border-[#E9A23B] focus:ring-1 focus:ring-[#E9A23B] transition-colors"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full mt-2 py-3 rounded-xl bg-[#E9A23B] hover:bg-[#F2B04E] text-[#0F1218] font-bold text-sm shadow-lg shadow-[#E9A23B]/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer active:scale-95"
+              >
+                {loading ? (
+                  <span>Vänligen vänta...</span>
+                ) : isLogin ? (
+                  <span>Logga in</span>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    <span>Skapa mitt konto</span>
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div className="mt-6 text-center text-xs text-[#8D97A8]">
+              {isLogin ? (
+                <p>
+                  Har du inget konto än?{' '}
+                  <button
+                    type="button"
+                    onClick={() => openAuthModal('signup')}
+                    className="text-[#E9A23B] hover:underline font-semibold cursor-pointer"
+                  >
+                    Skapa ett här
+                  </button>
+                </p>
+              ) : (
+                <p>
+                  Har du redan ett konto?{' '}
+                  <button
+                    type="button"
+                    onClick={() => openAuthModal('login')}
+                    className="text-[#E9A23B] hover:underline font-semibold cursor-pointer"
+                  >
+                    Logga in
+                  </button>
+                </p>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
