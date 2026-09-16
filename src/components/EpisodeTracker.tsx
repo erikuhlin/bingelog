@@ -5,6 +5,7 @@ import { Check, CheckCircle2, Play, Sparkles } from 'lucide-react';
 import { Season, Episode } from '@/lib/types';
 import { getWatchedEpisodes, toggleEpisodeWatched, markSeasonWatched, getUserMediaItem, saveUserMedia } from '@/lib/storage';
 import { getImageUrl } from '@/lib/tmdb';
+import { useAuth } from '@/context/AuthContext';
 
 interface EpisodeTrackerProps {
   showId: number;
@@ -21,6 +22,7 @@ export default function EpisodeTracker({
   backdropPath,
   seasons,
 }: EpisodeTrackerProps) {
+  const { user, openAuthModal } = useAuth();
   const [selectedSeasonNumber, setSelectedSeasonNumber] = useState<number>(
     seasons[0]?.season_number || 1
   );
@@ -31,6 +33,10 @@ export default function EpisodeTracker({
 
   // Load watched episodes
   const refreshWatched = async () => {
+    if (!user) {
+      setWatchedSet(new Set());
+      return;
+    }
     const list = await getWatchedEpisodes(showId);
     const newSet = new Set(list.map((item) => `${item.season_number}-${item.episode_number}`));
     setWatchedSet(newSet);
@@ -41,7 +47,7 @@ export default function EpisodeTracker({
     const handleStorageChange = () => refreshWatched();
     window.addEventListener('bingelog_storage_changed', handleStorageChange);
     return () => window.removeEventListener('bingelog_storage_changed', handleStorageChange);
-  }, [showId]);
+  }, [showId, user]);
 
   // Active season data
   const currentSeason = validSeasons.find((s) => s.season_number === selectedSeasonNumber) || validSeasons[0];
@@ -80,6 +86,11 @@ export default function EpisodeTracker({
 
   // Handle toggling an episode
   const handleToggle = async (seasonNum: number, episodeNum: number) => {
+    if (!user) {
+      openAuthModal('signup');
+      return;
+    }
+
     const existing = await getUserMediaItem(showId, 'tv');
     await toggleEpisodeWatched(showId, seasonNum, episodeNum);
 
@@ -100,6 +111,11 @@ export default function EpisodeTracker({
 
   // Handle marking entire season
   const handleSeasonToggleAll = async () => {
+    if (!user) {
+      openAuthModal('signup');
+      return;
+    }
+
     if (!currentSeason) return;
     const epCount = currentSeason.episode_count || currentEpisodes.length;
     const allSeasonWatched = currentEpisodes.every((ep) =>

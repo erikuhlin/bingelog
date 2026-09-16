@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Bookmark, Eye, CheckCircle2, XCircle, Trash2, Star } from 'lucide-react';
 import { WatchStatus, MediaType } from '@/lib/types';
 import { getUserMediaItem, saveUserMedia, removeUserMedia } from '@/lib/storage';
+import { useAuth } from '@/context/AuthContext';
 
 interface StatusSelectorProps {
   tmdbId: number;
@@ -24,6 +25,7 @@ export default function StatusSelector({
   className = '',
   showRating = false,
 }: StatusSelectorProps) {
+  const { user, openAuthModal } = useAuth();
   const [currentStatus, setCurrentStatus] = useState<WatchStatus | null>(null);
   const [userRating, setUserRating] = useState<number | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -31,6 +33,11 @@ export default function StatusSelector({
 
   useEffect(() => {
     async function loadStatus() {
+      if (!user) {
+        setCurrentStatus(null);
+        setUserRating(null);
+        return;
+      }
       const item = await getUserMediaItem(tmdbId, mediaType);
       if (item) {
         setCurrentStatus(item.status);
@@ -46,9 +53,22 @@ export default function StatusSelector({
     const handleStorageChange = () => loadStatus();
     window.addEventListener('bingelog_storage_changed', handleStorageChange);
     return () => window.removeEventListener('bingelog_storage_changed', handleStorageChange);
-  }, [tmdbId, mediaType]);
+  }, [tmdbId, mediaType, user]);
+
+  const handleButtonClick = () => {
+    if (!user) {
+      openAuthModal('signup');
+      return;
+    }
+    setIsOpen(!isOpen);
+  };
 
   const handleStatusChange = async (status: WatchStatus) => {
+    if (!user) {
+      openAuthModal('signup');
+      return;
+    }
+
     setLoading(true);
     try {
       await saveUserMedia({
@@ -68,6 +88,7 @@ export default function StatusSelector({
   };
 
   const handleRemove = async () => {
+    if (!user) return;
     setLoading(true);
     try {
       await removeUserMedia(tmdbId, mediaType);
@@ -80,6 +101,11 @@ export default function StatusSelector({
   };
 
   const handleRatingChange = async (rating: number) => {
+    if (!user) {
+      openAuthModal('signup');
+      return;
+    }
+
     const newRating = userRating === rating ? null : rating;
     setUserRating(newRating);
     if (currentStatus) {
@@ -128,7 +154,7 @@ export default function StatusSelector({
         {currentStatus ? (
           <button
             type="button"
-            onClick={() => setIsOpen(!isOpen)}
+            onClick={handleButtonClick}
             className={`w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${statusConfigs[currentStatus].color} ${statusConfigs[currentStatus].border} hover:opacity-90 shadow-sm`}
           >
             {React.createElement(statusConfigs[currentStatus].icon, { className: 'w-3.5 h-3.5' })}
@@ -137,7 +163,7 @@ export default function StatusSelector({
         ) : (
           <button
             type="button"
-            onClick={() => setIsOpen(!isOpen)}
+            onClick={handleButtonClick}
             className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#171C25] hover:bg-[#1E2531] text-[#ECE9E3] border border-[#2B3443] transition-all shadow-sm hover:border-[#E9A23B]/40"
           >
             <Bookmark className="w-3.5 h-3.5 text-[#E9A23B]" />
@@ -147,7 +173,7 @@ export default function StatusSelector({
       </div>
 
       {/* Dropdown menu */}
-      {isOpen && (
+      {isOpen && user && (
         <div className="absolute right-0 mt-2 w-48 bg-[#171C25] border border-[#2B3443] rounded-2xl shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95">
           <div className="text-[11px] font-semibold text-[#8D97A8] px-2.5 py-1 uppercase tracking-wider">
             Välj status
@@ -189,7 +215,7 @@ export default function StatusSelector({
       )}
 
       {/* Optional Rating Stars if in detail page */}
-      {showRating && currentStatus && (
+      {showRating && currentStatus && user && (
         <div className="mt-3 flex items-center gap-1">
           <span className="text-xs text-[#8D97A8] mr-1.5">Ditt betyg:</span>
           {[1, 2, 3, 4, 5].map((star) => (

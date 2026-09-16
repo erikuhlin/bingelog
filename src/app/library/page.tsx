@@ -15,7 +15,6 @@ import {
   Sparkles,
   LayoutGrid,
   List,
-  CloudOff,
   UserPlus,
 } from 'lucide-react';
 import {
@@ -26,6 +25,7 @@ import {
 import { UserMediaRecord, WatchStatus, MediaType } from '@/lib/types';
 import { getImageUrl } from '@/lib/tmdb';
 import { useAuth } from '@/context/AuthContext';
+import BrandLogo from '@/components/BrandLogo';
 import LibraryStatsHeader from '@/components/LibraryStatsHeader';
 import ContinueWatchingRow, { SeriesMetaInfo } from '@/components/ContinueWatchingRow';
 import StatusSelector from '@/components/StatusSelector';
@@ -38,7 +38,7 @@ type ViewMode = 'grid' | 'list';
 function LibraryContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, openAuthModal } = useAuth();
+  const { user, loading: authLoading, openAuthModal } = useAuth();
   const [, startTransition] = useTransition();
 
   // Read state from URL search params
@@ -120,6 +120,11 @@ function LibraryContent() {
   };
 
   useEffect(() => {
+    if (!user) {
+      setIsLoading(false);
+      setItems([]);
+      return;
+    }
     loadData();
     const handleStorageChange = () => loadData();
     window.addEventListener('bingelog_storage_changed', handleStorageChange);
@@ -203,6 +208,96 @@ function LibraryContent() {
     dropped: items.filter((i) => i.status === 'dropped').length,
   };
 
+  if (authLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] text-[#8D97A8]">
+        <div className="w-8 h-8 border-2 border-[#E9A23B] border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-sm font-medium">Laddar bibliotek...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="max-w-3xl mx-auto py-8 sm:py-16 px-4 text-center">
+        {/* Brand & Badge */}
+        <div className="flex flex-col items-center mb-8">
+          <BrandLogo size="lg" className="mb-4 shadow-xl shadow-[#E9A23B]/10" />
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#1E2531] border border-[#2B3443] text-xs font-semibold text-[#E9A23B] mb-3">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Konto krävs för biblioteket</span>
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-black text-[#ECE9E3] tracking-tight">
+            Ditt personliga film- och seriebibliotek
+          </h1>
+          <p className="text-sm sm:text-base text-[#8D97A8] max-w-xl mt-3 leading-relaxed">
+            Skapa ett gratis konto för att hålla koll på sedda avsnitt, spara dina filmer & serier och se direkt vilka streamingtjänster dina titlar finns på.
+          </p>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-12">
+          <button
+            type="button"
+            onClick={() => openAuthModal('signup')}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-sm font-bold bg-[#E9A23B] hover:bg-[#F2B04E] text-[#0F1218] shadow-lg shadow-[#E9A23B]/20 transition-all transform active:scale-95 cursor-pointer"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>Skapa gratis konto</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => openAuthModal('login')}
+            className="w-full sm:w-auto px-6 py-3.5 rounded-xl text-sm font-semibold text-[#ECE9E3] hover:bg-[#1E2531] border border-[#2B3443] transition-colors cursor-pointer"
+          >
+            Redan medlem? Logga in
+          </button>
+        </div>
+
+        {/* Feature Highlights Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left mb-10">
+          <div className="p-5 rounded-2xl bg-[#171C25] border border-[#2B3443] flex flex-col">
+            <div className="w-10 h-10 rounded-xl bg-[#1E2531] text-[#E9A23B] flex items-center justify-center mb-3.5">
+              <Eye className="w-5 h-5" />
+            </div>
+            <h3 className="text-sm font-bold text-[#ECE9E3] mb-1">Avsnittsspårare</h3>
+            <p className="text-xs text-[#8D97A8] leading-relaxed">
+              Markera sedda avsnitt med ett klick. Bingelog vet alltid vilket avsnitt du ska se härnäst.
+            </p>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-[#171C25] border border-[#2B3443] flex flex-col">
+            <div className="w-10 h-10 rounded-xl bg-[#1E2531] text-[#6FA98A] flex items-center justify-center mb-3.5">
+              <Tv className="w-5 h-5" />
+            </div>
+            <h3 className="text-sm font-bold text-[#ECE9E3] mb-1">Streamingkoll</h3>
+            <p className="text-xs text-[#8D97A8] leading-relaxed">
+              Se direkt vilka svenska tjänster som Netflix, Viaplay, Max och SVT som visar just dina sparade titlar.
+            </p>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-[#171C25] border border-[#2B3443] flex flex-col">
+            <div className="w-10 h-10 rounded-xl bg-[#1E2531] text-[#ECE9E3] flex items-center justify-center mb-3.5">
+              <Bookmark className="w-5 h-5" />
+            </div>
+            <h3 className="text-sm font-bold text-[#ECE9E3] mb-1">Molnsynkat & säkert</h3>
+            <p className="text-xs text-[#8D97A8] leading-relaxed">
+              Dina listor sparas tryggt i molnet och finns till hands oavsett om du använder mobil, surfplatta eller dator.
+            </p>
+          </div>
+        </div>
+
+        {/* Free explore link */}
+        <p className="text-xs text-[#8D97A8]">
+          Vill du bara kika runt först?{' '}
+          <Link href="/" className="text-[#E9A23B] hover:underline font-medium">
+            Utforska filmer & serier fritt utan konto →
+          </Link>
+        </p>
+      </div>
+    );
+  }
+
   const displayName = user?.user_metadata?.username || user?.email?.split('@')[0];
 
   return (
@@ -213,7 +308,7 @@ function LibraryContent() {
           <div>
             <h1 className="text-3xl font-black text-[#ECE9E3] tracking-tight flex items-center gap-2.5">
               <Bookmark className="w-7 h-7 text-[#E9A23B]" />
-              <span>{user ? `${displayName}s bibliotek` : 'Mitt bibliotek'}</span>
+              <span>{displayName}s bibliotek</span>
             </h1>
             <p className="text-sm text-[#8D97A8] mt-1">
               Din samling, dina sedda avsnitt och din historik samlad på ett ställe.
@@ -227,40 +322,6 @@ function LibraryContent() {
           totalWatchedEpisodes={totalEpisodesCount}
           totalRuntimeMinutes={totalRuntimeMinutes}
         />
-
-        {/* Guest Banner (when not logged in) */}
-        {!user && (
-          <div className="mt-5 p-4 sm:p-5 rounded-2xl bg-[#171C25] border border-[#2B3443] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-start gap-3.5">
-              <div className="w-9 h-9 rounded-xl bg-[#1E2531] text-[#8D97A8] flex items-center justify-center flex-shrink-0 mt-0.5">
-                <CloudOff className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="text-xs sm:text-sm font-bold text-[#ECE9E3]">Gästläge aktivt</h3>
-                <p className="text-xs text-[#8D97A8] mt-0.5 max-w-xl leading-relaxed">
-                  Dina titlar sparas lokalt i webbläsaren. Skapa ett gratis konto för att spara din samling permanent i molnet.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-              <button
-                type="button"
-                onClick={() => openAuthModal('login')}
-                className="px-3 py-1.5 rounded-xl text-xs font-semibold text-[#ECE9E3] hover:bg-[#1E2531] border border-[#2B3443] transition-colors"
-              >
-                Logga in
-              </button>
-              <button
-                type="button"
-                onClick={() => openAuthModal('signup')}
-                className="flex items-center gap-1 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-[#E9A23B] hover:bg-[#F2B04E] text-[#0F1218] shadow-md shadow-[#E9A23B]/20 transition-all"
-              >
-                <UserPlus className="w-3.5 h-3.5" />
-                <span>Skapa konto</span>
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* 2. "Fortsätt titta" — Horizontal Row */}
