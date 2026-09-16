@@ -108,3 +108,10 @@ create policy "Användare kan avmarkera sedda avsnitt"
 -- Index för snabb sökning och statistik
 create index if not exists idx_user_media_user on public.user_media(user_id, status);
 create index if not exists idx_watched_episodes_user_show on public.watched_episodes(user_id, tmdb_id);
+
+-- Ge rättigheter till anon och authenticated så PostgREST och RLS fungerar
+grant usage on schema public to anon, authenticated;
+grant all on all tables in schema public to anon, authenticated;
+grant all on all sequences in schema public to anon, authenticated;
+grant all on all routines in schema public to anon, authenticated;
+
