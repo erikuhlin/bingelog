@@ -17,7 +17,7 @@ export default async function HomePage() {
   const trendingList = trending.slice(5);
 
   return (
-    <div>
+    <div className="w-full max-w-full overflow-hidden">
       {/* Personalized Welcome Banner for Logged In User */}
       <UserWelcomeBanner />
 

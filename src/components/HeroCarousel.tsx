@@ -99,7 +99,7 @@ export default function HeroCarousel({
 
   return (
     <div
-      className="relative w-full h-[420px] xs:h-[440px] sm:h-[480px] md:h-[530px] rounded-3xl overflow-hidden mb-8 md:mb-12 border border-[#2B3443] shadow-2xl group select-none bg-[#0F1218] touch-pan-y"
+      className="relative w-full max-w-full h-[420px] sm:h-[480px] md:h-[530px] rounded-3xl overflow-hidden mb-8 md:mb-12 border border-[#2B3443] shadow-2xl group select-none bg-[#0F1218] touch-pan-y"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       onTouchStart={handleTouchStart}
@@ -133,7 +133,7 @@ export default function HeroCarousel({
             <div className="absolute inset-0 bg-gradient-to-r from-[#0F1218]/95 via-[#0F1218]/60 to-transparent" />
 
             {/* Slide Content */}
-            <div className="absolute inset-0 flex flex-col justify-end p-5 pb-14 sm:p-8 sm:pb-8 md:p-12 max-w-2xl">
+            <div className="absolute inset-0 flex flex-col justify-end p-4 pb-14 sm:p-8 sm:pb-8 md:p-12 max-w-full sm:max-w-2xl min-w-0">
               {/* Badges */}
               <div className="flex flex-wrap items-center gap-2 mb-2 sm:mb-2.5">
                 <span className="px-2.5 py-0.5 rounded-full bg-[#E9A23B] text-[#0F1218] font-black text-[10px] sm:text-xs uppercase tracking-wider shadow-lg shadow-[#E9A23B]/30">

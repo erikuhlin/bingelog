@@ -6,8 +6,6 @@ import { AuthProvider } from '@/context/AuthContext';
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
 };
 
 export const metadata: Metadata = {
@@ -36,11 +34,11 @@ export default function RootLayout({
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
       </head>
-      <body className="min-h-screen flex flex-col bg-zinc-950 text-zinc-100 antialiased selection:bg-rose-600 selection:text-white w-full max-w-full overflow-x-hidden">
+      <body className="min-h-screen flex flex-col bg-zinc-950 text-zinc-100 antialiased selection:bg-rose-600 selection:text-white w-full max-w-full overflow-x-hidden overflow-x-clip">
         <AuthProvider>
-          <div className="flex flex-col min-h-screen w-full max-w-full overflow-x-hidden relative">
+          <div className="flex flex-col min-h-screen w-full max-w-full overflow-x-hidden overflow-x-clip relative">
             <Navbar />
-            <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-24 md:pb-8 min-w-0">
+            <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8 pb-24 md:pb-8 min-w-0 overflow-hidden">
               {children}
             </main>
             <footer className="border-t border-zinc-800/80 py-8 text-center text-xs text-zinc-500 w-full overflow-hidden">

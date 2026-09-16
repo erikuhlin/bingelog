@@ -37,41 +37,43 @@ export default function ProviderFilterTabs({
   onSelectProvider,
 }: ProviderFilterTabsProps) {
   return (
-    <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none overscroll-x-contain">
-      {/* All providers pill */}
-      <button
-        type="button"
-        onClick={() => onSelectProvider(null)}
-        className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all flex-shrink-0 ${
-          selectedProviderId === null
-            ? 'bg-[#E9A23B] text-[#0F1218] shadow-lg shadow-[#E9A23B]/30 ring-2 ring-[#E9A23B]/50'
-            : 'bg-[#171C25] text-[#8D97A8] hover:text-[#ECE9E3] hover:bg-[#1E2531] border border-[#2B3443]'
-        }`}
-      >
-        <Sparkles className={`w-3.5 h-3.5 ${selectedProviderId === null ? 'text-[#0F1218]' : 'text-[#E9A23B]'}`} />
-        <span>Alla streamingtjänster</span>
-      </button>
+    <div className="w-full max-w-full overflow-x-auto pb-2 scrollbar-none overscroll-x-contain">
+      <div className="flex items-center gap-2 w-max min-w-full py-0.5">
+        {/* All providers pill */}
+        <button
+          type="button"
+          onClick={() => onSelectProvider(null)}
+          className={`flex items-center gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all flex-shrink-0 ${
+            selectedProviderId === null
+              ? 'bg-[#E9A23B] text-[#0F1218] shadow-lg shadow-[#E9A23B]/30 ring-2 ring-[#E9A23B]/50'
+              : 'bg-[#171C25] text-[#8D97A8] hover:text-[#ECE9E3] hover:bg-[#1E2531] border border-[#2B3443]'
+          }`}
+        >
+          <Sparkles className={`w-3.5 h-3.5 ${selectedProviderId === null ? 'text-[#0F1218]' : 'text-[#E9A23B]'}`} />
+          <span>Alla streamingtjänster</span>
+        </button>
 
-      {/* Streaming services */}
-      {SWEDISH_STREAMING_PROVIDERS.map((provider) => {
-        const isSelected = selectedProviderId === provider.id;
+        {/* Streaming services */}
+        {SWEDISH_STREAMING_PROVIDERS.map((provider) => {
+          const isSelected = selectedProviderId === provider.id;
 
-        return (
-          <button
-            key={provider.id}
-            type="button"
-            onClick={() => onSelectProvider(isSelected ? null : provider.id)}
-            className={`flex items-center gap-2.5 px-3.5 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all flex-shrink-0 border ${
-              isSelected
-                ? 'bg-[#E9A23B] text-[#0F1218] border-[#E9A23B] shadow-lg ring-2 ring-[#E9A23B]/30 scale-105'
-                : 'bg-[#171C25] text-[#ECE9E3] border-[#2B3443] hover:border-[#E9A23B]/50 hover:bg-[#1E2531]'
-            }`}
-          >
-            <ProviderLogo logoPath={provider.logo_path} name={provider.name} bg={provider.bg} />
-            <span>{provider.name}</span>
-          </button>
-        );
-      })}
+          return (
+            <button
+              key={provider.id}
+              type="button"
+              onClick={() => onSelectProvider(isSelected ? null : provider.id)}
+              className={`flex items-center gap-2 sm:gap-2.5 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all flex-shrink-0 border ${
+                isSelected
+                  ? 'bg-[#E9A23B] text-[#0F1218] border-[#E9A23B] shadow-lg ring-2 ring-[#E9A23B]/30 scale-105'
+                  : 'bg-[#171C25] text-[#ECE9E3] border-[#2B3443] hover:border-[#E9A23B]/50 hover:bg-[#1E2531]'
+              }`}
+            >
+              <ProviderLogo logoPath={provider.logo_path} name={provider.name} bg={provider.bg} />
+              <span>{provider.name}</span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

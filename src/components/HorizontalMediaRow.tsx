@@ -50,17 +50,17 @@ export default function HorizontalMediaRow({
   if (!items || items.length === 0) return null;
 
   return (
-    <section className="mb-10 sm:mb-14 relative group overflow-hidden">
+    <section className="mb-8 sm:mb-14 relative group w-full max-w-full overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          {IconComponent && <IconComponent className={`w-5 h-5 ${iconColor}`} />}
-          <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-[#ECE9E3] tracking-tight">
+      <div className="flex items-center justify-between mb-3 sm:mb-4 gap-2 min-w-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+          {IconComponent && <IconComponent className={`w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 ${iconColor}`} />}
+          <h2 className="text-base sm:text-xl md:text-2xl font-bold text-[#ECE9E3] tracking-tight truncate">
             {title}
           </h2>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
           {/* Scroll Buttons (visible on md screens and up) */}
           <div className="hidden md:flex items-center gap-1.5">
             <button
@@ -84,10 +84,10 @@ export default function HorizontalMediaRow({
           {moreLink && (
             <Link
               href={moreLink.href}
-              className="text-xs font-semibold text-[#E9A23B] hover:text-[#F2B04E] flex items-center gap-1 transition-colors"
+              className="text-xs font-semibold text-[#E9A23B] hover:text-[#F2B04E] flex items-center gap-1 transition-colors whitespace-nowrap flex-shrink-0"
             >
               <span>{moreLink.label}</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="w-3.5 h-3.5 flex-shrink-0" />
             </Link>
           )}
         </div>
@@ -96,7 +96,7 @@ export default function HorizontalMediaRow({
       {/* Horizontal Scroll Track */}
       <div
         ref={rowRef}
-        className="flex overflow-x-auto gap-3.5 sm:gap-4 pb-3 scrollbar-none snap-x snap-mandatory overscroll-x-contain"
+        className="w-full max-w-full flex overflow-x-auto gap-3 sm:gap-4 pb-3 scrollbar-none snap-x snap-mandatory overscroll-x-contain"
       >
         {items.map((item) => (
           <div

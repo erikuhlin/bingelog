@@ -67,14 +67,14 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full border-b border-[#2B3443] bg-[#0F1218]/90 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-4">
+      <header className="sticky top-0 z-40 w-full max-w-full border-b border-[#2B3443] bg-[#0F1218]/90 backdrop-blur-md overflow-hidden">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-4 min-w-0">
           {/* Brand */}
-          <div className="flex items-center gap-2.5 sm:gap-4 md:gap-6 flex-shrink-0">
+          <div className="flex items-center gap-2 sm:gap-4 md:gap-6 flex-shrink-0">
             <Link href="/" className="flex items-center gap-2 group">
               <BrandLogo size="md" />
               <div className="flex flex-col">
-                <span className="text-lg sm:text-xl font-bold tracking-tight text-[#ECE9E3] flex items-center gap-0.5">
+                <span className="text-base sm:text-xl font-bold tracking-tight text-[#ECE9E3] flex items-center gap-0.5">
                   Binge<span className="text-[#E9A23B]">log</span>
                 </span>
                 <span className="text-[10px] text-[#8D97A8] font-medium -mt-1 hidden sm:inline">
@@ -108,21 +108,21 @@ export default function Navbar() {
 
           {/* Search bar & Auth */}
           <div className="flex items-center gap-1.5 sm:gap-3 flex-1 justify-end max-w-md min-w-0">
-            <div ref={searchRef} className="relative w-full min-w-0 max-w-[130px] xs:max-w-[190px] sm:max-w-xs">
+            <div ref={searchRef} className="relative w-full min-w-0 max-w-[110px] sm:max-w-xs">
               <div className="relative flex items-center">
-                <Search className="absolute left-2.5 xs:left-3 w-3.5 h-3.5 text-[#8D97A8] pointer-events-none" />
+                <Search className="absolute left-2 sm:left-3 w-3.5 h-3.5 text-[#8D97A8] pointer-events-none" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => searchQuery.trim() && setShowDropdown(true)}
-                  placeholder="Sök film el. serie..."
-                  className="w-full bg-[#171C25] border border-[#2B3443] rounded-full pl-7 xs:pl-8 pr-7 xs:pr-8 py-1.5 text-xs text-[#ECE9E3] placeholder-[#8D97A8] focus:outline-none focus:border-[#E9A23B] focus:ring-1 focus:ring-[#E9A23B] transition-all truncate"
+                  placeholder="Sök..."
+                  className="w-full bg-[#171C25] border border-[#2B3443] rounded-full pl-7 sm:pl-8 pr-7 sm:pr-8 py-1.5 text-xs text-[#ECE9E3] placeholder-[#8D97A8] focus:outline-none focus:border-[#E9A23B] focus:ring-1 focus:ring-[#E9A23B] transition-all truncate"
                 />
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-2 xs:right-2.5 text-[#8D97A8] hover:text-[#ECE9E3]"
+                    className="absolute right-2 sm:right-2.5 text-[#8D97A8] hover:text-[#ECE9E3]"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -176,7 +176,7 @@ export default function Navbar() {
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => openAuthModal('login')}
-                      className="px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold text-[#ECE9E3] hover:bg-[#171C25] border border-transparent hover:border-[#2B3443] transition-colors whitespace-nowrap"
+                      className="px-2 sm:px-3 py-1.5 rounded-xl text-xs font-semibold text-[#ECE9E3] hover:bg-[#171C25] border border-transparent hover:border-[#2B3443] transition-colors whitespace-nowrap flex-shrink-0"
                     >
                       Logga in
                     </button>

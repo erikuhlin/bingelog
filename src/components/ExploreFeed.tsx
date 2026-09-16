@@ -176,7 +176,7 @@ export default function ExploreFeed({
     : null;
 
   return (
-    <section className="mb-14 space-y-6">
+    <section className="mb-14 space-y-6 w-full max-w-full overflow-hidden">
       {/* Streaming Provider Quick Tabs */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
@@ -218,7 +218,7 @@ export default function ExploreFeed({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
         <div className="flex flex-wrap items-center gap-2 min-w-0">
           <Sparkles className="w-5 h-5 text-[#E9A23B] flex-shrink-0" />
-          <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-[#ECE9E3] tracking-tight">
+          <h2 className="text-base sm:text-xl md:text-2xl font-bold text-[#ECE9E3] tracking-tight truncate">
             {selectedProviderName
               ? `Populärt på ${selectedProviderName}`
               : isFiltered
