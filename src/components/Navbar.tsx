@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Film, Tv, Bookmark, Search, X, Sparkles, LogIn, UserPlus } from 'lucide-react';
+import { Film, Tv, Bookmark, Search, X, Sparkles, UserPlus } from 'lucide-react';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 import { searchMedia, getImageUrl } from '@/lib/tmdb';
 import { MediaItem } from '@/lib/types';
@@ -19,12 +19,7 @@ export default function Navbar() {
   const [searchResults, setSearchResults] = useState<MediaItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [isDbConfigured, setIsDbConfigured] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setIsDbConfigured(isSupabaseConfigured());
-  }, []);
 
   // Debounced search
   useEffect(() => {
@@ -71,10 +66,10 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <header className="sticky top-0 z-40 w-full border-b border-zinc-800 bg-zinc-950/85 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3 sm:gap-4">
           {/* Brand */}
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4 md:gap-6 flex-shrink-0">
             <Link href="/" className="flex items-center gap-2.5 group">
               <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-rose-600 to-amber-500 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-rose-900/30 group-hover:scale-105 transition-transform">
                 B
@@ -89,7 +84,7 @@ export default function Navbar() {
               </div>
             </Link>
 
-            {/* Nav links */}
+            {/* Nav links (desktop) */}
             <nav className="hidden md:flex items-center gap-1">
               {navLinks.map((link) => {
                 const Icon = link.icon;
@@ -112,23 +107,23 @@ export default function Navbar() {
             </nav>
           </div>
 
-          {/* Search bar & Auth / User */}
-          <div className="flex items-center gap-3 flex-1 max-w-md justify-end">
-            <div ref={searchRef} className="relative w-full max-w-xs">
+          {/* Search bar & Auth */}
+          <div className="flex items-center gap-2 sm:gap-3 flex-1 justify-end max-w-md">
+            <div ref={searchRef} className="relative w-full max-w-[200px] sm:max-w-xs">
               <div className="relative flex items-center">
-                <Search className="absolute left-3 w-4 h-4 text-zinc-400 pointer-events-none" />
+                <Search className="absolute left-3 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => searchQuery.trim() && setShowDropdown(true)}
                   placeholder="Sök film el. serie..."
-                  className="w-full bg-zinc-900/90 border border-zinc-800 rounded-full pl-9 pr-9 py-1.5 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all"
+                  className="w-full bg-zinc-900/90 border border-zinc-800 rounded-full pl-8 pr-8 py-1.5 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all truncate"
                 />
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-3 text-zinc-400 hover:text-zinc-200"
+                    className="absolute right-2.5 text-zinc-400 hover:text-zinc-200"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -137,7 +132,7 @@ export default function Navbar() {
 
               {/* Live Search Dropdown */}
               {showDropdown && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden z-50">
+                <div className="absolute top-full right-0 sm:left-0 sm:right-0 mt-2 w-72 sm:w-auto bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden z-50">
                   {isSearching ? (
                     <div className="p-4 text-center text-xs text-zinc-400">Söker...</div>
                   ) : searchResults.length > 0 ? (
@@ -175,20 +170,20 @@ export default function Navbar() {
 
             {/* Auth / Profile Area */}
             {!authLoading && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 {user ? (
                   <UserMenu />
                 ) : (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => openAuthModal('login')}
-                      className="px-3 py-1.5 rounded-xl text-xs font-semibold text-zinc-300 hover:text-white hover:bg-zinc-800/80 transition-colors"
+                      className="px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold text-zinc-300 hover:text-white hover:bg-zinc-800/80 transition-colors whitespace-nowrap"
                     >
                       Logga in
                     </button>
                     <button
                       onClick={() => openAuthModal('signup')}
-                      className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-900/30 transition-all"
+                      className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-900/30 transition-all whitespace-nowrap"
                     >
                       <UserPlus className="w-3.5 h-3.5" />
                       <span>Skapa konto</span>

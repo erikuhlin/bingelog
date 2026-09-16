@@ -56,13 +56,13 @@ async function tmdbFetch<T>(endpoint: string, params: Record<string, string | nu
 
 export const SWEDISH_STREAMING_PROVIDERS = [
   { id: 8, name: 'Netflix', logo_path: '/rK1KljqmbvO9HQa1PBFLILWah72.png', bg: 'bg-red-600' },
-  { id: 1899, name: 'Max', logo_path: '/fksCUZ9QDWZMUwL2LgfqII0M6UV.jpg', bg: 'bg-blue-600' },
-  { id: 337, name: 'Disney+', logo_path: '/97yvRBw1GzX7fXprcF80419ONCS.jpg', bg: 'bg-indigo-700' },
-  { id: 119, name: 'Prime Video', logo_path: '/pvske1MyAofH67cw4M6b2sYh6FS.jpg', bg: 'bg-sky-600' },
-  { id: 350, name: 'Apple TV+', logo_path: '/2E03nojritEup79Rs7hZ2928v6l.jpg', bg: 'bg-zinc-700' },
-  { id: 56, name: 'Viaplay', logo_path: '/wA0n96B7L6L82bFfE9QjM3J8V2.jpg', bg: 'bg-rose-700' },
-  { id: 426, name: 'TV4 Play', logo_path: '/3v9m1k2l5p8q4w7e9r0t1y2u3i.png', bg: 'bg-red-700' },
-  { id: 383, name: 'SVT Play', logo_path: '/8qK8fQ2Q5m3e4w7v9b0n1m2l3k.png', bg: 'bg-emerald-600' },
+  { id: 1899, name: 'Max', logo_path: '/skypuy7SXuugIQeYg0IglmzoKaS.png', bg: 'bg-blue-600' },
+  { id: 337, name: 'Disney+', logo_path: '/5eZ872CghnHFLB1j8grszbrx0dx.png', bg: 'bg-indigo-700' },
+  { id: 119, name: 'Prime Video', logo_path: '/gMZdpavHmxFNnLpMHwVxfqeux2g.png', bg: 'bg-sky-600' },
+  { id: 350, name: 'Apple TV', logo_path: '/9icYBfYFcwgCbky5VdGUIKJ4C5i.png', bg: 'bg-zinc-700' },
+  { id: 76, name: 'Viaplay', logo_path: '/c1J9PGGowXwW5AxAaZaGipeFu7U.png', bg: 'bg-rose-700' },
+  { id: 1944, name: 'TV4 Play', logo_path: '/8sxwkXfXhlIHkAlkZ64kTU9BNyT.png', bg: 'bg-red-700' },
+  { id: 493, name: 'SVT Play', logo_path: '/vMU9xqjyIsOplkdSCRveond8fxV.png', bg: 'bg-emerald-600' },
 ];
 
 export async function getItemWatchProviders(mediaType: MediaType, id: number): Promise<any[]> {

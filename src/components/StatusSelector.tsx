@@ -123,13 +123,13 @@ export default function StatusSelector({
   };
 
   return (
-    <div className={`relative inline-block ${className}`}>
-      <div className="flex items-center gap-2">
+    <div className={`relative ${className}`}>
+      <div className="flex items-center gap-2 w-full">
         {currentStatus ? (
           <button
             type="button"
             onClick={() => setIsOpen(!isOpen)}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition-all ${statusConfigs[currentStatus].color} ${statusConfigs[currentStatus].border} hover:opacity-90 shadow-sm`}
+            className={`w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${statusConfigs[currentStatus].color} ${statusConfigs[currentStatus].border} hover:opacity-90 shadow-sm`}
           >
             {React.createElement(statusConfigs[currentStatus].icon, { className: 'w-3.5 h-3.5' })}
             <span>{statusConfigs[currentStatus].label}</span>
@@ -138,10 +138,10 @@ export default function StatusSelector({
           <button
             type="button"
             onClick={() => setIsOpen(!isOpen)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition-all shadow-sm"
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition-all shadow-sm"
           >
             <Bookmark className="w-3.5 h-3.5 text-rose-500" />
-            <span>Lägg till i lista</span>
+            <span>Lägg till</span>
           </button>
         )}
       </div>
