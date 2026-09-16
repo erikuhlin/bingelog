@@ -67,7 +67,7 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full max-w-full border-b border-[#2B3443] bg-[#0F1218]/90 backdrop-blur-md overflow-hidden">
+      <header className="sticky top-0 z-40 w-full max-w-full border-b border-[#2B3443] bg-[#0F1218]/90 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-4 min-w-0">
           {/* Brand */}
           <div className="flex items-center gap-2 sm:gap-4 md:gap-6 flex-shrink-0">
@@ -108,14 +108,19 @@ export default function Navbar() {
 
           {/* Search bar & Auth */}
           <div className="flex items-center gap-1.5 sm:gap-3 flex-1 justify-end max-w-md min-w-0">
-            <div ref={searchRef} className="relative w-full min-w-0 max-w-[110px] sm:max-w-xs">
+            <div ref={searchRef} className="relative w-full min-w-0 max-w-[130px] sm:max-w-xs">
               <div className="relative flex items-center">
-                <Search className="absolute left-2 sm:left-3 w-3.5 h-3.5 text-[#8D97A8] pointer-events-none" />
+                <Search className="absolute left-2.5 sm:left-3 w-3.5 h-3.5 text-[#8D97A8] pointer-events-none" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => searchQuery.trim() && setShowDropdown(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && searchResults.length > 0) {
+                      handleSelectMedia(searchResults[0]);
+                    }
+                  }}
                   placeholder="Sök..."
                   className="w-full bg-[#171C25] border border-[#2B3443] rounded-full pl-7 sm:pl-8 pr-7 sm:pr-8 py-1.5 text-xs text-[#ECE9E3] placeholder-[#8D97A8] focus:outline-none focus:border-[#E9A23B] focus:ring-1 focus:ring-[#E9A23B] transition-all truncate"
                 />
@@ -131,7 +136,7 @@ export default function Navbar() {
 
               {/* Live Search Dropdown */}
               {showDropdown && (
-                <div className="absolute top-full right-0 sm:left-0 sm:right-0 mt-2 w-72 sm:w-auto bg-[#171C25] border border-[#2B3443] rounded-2xl shadow-2xl overflow-hidden z-50">
+                <div className="absolute top-full right-0 sm:left-0 sm:right-0 mt-2 w-72 sm:w-auto max-w-[calc(100vw-1.5rem)] bg-[#171C25] border border-[#2B3443] rounded-2xl shadow-2xl overflow-hidden z-50">
                   {isSearching ? (
                     <div className="p-4 text-center text-xs text-[#8D97A8]">Söker...</div>
                   ) : searchResults.length > 0 ? (

@@ -209,7 +209,7 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
   return attachSelectedProvider(merged.slice(0, 24));
 }
 
-export async function searchMedia(query: string): Promise<MediaItem[]> {
+export async function searchMedia(query: string, enrich = false): Promise<MediaItem[]> {
   if (!query.trim()) return [];
 
   const data = await tmdbFetch<{ results: any[] }>('/search/multi', { query: query.trim() });
@@ -217,7 +217,7 @@ export async function searchMedia(query: string): Promise<MediaItem[]> {
     const list = data.results
       .filter((item) => item.media_type === 'movie' || item.media_type === 'tv')
       .map(normalizeMediaItem);
-    return enrichItemsWithProviders(list);
+    return enrich ? enrichItemsWithProviders(list) : list;
   }
 
   // Fallback search in mock data
