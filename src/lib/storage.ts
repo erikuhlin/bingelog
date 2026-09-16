@@ -48,15 +48,24 @@ function saveLocalWatchedEpisodes(episodes: WatchedEpisodeRecord[]): void {
 export async function getUserMediaList(): Promise<UserMediaRecord[]> {
   const supabase = getSupabaseClient();
   if (supabase) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data, error } = await supabase
-        .from('user_media')
-        .select('*')
-        .order('updated_at', { ascending: false });
-      if (!error && data) {
-        return data as UserMediaRecord[];
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data, error } = await supabase
+          .from('user_media')
+          .select('*')
+          .order('updated_at', { ascending: false });
+
+        if (error) {
+          console.error('Supabase getUserMediaList error:', error);
+        } else if (data) {
+          // Mirror cloud state to local storage so device stays synchronized
+          saveLocalMedia(data as UserMediaRecord[]);
+          return data as UserMediaRecord[];
+        }
       }
+    } catch (err) {
+      console.error('Error fetching media list from Supabase:', err);
     }
   }
   return getLocalMedia();
@@ -73,29 +82,7 @@ export async function saveUserMedia(
   const supabase = getSupabaseClient();
   const now = new Date().toISOString();
 
-  if (supabase) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const payload = {
-        ...item,
-        user_id: user.id,
-        updated_at: now,
-      };
-
-      const { data, error } = await supabase
-        .from('user_media')
-        .upsert(payload, { onConflict: 'user_id,tmdb_id,media_type' })
-        .select()
-        .single();
-
-      if (!error && data) {
-        window.dispatchEvent(new Event('bingelog_storage_changed'));
-        return data as UserMediaRecord;
-      }
-    }
-  }
-
-  // Local storage fallback
+  // 1. Optimistically update local storage first so UI reacts immediately
   const current = getLocalMedia();
   const existingIdx = current.findIndex(
     (m) => m.tmdb_id === item.tmdb_id && m.media_type === item.media_type
@@ -112,44 +99,123 @@ export async function saveUserMedia(
   } else {
     current.unshift(updatedRecord);
   }
-
   saveLocalMedia(current);
+
+  // 2. Persist to Supabase if logged in
+  if (supabase) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const payload = {
+          ...item,
+          user_id: user.id,
+          updated_at: now,
+        };
+
+        const { data, error } = await supabase
+          .from('user_media')
+          .upsert(payload, { onConflict: 'user_id,tmdb_id,media_type' })
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Supabase saveUserMedia error:', error);
+        } else if (data) {
+          const refreshed = getLocalMedia();
+          const rIdx = refreshed.findIndex(
+            (m) => m.tmdb_id === item.tmdb_id && m.media_type === item.media_type
+          );
+          if (rIdx >= 0) {
+            refreshed[rIdx] = data as UserMediaRecord;
+            saveLocalMedia(refreshed);
+          }
+          return data as UserMediaRecord;
+        }
+      }
+    } catch (err) {
+      console.error('Error saving media item to Supabase:', err);
+    }
+  }
+
   return updatedRecord;
 }
 
 export async function removeUserMedia(tmdbId: number, mediaType: MediaType): Promise<void> {
   const supabase = getSupabaseClient();
-  if (supabase) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase
-        .from('user_media')
-        .delete()
-        .match({ user_id: user.id, tmdb_id: tmdbId, media_type: mediaType });
-      window.dispatchEvent(new Event('bingelog_storage_changed'));
-      return;
-    }
-  }
 
+  // 1. Always remove from local storage immediately
   const current = getLocalMedia().filter(
     (m) => !(m.tmdb_id === tmdbId && m.media_type === mediaType)
   );
   saveLocalMedia(current);
+
+  // 2. Also remove from Supabase if logged in
+  if (supabase) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { error } = await supabase
+          .from('user_media')
+          .delete()
+          .match({ user_id: user.id, tmdb_id: tmdbId, media_type: mediaType });
+
+        if (error) {
+          console.error('Supabase removeUserMedia error:', error);
+        }
+
+        // If it's a TV series, also clean up watched episodes in Supabase
+        if (mediaType === 'tv') {
+          await supabase
+            .from('watched_episodes')
+            .delete()
+            .match({ user_id: user.id, tmdb_id: tmdbId });
+        }
+      }
+    } catch (err) {
+      console.error('Error removing media from Supabase:', err);
+    }
+  }
+
+  // Also remove local watched episodes if TV
+  if (mediaType === 'tv') {
+    const localEps = getLocalWatchedEpisodes().filter((ep) => ep.tmdb_id !== tmdbId);
+    saveLocalWatchedEpisodes(localEps);
+  }
+
+  window.dispatchEvent(new Event('bingelog_storage_changed'));
 }
 
 export async function getWatchedEpisodes(tmdbId: number): Promise<{ season_number: number; episode_number: number }[]> {
   const supabase = getSupabaseClient();
   if (supabase) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data, error } = await supabase
-        .from('watched_episodes')
-        .select('season_number, episode_number')
-        .eq('user_id', user.id)
-        .eq('tmdb_id', tmdbId);
-      if (!error && data) {
-        return data;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data, error } = await supabase
+          .from('watched_episodes')
+          .select('season_number, episode_number')
+          .eq('user_id', user.id)
+          .eq('tmdb_id', tmdbId);
+
+        if (error) {
+          console.error('Supabase getWatchedEpisodes error:', error);
+        } else if (data) {
+          // Merge into local cache for offline/instant speed
+          let local = getLocalWatchedEpisodes().filter((ep) => ep.tmdb_id !== tmdbId);
+          data.forEach((d) => {
+            local.push({
+              tmdb_id: tmdbId,
+              season_number: d.season_number,
+              episode_number: d.episode_number,
+              watched_at: new Date().toISOString(),
+            });
+          });
+          saveLocalWatchedEpisodes(local);
+          return data;
+        }
       }
+    } catch (err) {
+      console.error('Error fetching watched episodes from Supabase:', err);
     }
   }
 
@@ -166,35 +232,10 @@ export async function toggleEpisodeWatched(
 ): Promise<boolean> {
   const supabase = getSupabaseClient();
   const isWatched = await isEpisodeWatched(tmdbId, seasonNumber, episodeNumber);
+  const nextWatched = !isWatched;
+  const now = new Date().toISOString();
 
-  if (supabase) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      if (isWatched) {
-        await supabase
-          .from('watched_episodes')
-          .delete()
-          .match({
-            user_id: user.id,
-            tmdb_id: tmdbId,
-            season_number: seasonNumber,
-            episode_number: episodeNumber,
-          });
-      } else {
-        await supabase.from('watched_episodes').insert({
-          user_id: user.id,
-          tmdb_id: tmdbId,
-          season_number: seasonNumber,
-          episode_number: episodeNumber,
-          watched_at: new Date().toISOString(),
-        });
-      }
-      window.dispatchEvent(new Event('bingelog_storage_changed'));
-      return !isWatched;
-    }
-  }
-
-  // Local storage fallback
+  // 1. Optimistically update local storage
   let all = getLocalWatchedEpisodes();
   if (isWatched) {
     all = all.filter(
@@ -210,12 +251,45 @@ export async function toggleEpisodeWatched(
       tmdb_id: tmdbId,
       season_number: seasonNumber,
       episode_number: episodeNumber,
-      watched_at: new Date().toISOString(),
+      watched_at: now,
     });
   }
-
   saveLocalWatchedEpisodes(all);
-  return !isWatched;
+
+  // 2. Persist to Supabase if logged in
+  if (supabase) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        if (isWatched) {
+          const { error } = await supabase
+            .from('watched_episodes')
+            .delete()
+            .match({
+              user_id: user.id,
+              tmdb_id: tmdbId,
+              season_number: seasonNumber,
+              episode_number: episodeNumber,
+            });
+          if (error) console.error('Supabase delete watched_episodes error:', error);
+        } else {
+          const { error } = await supabase.from('watched_episodes').upsert({
+            user_id: user.id,
+            tmdb_id: tmdbId,
+            season_number: seasonNumber,
+            episode_number: episodeNumber,
+            watched_at: now,
+          }, { onConflict: 'user_id,tmdb_id,season_number,episode_number' });
+          if (error) console.error('Supabase insert watched_episodes error:', error);
+        }
+      }
+    } catch (err) {
+      console.error('Error toggling episode in Supabase:', err);
+    }
+  }
+
+  window.dispatchEvent(new Event('bingelog_storage_changed'));
+  return nextWatched;
 }
 
 export async function isEpisodeWatched(
@@ -236,48 +310,54 @@ export async function markSeasonWatched(
   markAll: boolean
 ): Promise<void> {
   const supabase = getSupabaseClient();
+  const now = new Date().toISOString();
 
-  if (supabase) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      if (markAll) {
-        const rows = Array.from({ length: episodeCount }, (_, i) => ({
-          user_id: user.id,
-          tmdb_id: tmdbId,
-          season_number: seasonNumber,
-          episode_number: i + 1,
-          watched_at: new Date().toISOString(),
-        }));
-        await supabase.from('watched_episodes').upsert(rows, {
-          onConflict: 'user_id,tmdb_id,season_number,episode_number',
-        });
-      } else {
-        await supabase
-          .from('watched_episodes')
-          .delete()
-          .match({ user_id: user.id, tmdb_id: tmdbId, season_number: seasonNumber });
-      }
-      window.dispatchEvent(new Event('bingelog_storage_changed'));
-      return;
-    }
-  }
-
+  // 1. Update local storage
   let all = getLocalWatchedEpisodes();
-  // Remove existing in season
   all = all.filter((ep) => !(ep.tmdb_id === tmdbId && ep.season_number === seasonNumber));
-
   if (markAll) {
     for (let i = 1; i <= episodeCount; i++) {
       all.push({
         tmdb_id: tmdbId,
         season_number: seasonNumber,
         episode_number: i,
-        watched_at: new Date().toISOString(),
+        watched_at: now,
       });
     }
   }
-
   saveLocalWatchedEpisodes(all);
+
+  // 2. Persist to Supabase
+  if (supabase) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        if (markAll) {
+          const rows = Array.from({ length: episodeCount }, (_, i) => ({
+            user_id: user.id,
+            tmdb_id: tmdbId,
+            season_number: seasonNumber,
+            episode_number: i + 1,
+            watched_at: now,
+          }));
+          const { error } = await supabase.from('watched_episodes').upsert(rows, {
+            onConflict: 'user_id,tmdb_id,season_number,episode_number',
+          });
+          if (error) console.error('Supabase markSeasonWatched error:', error);
+        } else {
+          const { error } = await supabase
+            .from('watched_episodes')
+            .delete()
+            .match({ user_id: user.id, tmdb_id: tmdbId, season_number: seasonNumber });
+          if (error) console.error('Supabase unmarkSeasonWatched error:', error);
+        }
+      }
+    } catch (err) {
+      console.error('Error updating season in Supabase:', err);
+    }
+  }
+
+  window.dispatchEvent(new Event('bingelog_storage_changed'));
 }
 
 export async function markNextEpisodeWatched(
@@ -292,37 +372,41 @@ export async function markNextEpisodeWatched(
 
   // 1. Mark episode in watched_episodes
   if (supabase) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from('watched_episodes').upsert({
-        user_id: user.id,
-        tmdb_id: tmdbId,
-        season_number: seasonNumber,
-        episode_number: episodeNumber,
-        watched_at: now,
-      }, { onConflict: 'user_id,tmdb_id,season_number,episode_number' });
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('watched_episodes').upsert({
+          user_id: user.id,
+          tmdb_id: tmdbId,
+          season_number: seasonNumber,
+          episode_number: episodeNumber,
+          watched_at: now,
+        }, { onConflict: 'user_id,tmdb_id,season_number,episode_number' });
 
-      // Determine next status
-      let nextStatus: WatchStatus = 'watching';
-      if (isEndedSeries && isLastEpisodeInShow) {
-        nextStatus = 'completed';
+        // Determine next status
+        let nextStatus: WatchStatus = 'watching';
+        if (isEndedSeries && isLastEpisodeInShow) {
+          nextStatus = 'completed';
+        }
+
+        // Update user_media current position
+        const { data } = await supabase
+          .from('user_media')
+          .update({
+            current_season: seasonNumber,
+            current_episode: episodeNumber,
+            status: nextStatus,
+            updated_at: now,
+          })
+          .match({ user_id: user.id, tmdb_id: tmdbId, media_type: 'tv' })
+          .select()
+          .single();
+
+        window.dispatchEvent(new Event('bingelog_storage_changed'));
+        return (data as UserMediaRecord) || null;
       }
-
-      // Update user_media current position
-      const { data } = await supabase
-        .from('user_media')
-        .update({
-          current_season: seasonNumber,
-          current_episode: episodeNumber,
-          status: nextStatus,
-          updated_at: now,
-        })
-        .match({ user_id: user.id, tmdb_id: tmdbId, media_type: 'tv' })
-        .select()
-        .single();
-
-      window.dispatchEvent(new Event('bingelog_storage_changed'));
-      return (data as UserMediaRecord) || null;
+    } catch (err) {
+      console.error('Error in markNextEpisodeWatched:', err);
     }
   }
 
@@ -371,15 +455,19 @@ export async function markNextEpisodeWatched(
 export async function getAllWatchedEpisodesCount(): Promise<number> {
   const supabase = getSupabaseClient();
   if (supabase) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { count, error } = await supabase
-        .from('watched_episodes')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id);
-      if (!error && count !== null) {
-        return count;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { count, error } = await supabase
+          .from('watched_episodes')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id);
+        if (!error && count !== null) {
+          return count;
+        }
       }
+    } catch (err) {
+      console.error('Error in getAllWatchedEpisodesCount:', err);
     }
   }
 
@@ -427,6 +515,18 @@ export async function syncLocalDataToSupabase(userId: string): Promise<void> {
         onConflict: 'user_id,tmdb_id,season_number,episode_number',
       });
     }
+
+    // Now pull full cloud library into local storage so devices match completely
+    const { data: cloudMedia } = await supabase
+      .from('user_media')
+      .select('*')
+      .order('updated_at', { ascending: false });
+
+    if (cloudMedia && cloudMedia.length > 0) {
+      saveLocalMedia(cloudMedia as UserMediaRecord[]);
+    }
+
+    window.dispatchEvent(new Event('bingelog_storage_changed'));
   } catch (err) {
     console.error('Error syncing local data to Supabase:', err);
   }

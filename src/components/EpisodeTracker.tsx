@@ -141,22 +141,39 @@ export default function EpisodeTracker({
       return;
     }
 
-    const existing = await getUserMediaItem(showId, 'tv');
-    await toggleEpisodeWatched(showId, seasonNum, episodeNum);
+    const key = `${seasonNum}-${episodeNum}`;
+    const willBeWatched = !watchedSet.has(key);
 
-    const isNowWatched = !watchedSet.has(`${seasonNum}-${episodeNum}`);
-    await saveUserMedia({
-      tmdb_id: showId,
-      media_type: 'tv',
-      title: showTitle,
-      poster_path: posterPath,
-      backdrop_path: backdropPath,
-      status: existing?.status || 'watching',
-      current_season: isNowWatched ? seasonNum : (existing?.current_season || seasonNum),
-      current_episode: isNowWatched ? episodeNum : (existing?.current_episode || 0),
+    // Optimistically update local watchedSet state immediately so checkbox is instant
+    setWatchedSet((prev) => {
+      const next = new Set(prev);
+      if (willBeWatched) {
+        next.add(key);
+      } else {
+        next.delete(key);
+      }
+      return next;
     });
 
-    await refreshWatched();
+    try {
+      const existing = await getUserMediaItem(showId, 'tv');
+      await toggleEpisodeWatched(showId, seasonNum, episodeNum);
+
+      await saveUserMedia({
+        tmdb_id: showId,
+        media_type: 'tv',
+        title: showTitle,
+        poster_path: posterPath,
+        backdrop_path: backdropPath,
+        status: existing?.status || 'watching',
+        current_season: willBeWatched ? seasonNum : (existing?.current_season || seasonNum),
+        current_episode: willBeWatched ? episodeNum : (existing?.current_episode || 0),
+      });
+    } catch (err) {
+      console.error('Error toggling episode:', err);
+    } finally {
+      await refreshWatched();
+    }
   };
 
   // Handle marking entire season
@@ -171,6 +188,21 @@ export default function EpisodeTracker({
     const allSeasonWatched = currentEpisodes.every((ep) =>
       watchedSet.has(`${currentSeason.season_number}-${ep.episode_number}`)
     );
+    const targetState = !allSeasonWatched;
+
+    // Optimistically update UI
+    setWatchedSet((prev) => {
+      const next = new Set(prev);
+      currentEpisodes.forEach((ep) => {
+        const key = `${currentSeason.season_number}-${ep.episode_number}`;
+        if (targetState) {
+          next.add(key);
+        } else {
+          next.delete(key);
+        }
+      });
+      return next;
+    });
 
     setLoading(true);
     try {
@@ -186,10 +218,12 @@ export default function EpisodeTracker({
         });
       }
 
-      await markSeasonWatched(showId, currentSeason.season_number, count, !allSeasonWatched);
-      await refreshWatched();
+      await markSeasonWatched(showId, currentSeason.season_number, count, targetState);
+    } catch (err) {
+      console.error('Error marking season:', err);
     } finally {
       setLoading(false);
+      await refreshWatched();
     }
   };
 
