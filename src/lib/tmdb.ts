@@ -136,7 +136,7 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
   const baseParams: Record<string, string | number> = {
     page,
     sort_by: sortBy,
-    'vote_count.gte': 10,
+    'vote_count.gte': sortBy === 'vote_average.desc' ? 100 : 15,
   };
 
   if (genreId) {
@@ -202,7 +202,7 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
   const tvs = (tvRes?.results || []).map((t) => normalizeMediaItem({ ...t, media_type: 'tv' }));
 
   const merged = [...movies, ...tvs].sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
-  return attachSelectedProvider(merged.slice(0, 20));
+  return attachSelectedProvider(merged.slice(0, 24));
 }
 
 export async function searchMedia(query: string): Promise<MediaItem[]> {

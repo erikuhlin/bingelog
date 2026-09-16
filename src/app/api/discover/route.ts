@@ -25,9 +25,10 @@ export async function GET(request: Request) {
 
   try {
     const results = await discoverMedia(filters);
-    return NextResponse.json({ results });
+    const hasMore = results.length >= 10;
+    return NextResponse.json({ results, page, hasMore });
   } catch (err: any) {
     console.error('Discover API route error:', err);
-    return NextResponse.json({ results: [], error: err?.message }, { status: 500 });
+    return NextResponse.json({ results: [], page: 1, hasMore: false, error: err?.message }, { status: 500 });
   }
 }

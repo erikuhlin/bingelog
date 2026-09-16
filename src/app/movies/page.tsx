@@ -9,11 +9,11 @@ export default async function MoviesPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-black text-white tracking-tight flex items-center gap-3">
-          <Film className="w-8 h-8 text-rose-500" />
+        <h1 className="text-3xl font-black text-[#ECE9E3] tracking-tight flex items-center gap-3">
+          <Film className="w-8 h-8 text-[#E9A23B]" />
           <span>Utforska Filmer</span>
         </h1>
-        <p className="text-sm text-zinc-400 mt-1">
+        <p className="text-sm text-[#8D97A8] mt-1">
           Hitta de mest populära långfilmerna och filtrera efter streamingtjänst.
         </p>
       </div>

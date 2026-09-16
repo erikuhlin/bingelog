@@ -1,9 +1,7 @@
 import React from 'react';
-import Link from 'next/link';
-import { Sparkles, Film, Tv, ArrowRight } from 'lucide-react';
 import { getTrendingMedia, getPopularMovies, getPopularShows } from '@/lib/tmdb';
-import HeroBanner from '@/components/HeroBanner';
-import MediaCard from '@/components/MediaCard';
+import HeroCarousel from '@/components/HeroCarousel';
+import HorizontalMediaRow from '@/components/HorizontalMediaRow';
 import ContinueWatchingSection from '@/components/ContinueWatchingSection';
 import UserWelcomeBanner from '@/components/UserWelcomeBanner';
 import ExploreFeed from '@/components/ExploreFeed';
@@ -13,72 +11,42 @@ export default async function HomePage() {
   const popularMovies = await getPopularMovies();
   const popularShows = await getPopularShows();
 
-  const featuredItem = trending[0];
-  const trendingList = trending.slice(1, 13);
+  // Top 5 trending items for hero carousel
+  const carouselItems = trending.slice(0, 5);
+  // Remaining trending items for the explore feed
+  const trendingList = trending.slice(5);
 
   return (
     <div>
       {/* Personalized Welcome Banner for Logged In User */}
       <UserWelcomeBanner />
 
-      {/* Featured Hero Banner */}
-      {featuredItem && <HeroBanner item={featuredItem} />}
+      {/* Hero Carousel with top trending titles */}
+      {carouselItems.length > 0 && <HeroCarousel items={carouselItems} />}
 
-      {/* Continue Watching Section (Active Series) */}
+      {/* Continue Watching Section (Active Series for authenticated user) */}
       <ContinueWatchingSection />
 
-      {/* Dynamic Explore & Streaming Filter Feed */}
-      <ExploreFeed initialTrending={trendingList} />
+      {/* Horizontal Scroll Row for Popular Movies */}
+      <HorizontalMediaRow
+        title="Populära filmer just nu"
+        iconType="film"
+        iconColor="text-[#E9A23B]"
+        items={popularMovies}
+        moreLink={{ href: '/movies', label: 'Visa fler filmer' }}
+      />
 
-      {/* Popular Movies Section */}
-      <section className="mb-14">
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-2">
-            <Film className="w-5 h-5 text-rose-500" />
-            <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight">
-              Populära filmer
-            </h2>
-          </div>
-          <Link
-            href="/movies"
-            className="text-xs font-semibold text-rose-400 hover:text-rose-300 flex items-center gap-1 transition-colors"
-          >
-            <span>Visa fler filmer</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
+      {/* Horizontal Scroll Row for Popular Shows */}
+      <HorizontalMediaRow
+        title="Populära serier just nu"
+        iconType="tv"
+        iconColor="text-[#6FA98A]"
+        items={popularShows}
+        moreLink={{ href: '/shows', label: 'Visa fler serier' }}
+      />
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4 md:gap-6">
-          {popularMovies.slice(0, 8).map((item) => (
-            <MediaCard key={`movie-${item.id}`} item={item} />
-          ))}
-        </div>
-      </section>
-
-      {/* Popular TV Shows Section */}
-      <section className="mb-14">
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-2">
-            <Tv className="w-5 h-5 text-sky-400" />
-            <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight">
-              Populära serier
-            </h2>
-          </div>
-          <Link
-            href="/shows"
-            className="text-xs font-semibold text-rose-400 hover:text-rose-300 flex items-center gap-1 transition-colors"
-          >
-            <span>Visa fler serier</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4 md:gap-6">
-          {popularShows.slice(0, 8).map((item) => (
-            <MediaCard key={`show-${item.id}`} item={item} />
-          ))}
-        </div>
-      </section>
+      {/* Dynamic Explore & Streaming Filter Feed with Pagination & Grid/List views */}
+      <ExploreFeed initialTrending={trendingList.length > 0 ? trendingList : trending} />
     </div>
   );
 }
