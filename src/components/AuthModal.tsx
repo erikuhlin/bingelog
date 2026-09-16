@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Lock, Mail, User, AlertCircle, CheckCircle2, Sparkles } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import BrandLogo from '@/components/BrandLogo';
 
 export default function AuthModal() {
   const { authModalOpen, authModalMode, closeAuthModal, openAuthModal, signIn, signUp } = useAuth();
@@ -62,7 +63,7 @@ export default function AuthModal() {
         if (res.error) {
           setError(res.error);
         } else {
-          setSuccessMessage('Ditt konto har skapats! Du är nu inloggad och din historik synkas.');
+          setSuccessMessage('Ditt konto har skapats! Du är nu inloggad och ditt bibliotek synkas.');
         }
       }
     } finally {
@@ -73,39 +74,42 @@ export default function AuthModal() {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div
-        className="relative w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden p-6 md:p-8 animate-in zoom-in-95 duration-200"
+        className="relative w-full max-w-md bg-[#171C25] border border-[#2B3443] rounded-3xl shadow-2xl shadow-black/80 overflow-hidden p-6 md:p-8 animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
         <button
+          type="button"
           onClick={closeAuthModal}
-          className="absolute top-5 right-5 p-2 rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
+          className="absolute top-5 right-5 p-2 rounded-xl text-[#8D97A8] hover:text-[#ECE9E3] hover:bg-[#1E2531] border border-transparent hover:border-[#2B3443] transition-colors cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* Header with Logo */}
         <div className="text-center mb-6">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-rose-600 to-amber-500 mx-auto flex items-center justify-center text-white font-black text-2xl shadow-xl shadow-rose-900/30 mb-3">
-            B
+          <div className="flex justify-center mb-3">
+            <BrandLogo size="lg" className="shadow-lg shadow-[#E9A23B]/10" />
           </div>
-          <h2 className="text-2xl font-bold text-white tracking-tight">
+          <h2 className="text-2xl font-black text-[#ECE9E3] tracking-tight">
             {isLogin ? 'Välkommen tillbaka' : 'Skapa ditt konto'}
           </h2>
-          <p className="text-xs text-zinc-400 mt-1 max-w-xs mx-auto">
+          <p className="text-xs text-[#8D97A8] mt-1 max-w-xs mx-auto leading-relaxed">
             {isLogin
-              ? 'Logga in för att komma åt dina sparade titlar och avsnitt.'
-              : 'Spara din historik och kom åt dina listor var du än loggar in.'}
+              ? 'Logga in för att komma åt ditt personliga bibliotek och sedda avsnitt.'
+              : 'Spara din historik och få full tillgång till ditt bibliotek på alla enheter.'}
           </p>
         </div>
 
         {/* Mode Switch Tabs */}
-        <div className="flex bg-zinc-950 p-1 rounded-xl mb-6 border border-zinc-800">
+        <div className="flex bg-[#0F1218] p-1 rounded-xl mb-6 border border-[#2B3443]">
           <button
             type="button"
             onClick={() => openAuthModal('login')}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
-              isLogin ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              isLogin
+                ? 'bg-[#1E2531] text-[#ECE9E3] border border-[#2B3443] shadow-sm'
+                : 'text-[#8D97A8] hover:text-[#ECE9E3]'
             }`}
           >
             Logga in
@@ -113,8 +117,10 @@ export default function AuthModal() {
           <button
             type="button"
             onClick={() => openAuthModal('signup')}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
-              !isLogin ? 'bg-rose-600 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              !isLogin
+                ? 'bg-[#E9A23B] text-[#0F1218] shadow-sm'
+                : 'text-[#8D97A8] hover:text-[#ECE9E3]'
             }`}
           >
             Skapa konto
@@ -123,15 +129,15 @@ export default function AuthModal() {
 
         {/* Alerts */}
         {error && (
-          <div className="mb-4 p-3 rounded-xl bg-rose-950/50 border border-rose-800/60 flex items-start gap-2.5 text-xs text-rose-300">
-            <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5" />
+          <div className="mb-4 p-3 rounded-xl bg-red-950/40 border border-red-800/60 flex items-start gap-2.5 text-xs text-red-300">
+            <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
             <span>{error}</span>
           </div>
         )}
 
         {successMessage && (
-          <div className="mb-4 p-3 rounded-xl bg-emerald-950/50 border border-emerald-800/60 flex items-start gap-2.5 text-xs text-emerald-300">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+          <div className="mb-4 p-3 rounded-xl bg-[#6FA98A]/15 border border-[#6FA98A]/30 flex items-start gap-2.5 text-xs text-[#6FA98A]">
+            <CheckCircle2 className="w-4 h-4 text-[#6FA98A] flex-shrink-0 mt-0.5" />
             <span>{successMessage}</span>
           </div>
         )}
@@ -140,52 +146,52 @@ export default function AuthModal() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
             <div>
-              <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+              <label className="block text-xs font-semibold text-[#ECE9E3] mb-1.5">
                 Visningsnamn / Användarnamn
               </label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8D97A8]" />
                 <input
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="t.ex. Filmälskaren"
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-9 pr-4 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-rose-500"
+                  className="w-full bg-[#0F1218] border border-[#2B3443] rounded-xl pl-9 pr-4 py-2.5 text-sm text-[#ECE9E3] placeholder-[#8D97A8]/60 focus:outline-none focus:border-[#E9A23B] focus:ring-1 focus:ring-[#E9A23B] transition-colors"
                 />
               </div>
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+            <label className="block text-xs font-semibold text-[#ECE9E3] mb-1.5">
               E-postadress
             </label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8D97A8]" />
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="namn@exempel.se"
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-9 pr-4 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-rose-500"
+                className="w-full bg-[#0F1218] border border-[#2B3443] rounded-xl pl-9 pr-4 py-2.5 text-sm text-[#ECE9E3] placeholder-[#8D97A8]/60 focus:outline-none focus:border-[#E9A23B] focus:ring-1 focus:ring-[#E9A23B] transition-colors"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+            <label className="block text-xs font-semibold text-[#ECE9E3] mb-1.5">
               Lösenord
             </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8D97A8]" />
               <input
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Minst 6 tecken"
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-9 pr-4 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-rose-500"
+                className="w-full bg-[#0F1218] border border-[#2B3443] rounded-xl pl-9 pr-4 py-2.5 text-sm text-[#ECE9E3] placeholder-[#8D97A8]/60 focus:outline-none focus:border-[#E9A23B] focus:ring-1 focus:ring-[#E9A23B] transition-colors"
               />
             </div>
           </div>
@@ -193,7 +199,7 @@ export default function AuthModal() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-2 py-3 rounded-xl bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-bold text-sm shadow-lg shadow-rose-900/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full mt-2 py-3 rounded-xl bg-[#E9A23B] hover:bg-[#F2B04E] text-[#0F1218] font-bold text-sm shadow-lg shadow-[#E9A23B]/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer active:scale-95"
           >
             {loading ? (
               <span>Vänligen vänta...</span>
@@ -208,14 +214,14 @@ export default function AuthModal() {
           </button>
         </form>
 
-        <div className="mt-6 text-center text-xs text-zinc-500">
+        <div className="mt-6 text-center text-xs text-[#8D97A8]">
           {isLogin ? (
             <p>
               Har du inget konto än?{' '}
               <button
                 type="button"
                 onClick={() => openAuthModal('signup')}
-                className="text-rose-400 hover:underline font-semibold"
+                className="text-[#E9A23B] hover:underline font-semibold cursor-pointer"
               >
                 Skapa ett här
               </button>
@@ -226,7 +232,7 @@ export default function AuthModal() {
               <button
                 type="button"
                 onClick={() => openAuthModal('login')}
-                className="text-rose-400 hover:underline font-semibold"
+                className="text-[#E9A23B] hover:underline font-semibold cursor-pointer"
               >
                 Logga in
               </button>

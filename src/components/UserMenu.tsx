@@ -79,7 +79,7 @@ export default function UserMenu() {
               setIsOpen(false);
               signOut();
             }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-rose-400 hover:bg-rose-950/30 transition-colors text-left"
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-red-400 hover:bg-red-950/30 transition-colors text-left cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
             <span>Logga ut</span>

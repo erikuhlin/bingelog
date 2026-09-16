@@ -29,22 +29,23 @@ export default function TrailerModal({ video, isOpen, onClose }: TrailerModalPro
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-4xl bg-zinc-950 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200"
+        className="relative w-full max-w-4xl bg-[#171C25] border border-[#2B3443] rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header bar */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-zinc-800 bg-zinc-900/80">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#2B3443] bg-[#171C25]">
           <div className="flex items-center gap-2">
-            <div className="p-1 rounded-md bg-rose-600/20 text-rose-500">
+            <div className="p-1.5 rounded-lg bg-[#E9A23B]/15 text-[#E9A23B]">
               <Play className="w-3.5 h-3.5 fill-current" />
             </div>
-            <span className="text-xs md:text-sm font-bold text-zinc-200 truncate">
+            <span className="text-xs md:text-sm font-bold text-[#ECE9E3] truncate">
               {video.name || 'Officiell Trailer'}
             </span>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+            className="p-1.5 rounded-xl text-[#8D97A8] hover:text-[#ECE9E3] hover:bg-[#1E2531] transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
