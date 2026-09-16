@@ -20,17 +20,17 @@ function ProviderItem({ p }: { p: WatchProvider }) {
   return (
     <div
       title={p.provider_name}
-      className="group flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#171C25] border border-[#2B3443] hover:border-[#E9A23B]/60 transition-all shadow-sm"
+      className="group flex items-center gap-2.5 px-3 py-2 rounded-xl bg-[#1E2531] border border-[#2B3443] hover:border-[#E9A23B]/60 transition-all shadow-sm"
     >
       {imgErr || !p.logo_path ? (
-        <div className="w-6 h-6 rounded-lg bg-[#1E2531] text-[#ECE9E3] font-bold text-xs flex items-center justify-center">
+        <div className="w-7 h-7 rounded-lg bg-[#0F1218] text-[#ECE9E3] font-bold text-xs flex items-center justify-center border border-[#2B3443]">
           {p.provider_name.slice(0, 1)}
         </div>
       ) : (
         <img
           src={getImageUrl(p.logo_path, 'w300')}
           alt={p.provider_name}
-          className="w-6 h-6 rounded-lg object-cover"
+          className="w-7 h-7 rounded-lg object-cover shadow-sm"
           onError={() => setImgErr(true)}
         />
       )}
