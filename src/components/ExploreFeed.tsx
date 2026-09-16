@@ -99,11 +99,11 @@ export default function ExploreFeed({
       {/* Streaming Provider Quick Tabs */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+          <span className="text-xs font-bold text-[#8D97A8] uppercase tracking-wider">
             Filtrera efter streamingtjänst
           </span>
           {selectedProviderName && (
-            <span className="text-xs font-semibold text-rose-400">
+            <span className="text-xs font-semibold text-[#E9A23B]">
               Visar titlar på {selectedProviderName}
             </span>
           )}
@@ -132,8 +132,8 @@ export default function ExploreFeed({
       {/* Title & Results count */}
       <div className="flex items-center justify-between pt-2">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-rose-500" />
-          <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight">
+          <Sparkles className="w-5 h-5 text-[#E9A23B]" />
+          <h2 className="text-xl md:text-2xl font-bold text-[#ECE9E3] tracking-tight">
             {selectedProviderName
               ? `Populärt på ${selectedProviderName}`
               : isFiltered
@@ -142,7 +142,7 @@ export default function ExploreFeed({
           </h2>
         </div>
         {isFiltered && (
-          <span className="text-xs text-zinc-400 font-medium">
+          <span className="text-xs text-[#8D97A8] font-medium">
             {items.length} titlar hittades
           </span>
         )}
@@ -150,21 +150,21 @@ export default function ExploreFeed({
 
       {/* Content Grid / Loading */}
       {loading ? (
-        <div className="py-24 flex flex-col items-center justify-center gap-3 text-zinc-400">
-          <Loader2 className="w-8 h-8 animate-spin text-rose-500" />
+        <div className="py-24 flex flex-col items-center justify-center gap-3 text-[#8D97A8]">
+          <Loader2 className="w-8 h-8 animate-spin text-[#E9A23B]" />
           <span className="text-xs font-medium">Hämtar titlar från streamingtjänster...</span>
         </div>
       ) : items.length === 0 ? (
-        <div className="py-20 text-center border border-dashed border-zinc-800 rounded-3xl bg-zinc-900/30">
-          <Frown className="w-10 h-10 text-zinc-600 mx-auto mb-3" />
-          <h3 className="text-base font-bold text-zinc-200">Inga titlar matchade dina filter</h3>
-          <p className="text-xs text-zinc-500 max-w-sm mx-auto mt-1">
+        <div className="py-20 text-center border border-dashed border-[#2B3443] rounded-3xl bg-[#171C25]/40">
+          <Frown className="w-10 h-10 text-[#8D97A8] mx-auto mb-3" />
+          <h3 className="text-base font-bold text-[#ECE9E3]">Inga titlar matchade dina filter</h3>
+          <p className="text-xs text-[#8D97A8] max-w-sm mx-auto mt-1">
             Testa att sänka betyget eller byta streamingtjänst för att se fler resultat.
           </p>
           <button
             type="button"
             onClick={handleReset}
-            className="mt-4 px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold transition-colors"
+            className="mt-4 px-4 py-2 rounded-xl bg-[#1E2531] hover:bg-[#2B3443] text-[#ECE9E3] text-xs font-semibold transition-colors"
           >
             Återställ filter
           </button>

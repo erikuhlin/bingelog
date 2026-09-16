@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Bookmark, Eye, CheckCircle2, XCircle, Trash2, Star } from 'lucide-react';
-import { WatchStatus, MediaType, UserMediaRecord } from '@/lib/types';
+import { WatchStatus, MediaType } from '@/lib/types';
 import { getUserMediaItem, saveUserMedia, removeUserMedia } from '@/lib/storage';
 
 interface StatusSelectorProps {
@@ -99,26 +99,26 @@ export default function StatusSelector({
     watchlist: {
       label: 'Vill se',
       icon: Bookmark,
-      color: 'bg-blue-900/30 text-blue-400',
-      border: 'border-blue-800/40',
+      color: 'bg-[#1E2531] text-[#ECE9E3]',
+      border: 'border-[#2B3443]',
     },
     watching: {
       label: 'Tittar på',
       icon: Eye,
-      color: 'bg-amber-900/30 text-amber-400',
-      border: 'border-amber-800/40',
+      color: 'bg-[#E9A23B]/15 text-[#E9A23B]',
+      border: 'border-[#E9A23B]/40',
     },
     completed: {
       label: 'Har sett',
       icon: CheckCircle2,
-      color: 'bg-emerald-900/30 text-emerald-400',
-      border: 'border-emerald-800/40',
+      color: 'bg-[#6FA98A]/15 text-[#6FA98A]',
+      border: 'border-[#6FA98A]/40',
     },
     dropped: {
       label: 'Avbruten',
       icon: XCircle,
-      color: 'bg-zinc-800 text-zinc-400',
-      border: 'border-zinc-700',
+      color: 'bg-[#171C25] text-[#8D97A8]',
+      border: 'border-[#2B3443]',
     },
   };
 
@@ -138,9 +138,9 @@ export default function StatusSelector({
           <button
             type="button"
             onClick={() => setIsOpen(!isOpen)}
-            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition-all shadow-sm"
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#171C25] hover:bg-[#1E2531] text-[#ECE9E3] border border-[#2B3443] transition-all shadow-sm hover:border-[#E9A23B]/40"
           >
-            <Bookmark className="w-3.5 h-3.5 text-rose-500" />
+            <Bookmark className="w-3.5 h-3.5 text-[#E9A23B]" />
             <span>Lägg till</span>
           </button>
         )}
@@ -148,8 +148,8 @@ export default function StatusSelector({
 
       {/* Dropdown menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95">
-          <div className="text-[11px] font-semibold text-zinc-400 px-2.5 py-1 uppercase tracking-wider">
+        <div className="absolute right-0 mt-2 w-48 bg-[#171C25] border border-[#2B3443] rounded-2xl shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95">
+          <div className="text-[11px] font-semibold text-[#8D97A8] px-2.5 py-1 uppercase tracking-wider">
             Välj status
           </div>
           {(['watchlist', 'watching', 'completed', 'dropped'] as WatchStatus[]).map((status) => {
@@ -163,7 +163,7 @@ export default function StatusSelector({
                 type="button"
                 onClick={() => handleStatusChange(status)}
                 className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  isSelected ? `${config.color} font-semibold` : 'text-zinc-300 hover:bg-zinc-800'
+                  isSelected ? `${config.color} font-semibold` : 'text-[#ECE9E3] hover:bg-[#1E2531]'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -174,11 +174,11 @@ export default function StatusSelector({
 
           {currentStatus && (
             <>
-              <div className="my-1 border-t border-zinc-800" />
+              <div className="my-1 border-t border-[#2B3443]" />
               <button
                 type="button"
                 onClick={handleRemove}
-                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-rose-400 hover:bg-rose-950/40 transition-colors"
+                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-rose-400 hover:bg-rose-950/30 transition-colors"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Ta bort från listan</span>
@@ -191,7 +191,7 @@ export default function StatusSelector({
       {/* Optional Rating Stars if in detail page */}
       {showRating && currentStatus && (
         <div className="mt-3 flex items-center gap-1">
-          <span className="text-xs text-zinc-400 mr-1.5">Ditt betyg:</span>
+          <span className="text-xs text-[#8D97A8] mr-1.5">Ditt betyg:</span>
           {[1, 2, 3, 4, 5].map((star) => (
             <button
               key={star}
@@ -202,14 +202,14 @@ export default function StatusSelector({
               <Star
                 className={`w-4 h-4 ${
                   userRating && userRating >= star * 2
-                    ? 'text-amber-400 fill-amber-400'
-                    : 'text-zinc-600'
+                    ? 'text-[#E9A23B] fill-[#E9A23B]'
+                    : 'text-[#2B3443]'
                 }`}
               />
             </button>
           ))}
           {userRating && (
-            <span className="text-xs font-bold text-amber-400 ml-1">{userRating}/10</span>
+            <span className="text-xs font-bold text-[#E9A23B] ml-1">{userRating}/10</span>
           )}
         </div>
       )}

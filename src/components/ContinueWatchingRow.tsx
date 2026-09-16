@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Play, Check, ChevronRight, Sparkles, Calendar } from 'lucide-react';
+import { Play, Check, Sparkles, Calendar } from 'lucide-react';
 import { UserMediaRecord } from '@/lib/types';
 import { getImageUrl } from '@/lib/tmdb';
 
@@ -38,17 +38,17 @@ export default function ContinueWatchingRow({
   return (
     <section className="mb-10" aria-label="Fortsätt titta">
       <div className="flex items-center gap-2 mb-3.5">
-        <div className="p-1.5 rounded-lg bg-rose-600/20 text-rose-500">
-          <Play className="w-4 h-4 fill-rose-500" />
+        <div className="p-1.5 rounded-xl bg-[#E9A23B]/15 text-[#E9A23B]">
+          <Play className="w-4 h-4 fill-current" />
         </div>
-        <h2 className="text-xl font-bold text-white tracking-tight">Fortsätt titta</h2>
-        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400">
+        <h2 className="text-xl font-bold text-[#ECE9E3] tracking-tight">Fortsätt titta</h2>
+        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[#1E2531] text-[#8D97A8] border border-[#2B3443]">
           {watchingShows.length}
         </span>
       </div>
 
       {/* Horizontal scroll row */}
-      <div className="flex items-stretch gap-4 overflow-x-auto pb-3 pt-1 scrollbar-thin scrollbar-thumb-zinc-800 focus:outline-none">
+      <div className="flex items-stretch gap-4 overflow-x-auto pb-3 pt-1 scrollbar-thin scrollbar-thumb-[#2B3443] focus:outline-none">
         {watchingShows.map((show) => {
           const meta = seriesMeta[show.tmdb_id];
           const curSeason = show.current_season || 1;
@@ -71,13 +71,13 @@ export default function ContinueWatchingRow({
           return (
             <div
               key={`continue-${show.tmdb_id}`}
-              className="flex-shrink-0 w-80 sm:w-96 p-3.5 rounded-2xl bg-zinc-900/90 border border-zinc-800/90 hover:border-zinc-700/80 transition-all flex flex-col justify-between shadow-lg"
+              className="flex-shrink-0 w-80 sm:w-96 p-3.5 rounded-2xl bg-[#171C25] border border-[#2B3443] hover:border-[#E9A23B]/50 transition-all flex flex-col justify-between shadow-lg"
             >
               {/* Top part: Poster & Title info */}
               <div className="flex items-start gap-3.5">
                 <Link
                   href={`/tv/${show.tmdb_id}`}
-                  className="w-[74px] aspect-[2/3] rounded-xl overflow-hidden bg-zinc-950 flex-shrink-0 border border-zinc-800 hover:opacity-90 transition-opacity"
+                  className="w-[74px] aspect-[2/3] rounded-xl overflow-hidden bg-[#0F1218] flex-shrink-0 border border-[#2B3443] hover:opacity-90 transition-opacity"
                 >
                   <img
                     src={getImageUrl(show.poster_path, 'w300')}
@@ -90,27 +90,27 @@ export default function ContinueWatchingRow({
                 <div className="flex-1 min-w-0">
                   <Link
                     href={`/tv/${show.tmdb_id}`}
-                    className="font-bold text-sm text-white hover:text-rose-400 transition-colors line-clamp-1"
+                    className="font-bold text-sm text-[#ECE9E3] hover:text-[#E9A23B] transition-colors line-clamp-1"
                     title={show.title}
                   >
                     {show.title}
                   </Link>
 
                   {/* Position text */}
-                  <p className="text-xs font-semibold text-rose-400 mt-0.5">
+                  <p className="text-xs font-semibold text-[#E9A23B] mt-0.5">
                     {curEpisode === 0
                       ? `Säsong ${curSeason}`
                       : `Säsong ${curSeason}, avsnitt ${curEpisode}`}
                   </p>
 
-                  {/* Filmstrip visualization (decorative for screen readers) */}
+                  {/* Filmstrip visualization matching the exact brand color steps */}
                   <div
                     aria-hidden="true"
                     className="flex items-center gap-1 my-2 py-0.5 overflow-x-hidden"
                   >
                     {Array.from({ length: Math.min(totalInSeason, 24) }, (_, idx) => {
                       const epNum = idx + 1;
-                      const isSeen = epNum <= curEpisode;
+                      const isSeen = epNum < curEpisode;
                       const isCurrent = epNum === curEpisode;
 
                       return (
@@ -118,10 +118,10 @@ export default function ContinueWatchingRow({
                           key={`strip-${epNum}`}
                           className={`rounded-full transition-all duration-300 ${
                             isCurrent
-                              ? 'w-2 h-3.5 bg-rose-500 shadow-sm shadow-rose-500/50'
+                              ? 'w-2 h-3.5 bg-[#E9A23B] shadow-sm shadow-[#E9A23B]/50' // --amber (primär accent)
                               : isSeen
-                              ? 'w-1.5 h-2 bg-rose-800/70'
-                              : 'w-1.5 h-1.5 bg-zinc-800'
+                              ? 'w-1.5 h-2 bg-[#7A5A21]' // --amber-dim (sedda avsnitt)
+                              : 'w-1.5 h-1.5 bg-[#2B3443]' // --line (osedda staplar)
                           }`}
                         />
                       );
@@ -129,15 +129,15 @@ export default function ContinueWatchingRow({
                   </div>
 
                   {/* Remaining episodes or Next season indicator */}
-                  <div className="text-[11px] text-zinc-400">
+                  <div className="text-[11px] text-[#8D97A8]">
                     {isSeasonComplete ? (
                       meta?.next_air_date ? (
-                        <span className="flex items-center gap-1 text-sky-400">
+                        <span className="flex items-center gap-1 text-[#6FA98A]">
                           <Calendar className="w-3 h-3" />
                           <span>Nästa säsong: {meta.next_air_date}</span>
                         </span>
                       ) : (
-                        <span className="text-zinc-500 italic">Väntar på nästa säsong</span>
+                        <span className="text-[#8D97A8] italic">Väntar på nästa säsong</span>
                       )
                     ) : (
                       <span>{epsLeft} {epsLeft === 1 ? 'avsnitt kvar' : 'avsnitt kvar i säsongen'}</span>
@@ -147,12 +147,12 @@ export default function ContinueWatchingRow({
               </div>
 
               {/* Bottom part: Action button */}
-              <div className="mt-3 pt-3 border-t border-zinc-800/60">
+              <div className="mt-3 pt-3 border-t border-[#2B3443]/60">
                 {isSeasonComplete ? (
                   <button
                     type="button"
                     disabled
-                    className="w-full py-2 px-3 rounded-xl bg-zinc-800/60 text-zinc-500 text-xs font-semibold cursor-not-allowed text-center border border-zinc-800"
+                    className="w-full py-2 px-3 rounded-xl bg-[#1E2531] text-[#8D97A8] text-xs font-semibold cursor-not-allowed text-center border border-[#2B3443]"
                   >
                     Säsongen klar
                   </button>
@@ -161,7 +161,7 @@ export default function ContinueWatchingRow({
                     type="button"
                     onClick={handleActionClick}
                     disabled={isUpdating}
-                    className="w-full py-2 px-3 rounded-xl bg-rose-600 hover:bg-rose-500 active:scale-[0.98] text-white text-xs font-bold transition-all shadow-md shadow-rose-950/40 flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:outline-none disabled:opacity-50"
+                    className="w-full py-2 px-3 rounded-xl bg-[#E9A23B] hover:bg-[#F2B04E] active:scale-[0.98] text-[#0F1218] text-xs font-bold transition-all shadow-md shadow-[#E9A23B]/20 flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-[#E9A23B] focus-visible:outline-none disabled:opacity-50"
                   >
                     <Check className="w-3.5 h-3.5 stroke-[2.5]" />
                     <span>

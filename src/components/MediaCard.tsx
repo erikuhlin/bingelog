@@ -18,7 +18,7 @@ function ProviderMiniBadge({ logoPath, name }: { logoPath: string; name: string 
     return (
       <div
         title={name}
-        className="w-5 h-5 sm:w-6 sm:h-6 rounded-md bg-zinc-800 border border-zinc-700 text-white font-black text-[9px] flex items-center justify-center flex-shrink-0 shadow-md"
+        className="w-5 h-5 sm:w-6 sm:h-6 rounded-md bg-[#1E2531] border border-[#2B3443] text-[#ECE9E3] font-black text-[9px] flex items-center justify-center flex-shrink-0 shadow-md"
       >
         {name.slice(0, 1)}
       </div>
@@ -28,7 +28,7 @@ function ProviderMiniBadge({ logoPath, name }: { logoPath: string; name: string 
   return (
     <div
       title={name}
-      className="w-5 h-5 sm:w-6 sm:h-6 rounded-md overflow-hidden border border-zinc-900 shadow-lg bg-zinc-900 flex-shrink-0"
+      className="w-5 h-5 sm:w-6 sm:h-6 rounded-md overflow-hidden border border-[#0F1218] shadow-lg bg-[#0F1218] flex-shrink-0"
     >
       <img
         src={getImageUrl(logoPath, 'w300')}
@@ -45,9 +45,9 @@ export default function MediaCard({ item }: MediaCardProps) {
   const detailUrl = `/${item.media_type}/${item.id}`;
 
   return (
-    <div className="group relative flex flex-col bg-zinc-900/60 rounded-2xl border border-zinc-800/80 overflow-hidden hover:border-zinc-700 transition-all hover:shadow-xl hover:shadow-black/50">
+    <div className="group relative flex flex-col bg-[#171C25] rounded-2xl border border-[#2B3443] overflow-hidden hover:border-[#E9A23B]/60 transition-all hover:shadow-xl hover:shadow-black/50">
       {/* Poster wrapper */}
-      <div className="relative aspect-[2/3] w-full overflow-hidden bg-zinc-950">
+      <div className="relative aspect-[2/3] w-full overflow-hidden bg-[#0F1218]">
         <Link href={detailUrl} className="block w-full h-full">
           <img
             src={getImageUrl(item.poster_path, 'w500')}
@@ -59,10 +59,10 @@ export default function MediaCard({ item }: MediaCardProps) {
 
         {/* Badges on top of poster */}
         <div className="absolute top-2 left-2 right-2 flex items-center justify-between pointer-events-none z-10">
-          <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-zinc-950/85 backdrop-blur-md text-[10px] font-semibold text-zinc-200 border border-zinc-800 shadow-sm">
+          <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#0F1218]/90 backdrop-blur-md text-[10px] font-semibold text-[#ECE9E3] border border-[#2B3443] shadow-sm">
             {item.media_type === 'movie' ? (
               <>
-                <Film className="w-3 h-3 text-rose-400" />
+                <Film className="w-3 h-3 text-[#E9A23B]" />
                 <span>Film</span>
               </>
             ) : (
@@ -74,8 +74,8 @@ export default function MediaCard({ item }: MediaCardProps) {
           </span>
 
           {item.vote_average > 0 && (
-            <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-zinc-950/85 backdrop-blur-md text-[10px] font-bold text-amber-400 border border-zinc-800 shadow-sm">
-              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+            <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#0F1218]/90 backdrop-blur-md text-[10px] font-bold text-[#E9A23B] border border-[#2B3443] shadow-sm">
+              <Star className="w-3 h-3 fill-[#E9A23B] text-[#E9A23B]" />
               <span>{item.vote_average.toFixed(1)}</span>
             </span>
           )}
@@ -92,7 +92,7 @@ export default function MediaCard({ item }: MediaCardProps) {
               />
             ))}
             {item.watch_providers.length > 3 && (
-              <span className="w-5 h-5 rounded-md bg-zinc-950/90 text-zinc-300 border border-zinc-800 text-[9px] font-bold flex items-center justify-center">
+              <span className="w-5 h-5 rounded-md bg-[#0F1218]/90 text-[#ECE9E3] border border-[#2B3443] text-[9px] font-bold flex items-center justify-center">
                 +{item.watch_providers.length - 3}
               </span>
             )}
@@ -103,23 +103,23 @@ export default function MediaCard({ item }: MediaCardProps) {
       {/* Info content & Status button */}
       <div className="p-3 flex flex-col flex-1 justify-between gap-2.5">
         <div>
-          <Link href={detailUrl} className="hover:text-rose-400 transition-colors block">
-            <h3 className="font-bold text-xs sm:text-sm text-zinc-100 line-clamp-1 leading-snug">
+          <Link href={detailUrl} className="hover:text-[#E9A23B] transition-colors block">
+            <h3 className="font-bold text-xs sm:text-sm text-[#ECE9E3] line-clamp-1 leading-snug">
               {item.title}
             </h3>
           </Link>
-          <div className="flex items-center justify-between text-[11px] text-zinc-400 mt-1">
+          <div className="flex items-center justify-between text-[11px] text-[#8D97A8] mt-1">
             <span>{year || '–'}</span>
             {item.origin_country?.[0] && (
-              <span className="text-[10px] font-medium text-zinc-400 px-1 py-0.2 rounded bg-zinc-800/80">
+              <span className="text-[10px] font-medium text-[#8D97A8] px-1 py-0.2 rounded bg-[#1E2531]">
                 {item.origin_country[0]}
               </span>
             )}
           </div>
         </div>
 
-        {/* Status button below poster for clean, unhindered poster view */}
-        <div className="pt-1 border-t border-zinc-800/60">
+        {/* Status button */}
+        <div className="pt-1 border-t border-[#2B3443]/60">
           <StatusSelector
             tmdbId={item.id}
             mediaType={item.media_type}

@@ -1,34 +1,60 @@
 @import "tailwindcss";
 
 :root {
-  --background: #09090b;
-  --foreground: #f4f4f5;
-  --card: #18181b;
-  --card-border: #27272a;
-  --accent: #e11d48; /* Rose 600 */
-  --accent-hover: #f43f5e;
+  /* Nya Bingelog Brand Tokens */
+  --ink: #0F1218;
+  --surface: #171C25;
+  --surface-2: #1E2531;
+  --line: #2B3443;
+  --text: #ECE9E3;
+  --muted: #8D97A8;
+  --amber: #E9A23B;
+  --amber-dim: #7A5A21;
+  --amber-mid: #B5721E;
+  --moss: #6FA98A;
+
+  /* Global semantic mapping */
+  --background: var(--ink);
+  --foreground: var(--text);
+  --card: var(--surface);
+  --card-border: var(--line);
+  --accent: var(--amber);
+  --accent-hover: #F2B04E;
+}
+
+@theme {
+  --color-ink: #0F1218;
+  --color-surface: #171C25;
+  --color-surface-2: #1E2531;
+  --color-line: #2B3443;
+  --color-brand-text: #ECE9E3;
+  --color-muted: #8D97A8;
+  --color-amber: #E9A23B;
+  --color-amber-dim: #7A5A21;
+  --color-amber-mid: #B5721E;
+  --color-moss: #6FA98A;
 }
 
 body {
-  background-color: var(--background);
-  color: var(--foreground);
+  background-color: var(--ink);
+  color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   overflow-x: hidden;
   min-height: 100vh;
 }
 
-/* Custom subtle scrollbar */
+/* Custom subtle scrollbar styled with theme tokens */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
 }
 ::-webkit-scrollbar-track {
-  background: #09090b;
+  background: var(--ink);
 }
 ::-webkit-scrollbar-thumb {
-  background: #27272a;
+  background: var(--line);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
+  background: var(--muted);
 }

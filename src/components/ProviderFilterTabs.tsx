@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { SWEDISH_STREAMING_PROVIDERS, getImageUrl } from '@/lib/tmdb';
-import { Sparkles, Tv } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 interface ProviderFilterTabsProps {
   selectedProviderId: number | null;
@@ -14,14 +14,14 @@ function ProviderLogo({ logoPath, name, bg }: { logoPath: string; name: string; 
 
   if (imgError || !logoPath) {
     return (
-      <div className={`w-5 h-5 rounded-md ${bg || 'bg-zinc-800'} text-white font-bold text-[10px] flex items-center justify-center flex-shrink-0 shadow-inner`}>
+      <div className={`w-5 h-5 rounded-md ${bg || 'bg-[#1E2531]'} text-white font-bold text-[10px] flex items-center justify-center flex-shrink-0 shadow-inner`}>
         {name.slice(0, 1)}
       </div>
     );
   }
 
   return (
-    <div className="w-5 h-5 rounded-md overflow-hidden bg-zinc-950 flex-shrink-0 flex items-center justify-center shadow-sm">
+    <div className="w-5 h-5 rounded-md overflow-hidden bg-[#0F1218] flex-shrink-0 flex items-center justify-center shadow-sm">
       <img
         src={getImageUrl(logoPath, 'w300')}
         alt={name}
@@ -44,11 +44,11 @@ export default function ProviderFilterTabs({
         onClick={() => onSelectProvider(null)}
         className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all flex-shrink-0 ${
           selectedProviderId === null
-            ? 'bg-rose-600 text-white shadow-lg shadow-rose-900/40 ring-2 ring-rose-500/50'
-            : 'bg-zinc-900/90 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 border border-zinc-800'
+            ? 'bg-[#E9A23B] text-[#0F1218] shadow-lg shadow-[#E9A23B]/30 ring-2 ring-[#E9A23B]/50'
+            : 'bg-[#171C25] text-[#8D97A8] hover:text-[#ECE9E3] hover:bg-[#1E2531] border border-[#2B3443]'
         }`}
       >
-        <Sparkles className="w-3.5 h-3.5 text-white" />
+        <Sparkles className={`w-3.5 h-3.5 ${selectedProviderId === null ? 'text-[#0F1218]' : 'text-[#E9A23B]'}`} />
         <span>Alla streamingtjänster</span>
       </button>
 
@@ -63,8 +63,8 @@ export default function ProviderFilterTabs({
             onClick={() => onSelectProvider(isSelected ? null : provider.id)}
             className={`flex items-center gap-2.5 px-3.5 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all flex-shrink-0 border ${
               isSelected
-                ? 'bg-zinc-100 text-zinc-950 border-white shadow-lg ring-2 ring-white/30 scale-105'
-                : 'bg-zinc-900/90 text-zinc-300 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800/90'
+                ? 'bg-[#E9A23B] text-[#0F1218] border-[#E9A23B] shadow-lg ring-2 ring-[#E9A23B]/30 scale-105'
+                : 'bg-[#171C25] text-[#ECE9E3] border-[#2B3443] hover:border-[#E9A23B]/50 hover:bg-[#1E2531]'
             }`}
           >
             <ProviderLogo logoPath={provider.logo_path} name={provider.name} bg={provider.bg} />
