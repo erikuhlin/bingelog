@@ -19,7 +19,9 @@ export default function HeroCarousel({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
+  const touchEndY = useRef<number | null>(null);
 
   const carouselItems = items.slice(0, 6);
   const total = carouselItems.length;
@@ -45,36 +47,65 @@ export default function HeroCarousel({
   const handleTouchStart = (e: React.TouchEvent) => {
     setIsPaused(true);
     touchStartX.current = e.targetTouches[0].clientX;
+    touchStartY.current = e.targetTouches[0].clientY;
+    touchEndX.current = e.targetTouches[0].clientX;
+    touchEndY.current = e.targetTouches[0].clientY;
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
     touchEndX.current = e.targetTouches[0].clientX;
+    touchEndY.current = e.targetTouches[0].clientY;
   };
 
   const handleTouchEnd = () => {
     setIsPaused(false);
-    if (!touchStartX.current || !touchEndX.current) return;
-    const diff = touchStartX.current - touchEndX.current;
-    const minSwipeDistance = 50;
-    if (diff > minSwipeDistance) {
-      nextSlide();
-    } else if (diff < -minSwipeDistance) {
-      prevSlide();
+    if (
+      touchStartX.current === null ||
+      touchEndX.current === null ||
+      touchStartY.current === null ||
+      touchEndY.current === null
+    ) {
+      return;
     }
+
+    const diffX = touchStartX.current - touchEndX.current;
+    const diffY = touchStartY.current - touchEndY.current;
+    const minSwipeDistance = 40;
+
+    // Only swipe if horizontal movement exceeds vertical movement to avoid interfering with scrolling
+    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > minSwipeDistance) {
+      if (diffX > 0) {
+        nextSlide();
+      } else {
+        prevSlide();
+      }
+    }
+
     touchStartX.current = null;
+    touchStartY.current = null;
     touchEndX.current = null;
+    touchEndY.current = null;
+  };
+
+  const handleTouchCancel = () => {
+    setIsPaused(false);
+    touchStartX.current = null;
+    touchStartY.current = null;
+    touchEndX.current = null;
+    touchEndY.current = null;
   };
 
   if (!items || items.length === 0) return null;
 
   return (
     <div
-      className="relative w-full h-[400px] xs:h-[430px] sm:h-[480px] md:h-[530px] rounded-3xl overflow-hidden mb-8 md:mb-12 border border-[#2B3443] shadow-2xl group select-none bg-[#0F1218]"
+      className="relative w-full h-[420px] xs:h-[440px] sm:h-[480px] md:h-[530px] rounded-3xl overflow-hidden mb-8 md:mb-12 border border-[#2B3443] shadow-2xl group select-none bg-[#0F1218] touch-pan-y"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchCancel}
     >
       {/* Slides */}
       {carouselItems.map((item, index) => {
@@ -102,7 +133,7 @@ export default function HeroCarousel({
             <div className="absolute inset-0 bg-gradient-to-r from-[#0F1218]/95 via-[#0F1218]/60 to-transparent" />
 
             {/* Slide Content */}
-            <div className="absolute inset-0 flex flex-col justify-end p-5 sm:p-8 md:p-12 max-w-2xl">
+            <div className="absolute inset-0 flex flex-col justify-end p-5 pb-14 sm:p-8 sm:pb-8 md:p-12 max-w-2xl">
               {/* Badges */}
               <div className="flex flex-wrap items-center gap-2 mb-2 sm:mb-2.5">
                 <span className="px-2.5 py-0.5 rounded-full bg-[#E9A23B] text-[#0F1218] font-black text-[10px] sm:text-xs uppercase tracking-wider shadow-lg shadow-[#E9A23B]/30">
@@ -167,16 +198,16 @@ export default function HeroCarousel({
               )}
 
               {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                 <Link
                   href={detailUrl}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#E9A23B] hover:bg-[#F2B04E] text-[#0F1218] font-bold text-xs sm:text-sm transition-all shadow-lg shadow-[#E9A23B]/20 hover:scale-105 active:scale-95 cursor-pointer"
+                  className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-[#E9A23B] hover:bg-[#F2B04E] text-[#0F1218] font-bold text-xs sm:text-sm transition-all shadow-lg shadow-[#E9A23B]/20 hover:scale-105 active:scale-95 cursor-pointer whitespace-nowrap flex-shrink-0"
                 >
                   <Info className="w-4 h-4" />
                   <span>Mer information</span>
                 </Link>
 
-                <div className="w-auto">
+                <div className="w-auto flex-shrink-0">
                   <StatusSelector
                     tmdbId={item.id}
                     mediaType={item.media_type}
@@ -216,7 +247,7 @@ export default function HeroCarousel({
 
       {/* Paginator Dots */}
       {total > 1 && (
-        <div className="absolute bottom-3 right-4 sm:bottom-4 sm:right-6 z-20 flex items-center gap-1.5 bg-[#0F1218]/70 backdrop-blur-md px-2.5 py-1.5 rounded-full border border-[#2B3443]/60">
+        <div className="absolute bottom-3.5 left-1/2 -translate-x-1/2 sm:left-auto sm:right-6 sm:bottom-5 sm:translate-x-0 z-20 flex items-center gap-1.5 bg-[#0F1218]/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-[#2B3443]/70 shadow-lg">
           {carouselItems.map((_, i) => (
             <button
               key={`dot-${i}`}

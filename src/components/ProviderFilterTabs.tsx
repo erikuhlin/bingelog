@@ -37,7 +37,7 @@ export default function ProviderFilterTabs({
   onSelectProvider,
 }: ProviderFilterTabsProps) {
   return (
-    <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
+    <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none overscroll-x-contain -mx-4 px-4 sm:mx-0 sm:px-0">
       {/* All providers pill */}
       <button
         type="button"

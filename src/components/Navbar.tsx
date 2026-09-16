@@ -107,22 +107,22 @@ export default function Navbar() {
           </div>
 
           {/* Search bar & Auth */}
-          <div className="flex items-center gap-2 sm:gap-3 flex-1 justify-end max-w-md">
-            <div ref={searchRef} className="relative w-full max-w-[200px] sm:max-w-xs">
+          <div className="flex items-center gap-2 sm:gap-3 flex-1 justify-end max-w-md min-w-0">
+            <div ref={searchRef} className="relative w-full min-w-0 max-w-[160px] xs:max-w-[200px] sm:max-w-xs">
               <div className="relative flex items-center">
-                <Search className="absolute left-3 w-3.5 h-3.5 text-[#8D97A8] pointer-events-none" />
+                <Search className="absolute left-2.5 xs:left-3 w-3.5 h-3.5 text-[#8D97A8] pointer-events-none" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => searchQuery.trim() && setShowDropdown(true)}
                   placeholder="Sök film el. serie..."
-                  className="w-full bg-[#171C25] border border-[#2B3443] rounded-full pl-8 pr-8 py-1.5 text-xs text-[#ECE9E3] placeholder-[#8D97A8] focus:outline-none focus:border-[#E9A23B] focus:ring-1 focus:ring-[#E9A23B] transition-all truncate"
+                  className="w-full bg-[#171C25] border border-[#2B3443] rounded-full pl-7 xs:pl-8 pr-7 xs:pr-8 py-1.5 text-xs text-[#ECE9E3] placeholder-[#8D97A8] focus:outline-none focus:border-[#E9A23B] focus:ring-1 focus:ring-[#E9A23B] transition-all truncate"
                 />
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-2.5 text-[#8D97A8] hover:text-[#ECE9E3]"
+                    className="absolute right-2 xs:right-2.5 text-[#8D97A8] hover:text-[#ECE9E3]"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
