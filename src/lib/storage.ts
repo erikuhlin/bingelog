@@ -49,6 +49,36 @@ function saveLocalWatchedEpisodes(episodes: WatchedEpisodeRecord[], emitEvent: b
   }
 }
 
+export function getShowProgress(tmdbId: number): {
+  watchedCount: number;
+  latestSeason: number;
+  latestEpisode: number;
+  watchedSet: Set<string>;
+} {
+  const allWatched = getLocalWatchedEpisodes().filter((ep) => ep.tmdb_id === tmdbId);
+  let latestSeason = 1;
+  let latestEpisode = 0;
+  const watchedSet = new Set<string>();
+
+  allWatched.forEach((ep) => {
+    watchedSet.add(`${ep.season_number}-${ep.episode_number}`);
+    if (
+      ep.season_number > latestSeason ||
+      (ep.season_number === latestSeason && ep.episode_number > latestEpisode)
+    ) {
+      latestSeason = ep.season_number;
+      latestEpisode = ep.episode_number;
+    }
+  });
+
+  return {
+    watchedCount: allWatched.length,
+    latestSeason,
+    latestEpisode,
+    watchedSet,
+  };
+}
+
 export async function getUserMediaList(): Promise<UserMediaRecord[]> {
   const localItems = getLocalMedia();
   const supabase = getSupabaseClient();
@@ -130,9 +160,19 @@ export async function saveUserMedia(
     (m) => m.tmdb_id === item.tmdb_id && m.media_type === item.media_type
   );
 
+  const existingItem = existingIdx >= 0 ? current[existingIdx] : undefined;
+
+  // For TV shows, derive latest progress from actual watched episodes if available
+  const progress = item.media_type === 'tv' ? getShowProgress(item.tmdb_id) : null;
+  const resolvedSeason = item.current_season ?? existingItem?.current_season ?? (progress && progress.latestEpisode > 0 ? progress.latestSeason : 1);
+  const resolvedEpisode = item.current_episode ?? existingItem?.current_episode ?? (progress && progress.latestEpisode > 0 ? progress.latestEpisode : 0);
+
   const updatedRecord: UserMediaRecord = {
+    ...existingItem,
     ...item,
-    created_at: existingIdx >= 0 ? current[existingIdx].created_at : now,
+    current_season: resolvedSeason,
+    current_episode: resolvedEpisode,
+    created_at: existingItem?.created_at || now,
     updated_at: now,
   };
 
@@ -148,17 +188,40 @@ export async function saveUserMedia(
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const payload = {
-          ...item,
+        const payload: Record<string, any> = {
+          ...updatedRecord,
           user_id: user.id,
           updated_at: now,
         };
 
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('user_media')
           .upsert(payload, { onConflict: 'user_id,tmdb_id,media_type' })
           .select()
           .single();
+
+        // If error due to missing columns in older database migrations, retry with base columns
+        if (error && (error.message?.includes('current_season') || error.message?.includes('current_episode'))) {
+          const fallbackPayload = {
+            user_id: user.id,
+            tmdb_id: updatedRecord.tmdb_id,
+            media_type: updatedRecord.media_type,
+            title: updatedRecord.title,
+            poster_path: updatedRecord.poster_path,
+            backdrop_path: updatedRecord.backdrop_path,
+            status: updatedRecord.status,
+            user_rating: updatedRecord.user_rating,
+            notes: updatedRecord.notes,
+            updated_at: now,
+          };
+          const fallbackRes = await supabase
+            .from('user_media')
+            .upsert(fallbackPayload, { onConflict: 'user_id,tmdb_id,media_type' })
+            .select()
+            .single();
+          data = fallbackRes.data;
+          error = fallbackRes.error;
+        }
 
         if (error) {
           console.error('Supabase saveUserMedia error:', error);
@@ -171,7 +234,7 @@ export async function saveUserMedia(
             refreshed[rIdx] = { ...refreshed[rIdx], id: data.id };
             saveLocalMedia(refreshed, false);
           }
-          return data as UserMediaRecord;
+          return { ...updatedRecord, id: data.id };
         }
       }
     } catch (err) {
@@ -225,6 +288,54 @@ export async function removeUserMedia(tmdbId: number, mediaType: MediaType): Pro
   }
 }
 
+export async function syncAllWatchedEpisodes(): Promise<WatchedEpisodeRecord[]> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return getLocalWatchedEpisodes();
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return getLocalWatchedEpisodes();
+
+    const { data, error } = await supabase
+      .from('watched_episodes')
+      .select('tmdb_id, season_number, episode_number, watched_at')
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Supabase syncAllWatchedEpisodes error:', error);
+      return getLocalWatchedEpisodes();
+    }
+
+    if (data) {
+      const local = getLocalWatchedEpisodes();
+      if (local.length === 0) {
+        saveLocalWatchedEpisodes(data as WatchedEpisodeRecord[], false);
+        return data as WatchedEpisodeRecord[];
+      }
+
+      // Merge: union with cloud records taking precedence
+      const map = new Map<string, WatchedEpisodeRecord>();
+      (data as WatchedEpisodeRecord[]).forEach((ep) => {
+        map.set(`${ep.tmdb_id}-${ep.season_number}-${ep.episode_number}`, ep);
+      });
+      local.forEach((ep) => {
+        const key = `${ep.tmdb_id}-${ep.season_number}-${ep.episode_number}`;
+        if (!map.has(key)) {
+          map.set(key, ep);
+        }
+      });
+
+      const merged = Array.from(map.values());
+      saveLocalWatchedEpisodes(merged, false);
+      return merged;
+    }
+  } catch (err) {
+    console.error('Error syncing all watched episodes:', err);
+  }
+
+  return getLocalWatchedEpisodes();
+}
+
 export async function getWatchedEpisodes(tmdbId: number): Promise<{ season_number: number; episode_number: number }[]> {
   const allLocal = getLocalWatchedEpisodes();
   const localShow = allLocal.filter((ep) => ep.tmdb_id === tmdbId);
@@ -236,35 +347,28 @@ export async function getWatchedEpisodes(tmdbId: number): Promise<{ season_numbe
       if (user) {
         const { data, error } = await supabase
           .from('watched_episodes')
-          .select('season_number, episode_number')
+          .select('season_number, episode_number, watched_at')
           .eq('user_id', user.id)
           .eq('tmdb_id', tmdbId);
 
         if (error) {
           console.error('Supabase getWatchedEpisodes error:', error);
         } else if (data) {
-          // Merge cloud with local episodes so we don't wipe out recent toggles
-          const set = new Set<string>();
-          localShow.forEach((e) => set.add(`${e.season_number}-${e.episode_number}`));
-          data.forEach((d) => set.add(`${d.season_number}-${d.episode_number}`));
-
-          const mergedShow: WatchedEpisodeRecord[] = Array.from(set).map((key) => {
-            const [s, ep] = key.split('-');
-            return {
+          // If localShow had no records for this show, populate from cloud
+          if (localShow.length === 0 && data.length > 0) {
+            const newRecords: WatchedEpisodeRecord[] = data.map((d) => ({
               tmdb_id: tmdbId,
-              season_number: parseInt(s, 10),
-              episode_number: parseInt(ep, 10),
-              watched_at: new Date().toISOString(),
-            };
-          });
-
-          const otherShows = allLocal.filter((ep) => ep.tmdb_id !== tmdbId);
-          saveLocalWatchedEpisodes([...otherShows, ...mergedShow], false);
-
-          return mergedShow.map((ep) => ({
-            season_number: ep.season_number,
-            episode_number: ep.episode_number,
-          }));
+              season_number: d.season_number,
+              episode_number: d.episode_number,
+              watched_at: d.watched_at || new Date().toISOString(),
+            }));
+            const otherShows = allLocal.filter((ep) => ep.tmdb_id !== tmdbId);
+            saveLocalWatchedEpisodes([...otherShows, ...newRecords], false);
+            return newRecords.map((ep) => ({
+              season_number: ep.season_number,
+              episode_number: ep.episode_number,
+            }));
+          }
         }
       }
     } catch (err) {
@@ -565,14 +669,73 @@ export async function syncLocalDataToSupabase(userId: string): Promise<void> {
       });
     }
 
-    // Now pull full cloud library into local storage so devices match completely
+    // Now pull full cloud library into local storage WITH SAFE MERGE
     const { data: cloudMedia } = await supabase
       .from('user_media')
       .select('*')
       .order('updated_at', { ascending: false });
 
     if (cloudMedia && cloudMedia.length > 0) {
-      saveLocalMedia(cloudMedia as UserMediaRecord[]);
+      const cloudMap = new Map<string, UserMediaRecord>();
+      (cloudMedia as UserMediaRecord[]).forEach((item) => {
+        cloudMap.set(`${item.media_type}-${item.tmdb_id}`, item);
+      });
+
+      const mergedMedia: UserMediaRecord[] = [];
+      const seen = new Set<string>();
+
+      localMedia.forEach((local) => {
+        const key = `${local.media_type}-${local.tmdb_id}`;
+        seen.add(key);
+        const cloud = cloudMap.get(key);
+        if (!cloud) {
+          mergedMedia.push(local);
+        } else {
+          // Keep best episode progress
+          const localEp = local.current_episode || 0;
+          const cloudEp = cloud.current_episode || 0;
+          const bestEp = Math.max(localEp, cloudEp);
+          const bestSeason = bestEp === localEp ? (local.current_season || 1) : (cloud.current_season || 1);
+
+          const localTime = new Date(local.updated_at || 0).getTime();
+          const cloudTime = new Date(cloud.updated_at || 0).getTime();
+          const base = localTime >= cloudTime ? local : cloud;
+
+          mergedMedia.push({
+            ...base,
+            current_season: bestSeason,
+            current_episode: bestEp,
+          });
+        }
+      });
+
+      cloudMap.forEach((cloud, key) => {
+        if (!seen.has(key)) {
+          mergedMedia.push(cloud);
+        }
+      });
+
+      saveLocalMedia(mergedMedia, false);
+    }
+
+    // Also pull cloud watched episodes into local storage
+    const { data: cloudEpisodes } = await supabase
+      .from('watched_episodes')
+      .select('tmdb_id, season_number, episode_number, watched_at')
+      .eq('user_id', userId);
+
+    if (cloudEpisodes && cloudEpisodes.length > 0) {
+      const epMap = new Map<string, WatchedEpisodeRecord>();
+      (cloudEpisodes as WatchedEpisodeRecord[]).forEach((ep) => {
+        epMap.set(`${ep.tmdb_id}-${ep.season_number}-${ep.episode_number}`, ep);
+      });
+      localEpisodes.forEach((ep) => {
+        const key = `${ep.tmdb_id}-${ep.season_number}-${ep.episode_number}`;
+        if (!epMap.has(key)) {
+          epMap.set(key, ep);
+        }
+      });
+      saveLocalWatchedEpisodes(Array.from(epMap.values()), false);
     }
 
     window.dispatchEvent(new Event('bingelog_storage_changed'));

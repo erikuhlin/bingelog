@@ -21,6 +21,8 @@ import {
   getUserMediaList,
   getAllWatchedEpisodesCount,
   markNextEpisodeWatched,
+  getShowProgress,
+  syncAllWatchedEpisodes,
 } from '@/lib/storage';
 import { UserMediaRecord, WatchStatus, MediaType } from '@/lib/types';
 import { getImageUrl } from '@/lib/tmdb';
@@ -76,6 +78,7 @@ function LibraryContent() {
       const [mediaList, epCount] = await Promise.all([
         getUserMediaList(),
         getAllWatchedEpisodesCount(),
+        syncAllWatchedEpisodes(),
       ]);
       setItems(mediaList);
       setTotalEpisodesCount(epCount);
@@ -109,6 +112,7 @@ function LibraryContent() {
             runtime: data.runtime || 45,
             status: data.status,
             next_air_date: data.next_episode_to_air?.air_date || null,
+            seasons: data.seasons || [],
           };
         });
 
@@ -518,10 +522,12 @@ function LibraryContent() {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-4 md:gap-5">
               {sorted.map((item) => {
                 const isTv = item.media_type === 'tv';
-                const curSeason = item.current_season || 1;
-                const curEp = item.current_episode || 0;
+                const progress = isTv ? getShowProgress(item.tmdb_id) : null;
+                const curSeason = progress && progress.latestEpisode > 0 ? progress.latestSeason : (item.current_season || 1);
+                const curEp = progress && progress.latestEpisode > 0 ? progress.latestEpisode : (item.current_episode || 0);
                 const meta = seriesMeta[item.tmdb_id];
-                const totalInSeason = meta?.episode_count || item.total_episodes_in_season || 10;
+                const seasonObj = meta?.seasons?.find((s) => s.season_number === curSeason);
+                const totalInSeason = seasonObj?.episode_count || meta?.episode_count || item.total_episodes_in_season || 10;
                 const progressPct = isTv && curEp > 0 ? Math.min(100, Math.round((curEp / totalInSeason) * 100)) : 0;
 
                 return (
@@ -608,10 +614,12 @@ function LibraryContent() {
             <div className="border border-[#2B3443] rounded-2xl overflow-hidden bg-[#171C25] divide-y divide-[#2B3443]/60">
               {sorted.map((item) => {
                 const isTv = item.media_type === 'tv';
-                const curSeason = item.current_season || 1;
-                const curEp = item.current_episode || 0;
+                const progress = isTv ? getShowProgress(item.tmdb_id) : null;
+                const curSeason = progress && progress.latestEpisode > 0 ? progress.latestSeason : (item.current_season || 1);
+                const curEp = progress && progress.latestEpisode > 0 ? progress.latestEpisode : (item.current_episode || 0);
                 const meta = seriesMeta[item.tmdb_id];
-                const totalInSeason = meta?.episode_count || item.total_episodes_in_season || 10;
+                const seasonObj = meta?.seasons?.find((s) => s.season_number === curSeason);
+                const totalInSeason = seasonObj?.episode_count || meta?.episode_count || item.total_episodes_in_season || 10;
                 const epsLeft = Math.max(0, totalInSeason - curEp);
 
                 return (

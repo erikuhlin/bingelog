@@ -5,12 +5,18 @@ import Link from 'next/link';
 import { Play, Check, Sparkles, Calendar } from 'lucide-react';
 import { UserMediaRecord } from '@/lib/types';
 import { getImageUrl } from '@/lib/tmdb';
+import { getShowProgress } from '@/lib/storage';
 
 export interface SeriesMetaInfo {
   episode_count: number;
   runtime?: number;
   status?: string;
   next_air_date?: string | null;
+  seasons?: {
+    season_number: number;
+    episode_count: number;
+    name?: string;
+  }[];
 }
 
 interface ContinueWatchingRowProps {
@@ -50,16 +56,31 @@ export default function ContinueWatchingRow({
       {/* Horizontal scroll row */}
       <div className="flex items-stretch gap-4 overflow-x-auto pb-3 pt-1 scrollbar-thin scrollbar-thumb-[#2B3443] focus:outline-none">
         {watchingShows.map((show) => {
+          const progress = getShowProgress(show.tmdb_id);
           const meta = seriesMeta[show.tmdb_id];
-          const curSeason = show.current_season || 1;
-          const curEpisode = show.current_episode || 0;
-          const totalInSeason = meta?.episode_count || show.total_episodes_in_season || 10;
+          const curSeason = progress.latestEpisode > 0 ? progress.latestSeason : (show.current_season || 1);
+          const curEpisode = progress.latestEpisode > 0 ? progress.latestEpisode : (show.current_episode || 0);
+          const seasonObj = meta?.seasons?.find((s) => s.season_number === curSeason);
+          const totalInSeason = seasonObj?.episode_count || meta?.episode_count || show.total_episodes_in_season || 10;
           const epsLeft = Math.max(0, totalInSeason - curEpisode);
           const isSeasonComplete = totalInSeason > 0 && curEpisode >= totalInSeason;
+          const nextSeasonObj = meta?.seasons?.find((s) => s.season_number === curSeason + 1);
+          const hasNextSeason = Boolean(nextSeasonObj && nextSeasonObj.episode_count > 0);
           const isUpdating = updatingId === show.tmdb_id;
 
           const handleActionClick = async () => {
-            if (isSeasonComplete || isUpdating) return;
+            if (isUpdating) return;
+            if (isSeasonComplete) {
+              if (hasNextSeason) {
+                setUpdatingId(show.tmdb_id);
+                try {
+                  await onMarkNextWatched(show, curSeason + 1, 1);
+                } finally {
+                  setUpdatingId(null);
+                }
+              }
+              return;
+            }
             setUpdatingId(show.tmdb_id);
             try {
               await onMarkNextWatched(show, curSeason, curEpisode + 1);
@@ -149,13 +170,25 @@ export default function ContinueWatchingRow({
               {/* Bottom part: Action button */}
               <div className="mt-3 pt-3 border-t border-[#2B3443]/60">
                 {isSeasonComplete ? (
-                  <button
-                    type="button"
-                    disabled
-                    className="w-full py-2 px-3 rounded-xl bg-[#1E2531] text-[#8D97A8] text-xs font-semibold cursor-not-allowed text-center border border-[#2B3443]"
-                  >
-                    Säsongen klar
-                  </button>
+                  hasNextSeason ? (
+                    <button
+                      type="button"
+                      onClick={handleActionClick}
+                      disabled={isUpdating}
+                      className="w-full py-2 px-3 rounded-xl bg-[#E9A23B] hover:bg-[#F2B04E] active:scale-[0.98] text-[#0F1218] text-xs font-bold transition-all shadow-md shadow-[#E9A23B]/20 flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-[#E9A23B] focus-visible:outline-none disabled:opacity-50"
+                    >
+                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <span>{isUpdating ? 'Uppdaterar...' : `Börja säsong ${curSeason + 1}`}</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      className="w-full py-2 px-3 rounded-xl bg-[#1E2531] text-[#8D97A8] text-xs font-semibold cursor-not-allowed text-center border border-[#2B3443]"
+                    >
+                      Säsongen klar
+                    </button>
+                  )
                 ) : (
                   <button
                     type="button"

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Check, CheckCircle2, Play, Sparkles } from 'lucide-react';
 import { Season, Episode } from '@/lib/types';
-import { getWatchedEpisodes, toggleEpisodeWatched, markSeasonWatched, getUserMediaItem, saveUserMedia } from '@/lib/storage';
+import { getWatchedEpisodes, getLocalWatchedEpisodes, toggleEpisodeWatched, markSeasonWatched, getUserMediaItem, saveUserMedia } from '@/lib/storage';
 import { getImageUrl } from '@/lib/tmdb';
 import { useAuth } from '@/context/AuthContext';
 
@@ -64,16 +64,25 @@ export default function EpisodeTracker({
     };
   }, [showId, selectedSeasonNumber, validSeasons, seasonEpisodesCache]);
 
-  // Load watched episodes
-  const refreshWatched = async () => {
-    const list = await getWatchedEpisodes(showId);
+  // Read current watched set from local storage immediately (no async latency or race condition)
+  const refreshFromLocal = () => {
+    const list = getLocalWatchedEpisodes().filter((item) => item.tmdb_id === showId);
     const newSet = new Set(list.map((item) => `${item.season_number}-${item.episode_number}`));
     setWatchedSet(newSet);
   };
 
   useEffect(() => {
-    refreshWatched();
-    const handleStorageChange = () => refreshWatched();
+    // 1. Initial check from local storage
+    refreshFromLocal();
+
+    // 2. Fetch/sync from Supabase on mount or auth change
+    getWatchedEpisodes(showId).then((list) => {
+      const newSet = new Set(list.map((item) => `${item.season_number}-${item.episode_number}`));
+      setWatchedSet(newSet);
+    });
+
+    // 3. Listen to local storage changes without re-querying remote Supabase during active clicks
+    const handleStorageChange = () => refreshFromLocal();
     window.addEventListener('bingelog_storage_changed', handleStorageChange);
     return () => window.removeEventListener('bingelog_storage_changed', handleStorageChange);
   }, [showId, user]);

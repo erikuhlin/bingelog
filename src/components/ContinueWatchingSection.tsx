@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Play, ArrowRight, Tv } from 'lucide-react';
-import { getUserMediaList } from '@/lib/storage';
+import { getUserMediaList, getShowProgress } from '@/lib/storage';
 import { UserMediaRecord } from '@/lib/types';
 import { getImageUrl } from '@/lib/tmdb';
 
@@ -47,8 +47,9 @@ export default function ContinueWatchingSection() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {watchingShows.map((show) => {
-          const curSeason = show.current_season || 1;
-          const curEpisode = show.current_episode || 0;
+          const progress = getShowProgress(show.tmdb_id);
+          const curSeason = progress.latestEpisode > 0 ? progress.latestSeason : (show.current_season || 1);
+          const curEpisode = progress.latestEpisode > 0 ? progress.latestEpisode : (show.current_episode || 0);
 
           return (
             <Link
