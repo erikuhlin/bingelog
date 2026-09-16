@@ -199,27 +199,27 @@ export default function Navbar() {
             )}
           </div>
         </div>
-
-        {/* Mobile navigation bar */}
-        <div className="md:hidden border-t border-zinc-800/80 bg-zinc-950/90 px-4 py-2 flex items-center justify-around">
-          {navLinks.map((link) => {
-            const Icon = link.icon;
-            const isActive = pathname === link.href;
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`flex flex-col items-center gap-1 py-1 px-3 text-xs font-medium transition-colors ${
-                  isActive ? 'text-rose-500' : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                <span>{link.label}</span>
-              </Link>
-            );
-          })}
-        </div>
       </header>
+
+      {/* Mobile Fixed Bottom Navigation Bar */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-zinc-800/90 bg-zinc-950/95 backdrop-blur-xl px-4 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] flex items-center justify-around shadow-2xl">
+        {navLinks.map((link) => {
+          const Icon = link.icon;
+          const isActive = pathname === link.href;
+          return (
+            <Link
+              key={link.href}
+              href={link.href}
+              className={`flex flex-col items-center gap-1 py-1 px-3 text-[11px] font-semibold transition-all active:scale-95 ${
+                isActive ? 'text-rose-500 font-bold' : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : ''}`} />
+              <span>{link.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
 
       {/* Global Auth Modal */}
       <AuthModal />

@@ -102,9 +102,30 @@ export async function searchMedia(query: string): Promise<MediaItem[]> {
 
 export async function getMediaDetails(mediaType: MediaType, id: number): Promise<MediaDetail | null> {
   const endpoint = `/${mediaType}/${id}`;
-  const data = await tmdbFetch<any>(endpoint, { append_to_response: 'credits' });
+  const data = await tmdbFetch<any>(endpoint, {
+    append_to_response: 'credits,videos,watch/providers,recommendations',
+  });
 
   if (data) {
+    const swedishProviders = data['watch/providers']?.results?.SE;
+    const trailers = data.videos?.results?.filter(
+      (v: any) => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser')
+    ) || [];
+
+    const directors = data.credits?.crew
+      ?.filter((c: any) => c.job === 'Director')
+      ?.map((c: any) => ({ id: c.id, name: c.name })) || [];
+
+    const createdBy = data.created_by?.map((c: any) => ({
+      id: c.id,
+      name: c.name,
+      profile_path: c.profile_path,
+    })) || [];
+
+    const recommendations = data.recommendations?.results
+      ?.slice(0, 8)
+      ?.map(normalizeMediaItem) || [];
+
     return {
       id: data.id,
       title: data.title || data.name,
@@ -125,14 +146,36 @@ export async function getMediaDetails(mediaType: MediaType, id: number): Promise
       number_of_seasons: data.number_of_seasons,
       number_of_episodes: data.number_of_episodes,
       seasons: data.seasons?.filter((s: any) => s.season_number > 0),
+      created_by: createdBy.length > 0 ? createdBy : undefined,
+      directors: directors.length > 0 ? directors : undefined,
       credits: data.credits ? {
-        cast: data.credits.cast?.slice(0, 8).map((c: any) => ({
+        cast: data.credits.cast?.slice(0, 10).map((c: any) => ({
           id: c.id,
           name: c.name,
           character: c.character,
           profile_path: c.profile_path,
         })) || []
-      } : undefined
+      } : undefined,
+      videos: trailers.length > 0 ? trailers : undefined,
+      watch_providers: swedishProviders ? {
+        link: swedishProviders.link,
+        flatrate: swedishProviders.flatrate?.map((p: any) => ({
+          provider_id: p.provider_id,
+          provider_name: p.provider_name,
+          logo_path: p.logo_path,
+        })),
+        rent: swedishProviders.rent?.map((p: any) => ({
+          provider_id: p.provider_id,
+          provider_name: p.provider_name,
+          logo_path: p.logo_path,
+        })),
+        buy: swedishProviders.buy?.map((p: any) => ({
+          provider_id: p.provider_id,
+          provider_name: p.provider_name,
+          logo_path: p.logo_path,
+        })),
+      } : undefined,
+      recommendations: recommendations.length > 0 ? recommendations : undefined,
     };
   }
 

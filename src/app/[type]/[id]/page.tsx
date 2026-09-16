@@ -1,11 +1,13 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { Star, Clock, Calendar, ArrowLeft, Film, Tv } from 'lucide-react';
+import { Star, Clock, Calendar, ArrowLeft, Film, Tv, Sparkles, UserCheck } from 'lucide-react';
 import { getMediaDetails, getImageUrl, getBackdropUrl } from '@/lib/tmdb';
 import { MediaType } from '@/lib/types';
-import StatusSelector from '@/components/StatusSelector';
 import EpisodeTracker from '@/components/EpisodeTracker';
+import WatchProvidersSection from '@/components/WatchProvidersSection';
+import MediaActionsBar from '@/components/MediaActionsBar';
+import MediaCard from '@/components/MediaCard';
 
 interface PageProps {
   params: Promise<{
@@ -32,12 +34,14 @@ export default async function MediaDetailPage({ params }: PageProps) {
   const releaseYear =
     media.release_date?.slice(0, 4) || media.first_air_date?.slice(0, 4) || '';
 
+  const trailer = media.videos?.[0];
+
   return (
-    <div className="space-y-10">
+    <div className="space-y-8 md:space-y-10 pb-16 md:pb-8">
       {/* Back button */}
       <Link
         href="/"
-        className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-100 transition-colors"
+        className="inline-flex items-center gap-2 text-xs md:text-sm text-zinc-400 hover:text-zinc-100 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         <span>Tillbaka till översikten</span>
@@ -46,20 +50,20 @@ export default async function MediaDetailPage({ params }: PageProps) {
       {/* Hero Backdrop Header */}
       <div className="relative rounded-3xl overflow-hidden border border-zinc-800 bg-zinc-900 shadow-2xl">
         {/* Backdrop Image */}
-        <div className="relative h-[340px] md:h-[460px] w-full">
+        <div className="relative h-64 sm:h-80 md:h-[440px] w-full">
           <img
             src={getBackdropUrl(media.backdrop_path, 'original')}
             alt={media.title}
             className="w-full h-full object-cover object-center"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/70 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-r from-zinc-950/90 via-zinc-950/40 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-zinc-950/90 via-zinc-950/50 to-transparent" />
         </div>
 
         {/* Content Box Overlapping Backdrop */}
-        <div className="relative -mt-36 md:-mt-44 p-6 md:p-10 flex flex-col md:flex-row items-start gap-8 z-10">
+        <div className="relative -mt-24 sm:-mt-36 md:-mt-44 p-4 sm:p-6 md:p-10 flex flex-col sm:flex-row items-center sm:items-start gap-6 md:gap-8 z-10">
           {/* Poster */}
-          <div className="w-44 md:w-56 aspect-[2/3] rounded-2xl overflow-hidden border-2 border-zinc-700/80 shadow-2xl bg-zinc-950 flex-shrink-0">
+          <div className="w-36 sm:w-44 md:w-56 aspect-[2/3] rounded-2xl overflow-hidden border-2 border-zinc-700/80 shadow-2xl bg-zinc-950 flex-shrink-0">
             <img
               src={getImageUrl(media.poster_path, 'w500')}
               alt={media.title}
@@ -68,9 +72,9 @@ export default async function MediaDetailPage({ params }: PageProps) {
           </div>
 
           {/* Details */}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 w-full text-center sm:text-left">
             {/* Badges */}
-            <div className="flex flex-wrap items-center gap-2.5 mb-3">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-3">
               <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-900/90 border border-zinc-700 text-xs font-semibold text-zinc-200">
                 {media.media_type === 'movie' ? (
                   <>
@@ -115,29 +119,51 @@ export default async function MediaDetailPage({ params }: PageProps) {
             </div>
 
             {/* Title & Tagline */}
-            <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
+            <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
               {media.title}
             </h1>
 
             {media.original_title && media.original_title !== media.title && (
-              <p className="text-sm text-zinc-400 mt-1 italic">
+              <p className="text-xs sm:text-sm text-zinc-400 mt-1 italic">
                 Originaltitel: {media.original_title}
               </p>
             )}
 
             {media.tagline && (
-              <p className="text-sm md:text-base text-rose-400 font-medium mt-2">
+              <p className="text-xs sm:text-sm md:text-base text-rose-400 font-medium mt-1.5">
                 &ldquo;{media.tagline}&rdquo;
               </p>
             )}
 
+            {/* Creator / Director info */}
+            {(media.directors || media.created_by) && (
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-1 mt-2 text-xs text-zinc-400">
+                {media.directors && media.directors.length > 0 && (
+                  <p>
+                    <span className="text-zinc-500">Regi:</span>{' '}
+                    <strong className="text-zinc-300 font-medium">
+                      {media.directors.map((d) => d.name).join(', ')}
+                    </strong>
+                  </p>
+                )}
+                {media.created_by && media.created_by.length > 0 && (
+                  <p>
+                    <span className="text-zinc-500">Skapare:</span>{' '}
+                    <strong className="text-zinc-300 font-medium">
+                      {media.created_by.map((c) => c.name).join(', ')}
+                    </strong>
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Genres */}
             {media.genres && media.genres.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-4">
+              <div className="flex flex-wrap justify-center sm:justify-start gap-1.5 mt-3.5">
                 {media.genres.map((genre) => (
                   <span
                     key={genre.id}
-                    className="px-2.5 py-1 rounded-lg bg-zinc-800/80 text-xs text-zinc-300 font-medium"
+                    className="px-2.5 py-1 rounded-lg bg-zinc-800/80 text-[11px] md:text-xs text-zinc-300 font-medium"
                   >
                     {genre.name}
                   </span>
@@ -146,29 +172,32 @@ export default async function MediaDetailPage({ params }: PageProps) {
             )}
 
             {/* Overview */}
-            <div className="mt-5">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
+            <div className="mt-4 text-left">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">
                 Handling
               </h3>
-              <p className="text-zinc-300 text-sm md:text-base leading-relaxed">
+              <p className="text-zinc-300 text-xs sm:text-sm leading-relaxed">
                 {media.overview}
               </p>
             </div>
 
-            {/* Actions & Rating */}
-            <div className="mt-6 pt-6 border-t border-zinc-800 flex flex-wrap items-center gap-4">
-              <StatusSelector
+            {/* Action Bar (Status, Rating, Trailer, Share) */}
+            <div className="mt-6 pt-5 border-t border-zinc-800/80 flex justify-center sm:justify-start">
+              <MediaActionsBar
                 tmdbId={media.id}
                 mediaType={media.media_type}
                 title={media.title}
                 posterPath={media.poster_path}
                 backdropPath={media.backdrop_path}
-                showRating={true}
+                trailerVideo={trailer}
               />
             </div>
           </div>
         </div>
       </div>
+
+      {/* Swedish Watch Providers (Stream, Hyr, Köp) */}
+      <WatchProvidersSection providers={media.watch_providers} />
 
       {/* Episode Tracker if TV Show */}
       {media.media_type === 'tv' && media.seasons && media.seasons.length > 0 && (
@@ -183,19 +212,23 @@ export default async function MediaDetailPage({ params }: PageProps) {
         </section>
       )}
 
-      {/* Cast Section */}
+      {/* Cast Section (Horizontal scrollable on mobile, grid on desktop) */}
       {media.credits?.cast && media.credits.cast.length > 0 && (
-        <section>
-          <h2 className="text-xl font-bold text-white tracking-tight mb-4">
-            Skådespelare
-          </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <section className="space-y-3">
+          <div className="flex items-center gap-2">
+            <UserCheck className="w-5 h-5 text-rose-500" />
+            <h2 className="text-lg md:text-xl font-bold text-white tracking-tight">
+              Skådespelare
+            </h2>
+          </div>
+
+          <div className="flex overflow-x-auto gap-3 pb-3 scrollbar-none sm:grid sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 sm:overflow-visible">
             {media.credits.cast.map((actor) => (
               <div
                 key={actor.id}
-                className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 text-center flex flex-col items-center"
+                className="w-28 sm:w-auto flex-shrink-0 p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 text-center flex flex-col items-center shadow-sm"
               >
-                <div className="w-16 h-16 rounded-full overflow-hidden bg-zinc-800 mb-2.5 border border-zinc-700">
+                <div className="w-16 h-16 rounded-full overflow-hidden bg-zinc-800 mb-2 border border-zinc-700">
                   <img
                     src={getImageUrl(actor.profile_path, 'w300')}
                     alt={actor.name}
@@ -209,6 +242,24 @@ export default async function MediaDetailPage({ params }: PageProps) {
                   {actor.character}
                 </p>
               </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Recommendations Section */}
+      {media.recommendations && media.recommendations.length > 0 && (
+        <section className="space-y-4 pt-4 border-t border-zinc-800/80">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-amber-400" />
+            <h2 className="text-lg md:text-xl font-bold text-white tracking-tight">
+              Liknande titlar du kanske gillar
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
+            {media.recommendations.map((item) => (
+              <MediaCard key={`rec-${item.id}`} item={item} />
             ))}
           </div>
         </section>

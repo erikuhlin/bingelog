@@ -44,6 +44,20 @@ export interface Season {
   episodes?: Episode[];
 }
 
+export interface WatchProvider {
+  provider_id: number;
+  provider_name: string;
+  logo_path: string;
+}
+
+export interface Video {
+  id: string;
+  key: string;
+  name: string;
+  site: string;
+  type: string;
+}
+
 export interface MediaDetail extends MediaItem {
   tagline?: string;
   status?: string;
@@ -51,6 +65,15 @@ export interface MediaDetail extends MediaItem {
   number_of_seasons?: number; // TV
   number_of_episodes?: number; // TV
   seasons?: Season[];
+  created_by?: {
+    id: number;
+    name: string;
+    profile_path: string | null;
+  }[];
+  directors?: {
+    id: number;
+    name: string;
+  }[];
   credits?: {
     cast: {
       id: number;
@@ -59,6 +82,14 @@ export interface MediaDetail extends MediaItem {
       profile_path: string | null;
     }[];
   };
+  videos?: Video[];
+  watch_providers?: {
+    link?: string;
+    flatrate?: WatchProvider[];
+    rent?: WatchProvider[];
+    buy?: WatchProvider[];
+  };
+  recommendations?: MediaItem[];
 }
 
 export interface UserMediaRecord {

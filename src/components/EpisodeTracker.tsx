@@ -132,18 +132,18 @@ export default function EpisodeTracker({
     currentEpisodes.every((ep) => watchedSet.has(`${currentSeason?.season_number}-${ep.episode_number}`));
 
   return (
-    <div className="bg-zinc-900/60 rounded-3xl border border-zinc-800 p-6 md:p-8 shadow-xl">
+    <div className="bg-zinc-900/60 rounded-3xl border border-zinc-800 p-4 sm:p-6 md:p-8 shadow-xl">
       {/* Overview Progress Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-zinc-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 pb-5 sm:pb-6 border-b border-zinc-800">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold text-rose-400 uppercase tracking-wider mb-1">
             <Sparkles className="w-4 h-4" />
             <span>Avsnitts-tracking</span>
           </div>
-          <h2 className="text-2xl font-bold text-white tracking-tight">
+          <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
             Dina framsteg i {showTitle}
           </h2>
-          <p className="text-sm text-zinc-400 mt-1">
+          <p className="text-xs sm:text-sm text-zinc-400 mt-1">
             {lastWatchedEpisode ? (
               <>
                 Senast sedda: <strong className="text-zinc-200">Säsong {lastWatchedEpisode.season}, Avsnitt {lastWatchedEpisode.episode}</strong>
@@ -154,32 +154,32 @@ export default function EpisodeTracker({
           </p>
         </div>
 
-        {/* Big Progress Stats */}
-        <div className="flex items-center gap-6">
-          <div className="text-right">
-            <div className="text-3xl font-black text-white">
-              {totalWatchedCount} <span className="text-zinc-500 text-lg font-normal">/ {totalShowEpisodes}</span>
+        {/* Progress Stats */}
+        <div className="flex items-center justify-between sm:justify-end gap-5 pt-2 sm:pt-0 border-t sm:border-t-0 border-zinc-800/60">
+          <div className="text-left sm:text-right">
+            <div className="text-2xl sm:text-3xl font-black text-white">
+              {totalWatchedCount} <span className="text-zinc-500 text-sm sm:text-lg font-normal">/ {totalShowEpisodes}</span>
             </div>
-            <div className="text-xs text-zinc-400 font-medium">
+            <div className="text-[11px] sm:text-xs text-zinc-400 font-medium">
               {remainingCount === 0 ? 'Alla avsnitt sedda! 🎉' : `${remainingCount} avsnitt kvar`}
             </div>
           </div>
-          <div className="w-16 h-16 rounded-full border-4 border-zinc-800 flex items-center justify-center relative bg-zinc-950">
-            <span className="text-sm font-bold text-rose-500">{progressPercentage}%</span>
+          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-4 border-zinc-800 flex items-center justify-center relative bg-zinc-950 flex-shrink-0">
+            <span className="text-xs sm:text-sm font-bold text-rose-500">{progressPercentage}%</span>
           </div>
         </div>
       </div>
 
       {/* Next Up to Watch Banner */}
       {nextEpisode && (
-        <div className="mt-6 p-4 rounded-2xl bg-gradient-to-r from-rose-950/40 via-zinc-900 to-zinc-900 border border-rose-900/30 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-rose-600/20 text-rose-400 flex items-center justify-center flex-shrink-0">
-              <Play className="w-5 h-5 fill-rose-400" />
+        <div className="mt-5 sm:mt-6 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-rose-950/40 via-zinc-900 to-zinc-900 border border-rose-900/30 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-rose-600/20 text-rose-400 flex items-center justify-center flex-shrink-0">
+              <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-rose-400" />
             </div>
-            <div>
-              <span className="text-xs font-semibold text-rose-400 uppercase">Nästa avsnitt att se</span>
-              <p className="text-sm font-bold text-zinc-100">
+            <div className="min-w-0">
+              <span className="text-[10px] sm:text-xs font-semibold text-rose-400 uppercase tracking-wide">Nästa avsnitt att se</span>
+              <p className="text-xs sm:text-sm font-bold text-zinc-100 truncate">
                 Säsong {nextEpisode.season}, Avsnitt {nextEpisode.episode}
                 {nextEpisode.name ? `: ${nextEpisode.name}` : ''}
               </p>
@@ -188,7 +188,7 @@ export default function EpisodeTracker({
           <button
             type="button"
             onClick={() => handleToggle(nextEpisode!.season, nextEpisode!.episode)}
-            className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-md shadow-rose-900/40 transition-all flex-shrink-0"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 sm:py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 active:scale-95 text-white text-xs font-semibold shadow-md shadow-rose-900/40 transition-all flex-shrink-0"
           >
             <Check className="w-4 h-4" />
             <span>Markera som sedd</span>
@@ -322,13 +322,13 @@ export default function EpisodeTracker({
                 <button
                   type="button"
                   onClick={() => handleToggle(episode.season_number, episode.episode_number)}
-                  className={`flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all flex-shrink-0 ${
+                  className={`w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 sm:py-2 rounded-xl text-xs font-semibold transition-all flex-shrink-0 active:scale-95 ${
                     isWatched
-                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20'
+                      ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/25'
                       : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700'
                   }`}
                 >
-                  <Check className={`w-4 h-4 ${isWatched ? 'text-emerald-400' : 'text-zinc-500'}`} />
+                  <Check className={`w-4 h-4 ${isWatched ? 'text-emerald-400 stroke-[2.5]' : 'text-zinc-500'}`} />
                   <span>{isWatched ? 'Sedd' : 'Markera som sedd'}</span>
                 </button>
               </div>
