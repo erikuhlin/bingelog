@@ -5,6 +5,7 @@ import { getTrendingMedia, getPopularMovies, getPopularShows } from '@/lib/tmdb'
 import HeroBanner from '@/components/HeroBanner';
 import MediaCard from '@/components/MediaCard';
 import ContinueWatchingSection from '@/components/ContinueWatchingSection';
+import UserWelcomeBanner from '@/components/UserWelcomeBanner';
 
 export default async function HomePage() {
   const trending = await getTrendingMedia();
@@ -16,6 +17,9 @@ export default async function HomePage() {
 
   return (
     <div>
+      {/* Personalized Welcome Banner for Logged In User */}
+      <UserWelcomeBanner />
+
       {/* Featured Hero Banner */}
       {featuredItem && <HeroBanner item={featuredItem} />}
 

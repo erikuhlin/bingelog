@@ -279,3 +279,46 @@ export async function markSeasonWatched(
 
   saveLocalWatchedEpisodes(all);
 }
+
+export async function syncLocalDataToSupabase(userId: string): Promise<void> {
+  const supabase = getSupabaseClient();
+  if (!supabase || !userId) return;
+
+  try {
+    const localMedia = getLocalMedia();
+    if (localMedia.length > 0) {
+      const rows = localMedia.map((m) => ({
+        user_id: userId,
+        tmdb_id: m.tmdb_id,
+        media_type: m.media_type,
+        title: m.title,
+        poster_path: m.poster_path,
+        backdrop_path: m.backdrop_path,
+        status: m.status,
+        user_rating: m.user_rating,
+        updated_at: m.updated_at || new Date().toISOString(),
+      }));
+
+      await supabase.from('user_media').upsert(rows, {
+        onConflict: 'user_id,tmdb_id,media_type',
+      });
+    }
+
+    const localEpisodes = getLocalWatchedEpisodes();
+    if (localEpisodes.length > 0) {
+      const epRows = localEpisodes.map((ep) => ({
+        user_id: userId,
+        tmdb_id: ep.tmdb_id,
+        season_number: ep.season_number,
+        episode_number: ep.episode_number,
+        watched_at: ep.watched_at || new Date().toISOString(),
+      }));
+
+      await supabase.from('watched_episodes').upsert(epRows, {
+        onConflict: 'user_id,tmdb_id,season_number,episode_number',
+      });
+    }
+  } catch (err) {
+    console.error('Error syncing local data to Supabase:', err);
+  }
+}
