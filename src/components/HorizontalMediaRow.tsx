@@ -50,7 +50,7 @@ export default function HorizontalMediaRow({
   if (!items || items.length === 0) return null;
 
   return (
-    <section className="mb-10 sm:mb-14 relative group">
+    <section className="mb-10 sm:mb-14 relative group overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
@@ -96,7 +96,7 @@ export default function HorizontalMediaRow({
       {/* Horizontal Scroll Track */}
       <div
         ref={rowRef}
-        className="flex overflow-x-auto gap-3.5 sm:gap-4 pb-3 scrollbar-none snap-x snap-mandatory overscroll-x-contain -mx-4 px-4 sm:mx-0 sm:px-0"
+        className="flex overflow-x-auto gap-3.5 sm:gap-4 pb-3 scrollbar-none snap-x snap-mandatory overscroll-x-contain"
       >
         {items.map((item) => (
           <div

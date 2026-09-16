@@ -216,8 +216,8 @@ export default function ExploreFeed({
 
       {/* Title & Results count & View Mode switcher */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-[#E9A23B]" />
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
+          <Sparkles className="w-5 h-5 text-[#E9A23B] flex-shrink-0" />
           <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-[#ECE9E3] tracking-tight">
             {selectedProviderName
               ? `Populärt på ${selectedProviderName}`
@@ -225,7 +225,7 @@ export default function ExploreFeed({
               ? 'Filtrerade titlar'
               : title || 'Trendar i veckan'}
           </h2>
-          <span className="text-xs text-[#8D97A8] font-medium ml-1">
+          <span className="text-xs text-[#8D97A8] font-medium ml-1 flex-shrink-0">
             ({items.length} titlar)
           </span>
         </div>

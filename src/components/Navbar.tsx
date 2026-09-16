@@ -68,13 +68,13 @@ export default function Navbar() {
   return (
     <>
       <header className="sticky top-0 z-40 w-full border-b border-[#2B3443] bg-[#0F1218]/90 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3 sm:gap-4">
+        <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-4">
           {/* Brand */}
-          <div className="flex items-center gap-4 md:gap-6 flex-shrink-0">
-            <Link href="/" className="flex items-center gap-2.5 group">
+          <div className="flex items-center gap-2.5 sm:gap-4 md:gap-6 flex-shrink-0">
+            <Link href="/" className="flex items-center gap-2 group">
               <BrandLogo size="md" />
               <div className="flex flex-col">
-                <span className="text-xl font-bold tracking-tight text-[#ECE9E3] flex items-center gap-0.5">
+                <span className="text-lg sm:text-xl font-bold tracking-tight text-[#ECE9E3] flex items-center gap-0.5">
                   Binge<span className="text-[#E9A23B]">log</span>
                 </span>
                 <span className="text-[10px] text-[#8D97A8] font-medium -mt-1 hidden sm:inline">
@@ -107,8 +107,8 @@ export default function Navbar() {
           </div>
 
           {/* Search bar & Auth */}
-          <div className="flex items-center gap-2 sm:gap-3 flex-1 justify-end max-w-md min-w-0">
-            <div ref={searchRef} className="relative w-full min-w-0 max-w-[160px] xs:max-w-[200px] sm:max-w-xs">
+          <div className="flex items-center gap-1.5 sm:gap-3 flex-1 justify-end max-w-md min-w-0">
+            <div ref={searchRef} className="relative w-full min-w-0 max-w-[130px] xs:max-w-[190px] sm:max-w-xs">
               <div className="relative flex items-center">
                 <Search className="absolute left-2.5 xs:left-3 w-3.5 h-3.5 text-[#8D97A8] pointer-events-none" />
                 <input

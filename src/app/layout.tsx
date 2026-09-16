@@ -1,7 +1,14 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import Navbar from '@/components/Navbar';
 import { AuthProvider } from '@/context/AuthContext';
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
 
 export const metadata: Metadata = {
   title: 'Bingelog - Håll koll på filmer och serier',
@@ -29,20 +36,22 @@ export default function RootLayout({
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
       </head>
-      <body className="min-h-screen flex flex-col bg-zinc-950 text-zinc-100 antialiased selection:bg-rose-600 selection:text-white">
+      <body className="min-h-screen flex flex-col bg-zinc-950 text-zinc-100 antialiased selection:bg-rose-600 selection:text-white w-full max-w-full overflow-x-hidden">
         <AuthProvider>
-          <Navbar />
-          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-24 md:pb-8 min-w-0 overflow-x-clip">
-            {children}
-          </main>
-          <footer className="border-t border-zinc-800/80 py-8 text-center text-xs text-zinc-500">
-            <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <p>© {new Date().getFullYear()} Bingelog. Data och bilder från TMDb.</p>
-              <p className="text-zinc-500">
-                Byggd med Next.js, Tailwind CSS & Supabase
-              </p>
-            </div>
-          </footer>
+          <div className="flex flex-col min-h-screen w-full max-w-full overflow-x-hidden relative">
+            <Navbar />
+            <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-24 md:pb-8 min-w-0">
+              {children}
+            </main>
+            <footer className="border-t border-zinc-800/80 py-8 text-center text-xs text-zinc-500 w-full overflow-hidden">
+              <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <p>© {new Date().getFullYear()} Bingelog. Data och bilder från TMDb.</p>
+                <p className="text-zinc-500">
+                  Byggd med Next.js, Tailwind CSS & Supabase
+                </p>
+              </div>
+            </footer>
+          </div>
         </AuthProvider>
       </body>
     </html>
