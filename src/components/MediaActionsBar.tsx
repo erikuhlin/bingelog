@@ -13,6 +13,7 @@ interface MediaActionsBarProps {
   posterPath: string | null;
   backdropPath: string | null;
   trailerVideo?: Video;
+  className?: string;
 }
 
 export default function MediaActionsBar({
@@ -22,6 +23,7 @@ export default function MediaActionsBar({
   posterPath,
   backdropPath,
   trailerVideo,
+  className = '',
 }: MediaActionsBarProps) {
   const [trailerOpen, setTrailerOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -42,9 +44,9 @@ export default function MediaActionsBar({
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+    <div className={`flex flex-wrap items-center gap-2.5 w-full ${className}`}>
       {/* Status Selector with Rating */}
-      <div className="flex-1 sm:flex-initial min-w-[140px]">
+      <div className="flex-1 min-w-[130px]">
         <StatusSelector
           tmdbId={tmdbId}
           mediaType={mediaType}
