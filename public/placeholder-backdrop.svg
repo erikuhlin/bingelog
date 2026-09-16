@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" fill="none">
+  <rect width="1280" height="720" fill="#09090b"/>
+  <circle cx="640" cy="340" r="64" fill="#18181b"/>
+  <path d="M625 315L665 340L625 365V315Z" fill="#3f3f46"/>
+  <text x="640" y="440" fill="#71717a" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="600" text-anchor="middle">Ingen bakgrundsbild</text>
+</svg>

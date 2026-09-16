@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="500" height="750" viewBox="0 0 500 750" fill="none">
+  <rect width="500" height="750" fill="#18181b"/>
+  <rect x="20" y="20" width="460" height="710" rx="16" stroke="#27272a" stroke-width="2" stroke-dasharray="8 8"/>
+  <circle cx="250" cy="330" r="48" fill="#27272a"/>
+  <path d="M240 310L270 330L240 350V310Z" fill="#71717a"/>
+  <text x="250" y="420" fill="#a1a1aa" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="600" text-anchor="middle">Ingen affisch</text>
+  <text x="250" y="450" fill="#52525b" font-family="system-ui, -apple-system, sans-serif" font-size="14" text-anchor="middle">Bingelog</text>
+</svg>
