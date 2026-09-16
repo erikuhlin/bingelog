@@ -3,7 +3,6 @@ import { getTrendingMedia, getPopularMovies, getPopularShows } from '@/lib/tmdb'
 import HeroCarousel from '@/components/HeroCarousel';
 import HorizontalMediaRow from '@/components/HorizontalMediaRow';
 import ContinueWatchingSection from '@/components/ContinueWatchingSection';
-import UserWelcomeBanner from '@/components/UserWelcomeBanner';
 import ExploreFeed from '@/components/ExploreFeed';
 
 export default async function HomePage() {
@@ -18,9 +17,6 @@ export default async function HomePage() {
 
   return (
     <div className="w-full max-w-full overflow-hidden">
-      {/* Personalized Welcome Banner for Logged In User */}
-      <UserWelcomeBanner />
-
       {/* Hero Carousel with top trending titles */}
       {carouselItems.length > 0 && <HeroCarousel items={carouselItems} />}
 

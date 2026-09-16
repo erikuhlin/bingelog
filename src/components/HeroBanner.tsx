@@ -24,9 +24,10 @@ export default function HeroBanner({ item }: HeroBannerProps) {
         className="w-full h-full object-cover object-center"
       />
 
-      {/* Gradients matching #0F1218 */}
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0F1218] via-[#0F1218]/70 to-transparent" />
-      <div className="absolute inset-0 bg-gradient-to-r from-[#0F1218]/95 via-[#0F1218]/60 to-transparent" />
+      {/* Gradient Overlays - Tuned for maximum backdrop clarity while guaranteeing text readability */}
+      <div className="absolute inset-0 bg-gradient-to-r from-[#0F1218] via-[#0F1218]/75 via-25% sm:via-35% to-transparent to-70% sm:to-85% pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#0F1218] via-[#0F1218]/60 via-12% sm:via-[#0F1218]/25 sm:via-25% to-transparent to-55% pointer-events-none" />
+      <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-[#0F1218]/40 to-transparent pointer-events-none" />
 
       {/* Content overlay */}
       <div className="absolute inset-0 flex flex-col justify-end p-4 sm:p-6 md:p-10 max-w-2xl">
@@ -56,11 +57,11 @@ export default function HeroBanner({ item }: HeroBannerProps) {
           )}
         </div>
 
-        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-[#ECE9E3] tracking-tight leading-tight mb-2 sm:mb-2.5">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-[#ECE9E3] tracking-tight leading-tight mb-2 sm:mb-2.5 drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">
           {item.title}
         </h1>
 
-        <p className="text-[#ECE9E3]/85 text-xs sm:text-sm line-clamp-2 sm:line-clamp-3 mb-4 leading-relaxed max-w-xl">
+        <p className="text-zinc-200 text-xs sm:text-sm line-clamp-2 sm:line-clamp-3 mb-4 leading-relaxed max-w-xl font-medium drop-shadow-[0_1px_4px_rgba(0,0,0,0.85)]">
           {item.overview}
         </p>
 

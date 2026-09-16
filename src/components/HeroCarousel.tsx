@@ -128,9 +128,15 @@ export default function HeroCarousel({
               loading={index === 0 ? 'eager' : 'lazy'}
             />
 
-            {/* Gradient Overlays */}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0F1218] via-[#0F1218]/70 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#0F1218]/95 via-[#0F1218]/60 to-transparent" />
+            {/* Gradient Overlays - Tuned for maximum backdrop clarity while guaranteeing text readability */}
+            {/* Horizontal gradient focused on the left text area */}
+            <div className="absolute inset-0 bg-gradient-to-r from-[#0F1218] via-[#0F1218]/75 via-25% sm:via-35% to-transparent to-70% sm:to-85% pointer-events-none" />
+
+            {/* Gentle bottom gradient to seamlessly blend into container without muddying the artwork */}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0F1218] via-[#0F1218]/60 via-12% sm:via-[#0F1218]/25 sm:via-25% to-transparent to-55% pointer-events-none" />
+
+            {/* Subtle top edge blend */}
+            <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-[#0F1218]/40 to-transparent pointer-events-none" />
 
             {/* Slide Content */}
             <div className="absolute inset-0 flex flex-col justify-end p-4 pb-14 sm:p-8 sm:pb-8 md:p-12 max-w-full sm:max-w-2xl min-w-0">
@@ -165,12 +171,12 @@ export default function HeroCarousel({
               </div>
 
               {/* Title */}
-              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-[#ECE9E3] tracking-tight leading-tight mb-2 sm:mb-2.5 drop-shadow-md">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-[#ECE9E3] tracking-tight leading-tight mb-2 sm:mb-2.5 drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">
                 {item.title}
               </h1>
 
               {/* Overview */}
-              <p className="text-[#ECE9E3]/85 text-xs sm:text-sm line-clamp-2 sm:line-clamp-3 mb-4 leading-relaxed max-w-xl">
+              <p className="text-zinc-200 text-xs sm:text-sm line-clamp-2 sm:line-clamp-3 mb-4 leading-relaxed max-w-xl font-medium drop-shadow-[0_1px_4px_rgba(0,0,0,0.85)]">
                 {item.overview}
               </p>
 
