@@ -95,7 +95,7 @@ export default function AuthModal() {
           <p className="text-xs text-zinc-400 mt-1 max-w-xs mx-auto">
             {isLogin
               ? 'Logga in för att komma åt dina sparade titlar och avsnitt.'
-              : 'Spara din historik, synka mellan mobil och dator helt gratis.'}
+              : 'Spara din historik och kom åt dina listor var du än loggar in.'}
           </p>
         </div>
 

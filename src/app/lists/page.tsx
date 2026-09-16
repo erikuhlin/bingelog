@@ -126,10 +126,10 @@ export default function MyListsPage() {
             </div>
             <div>
               <h3 className="text-sm font-bold text-white">
-                Vill du spara din samling och synka till mobilen?
+                Spara din samling permanent
               </h3>
               <p className="text-xs text-zinc-400 mt-0.5 max-w-xl leading-relaxed">
-                Just nu sparas dina filmer och avsnitt lokalt i den här webbläsaren. Skapa ett gratis konto så sparas allt säkert i molnet och du kan fortsätta titta var du än är!
+                Just nu sparas dina filmer och avsnitt endast tillfälligt i den här webbläsaren. Skapa ett gratis konto för att spara allt säkert på ditt konto så att din historik aldrig försvinner.
               </p>
             </div>
           </div>
