@@ -33,11 +33,11 @@ export default function UserWelcomeBanner() {
 
       <div className="flex items-center gap-2">
         <Link
-          href="/lists"
+          href="/library"
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold transition-colors"
         >
           <Bookmark className="w-3.5 h-3.5 text-rose-500" />
-          <span>Öppna samling</span>
+          <span>Mitt bibliotek</span>
         </Link>
       </div>
     </div>

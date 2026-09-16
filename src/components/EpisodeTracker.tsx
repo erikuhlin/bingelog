@@ -82,18 +82,20 @@ export default function EpisodeTracker({
   const handleToggle = async (seasonNum: number, episodeNum: number) => {
     // Ensure show is saved in user's list (default to 'watching')
     const existing = await getUserMediaItem(showId, 'tv');
-    if (!existing) {
-      await saveUserMedia({
-        tmdb_id: showId,
-        media_type: 'tv',
-        title: showTitle,
-        poster_path: posterPath,
-        backdrop_path: backdropPath,
-        status: 'watching',
-      });
-    }
-
     await toggleEpisodeWatched(showId, seasonNum, episodeNum);
+
+    const isNowWatched = !watchedSet.has(`${seasonNum}-${episodeNum}`);
+    await saveUserMedia({
+      tmdb_id: showId,
+      media_type: 'tv',
+      title: showTitle,
+      poster_path: posterPath,
+      backdrop_path: backdropPath,
+      status: existing?.status || 'watching',
+      current_season: isNowWatched ? seasonNum : (existing?.current_season || seasonNum),
+      current_episode: isNowWatched ? episodeNum : (existing?.current_episode || 0),
+    });
+
     await refreshWatched();
   };
 

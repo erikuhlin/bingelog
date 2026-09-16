@@ -116,11 +116,13 @@ export interface UserMediaRecord {
   notes?: string;
   created_at?: string;
   updated_at?: string;
-  // Computed or cached for TV
-  last_season_watched?: number;
-  last_episode_watched?: number;
-  total_episodes_watched?: number;
-  total_episodes?: number;
+  // Denormalized TV progress
+  current_season?: number;
+  current_episode?: number;
+  // Cached series metadata for quick display
+  total_episodes_in_season?: number;
+  runtime?: number;
+  next_air_date?: string | null;
 }
 
 export interface WatchedEpisodeRecord {

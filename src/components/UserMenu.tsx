@@ -55,12 +55,12 @@ export default function UserMenu() {
 
           {/* Links */}
           <Link
-            href="/lists"
+            href="/library"
             onClick={() => setIsOpen(false)}
             className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-zinc-200 hover:bg-zinc-800 transition-colors"
           >
             <Bookmark className="w-4 h-4 text-rose-500" />
-            <span>Mina Listor</span>
+            <span>Mitt bibliotek</span>
           </Link>
 
           <Link

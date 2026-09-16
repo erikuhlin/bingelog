@@ -66,7 +66,7 @@ export default function Navbar() {
     { href: '/', label: 'Utforska', icon: Sparkles },
     { href: '/movies', label: 'Filmer', icon: Film },
     { href: '/shows', label: 'Serier', icon: Tv },
-    { href: '/lists', label: 'Mina Listor', icon: Bookmark },
+    { href: '/library', label: 'Mitt bibliotek', icon: Bookmark },
   ];
 
   return (

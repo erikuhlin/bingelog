@@ -55,10 +55,18 @@ create table if not exists public.user_media (
   status text not null check (status in ('watchlist', 'watching', 'completed', 'dropped')),
   user_rating integer check (user_rating between 1 and 10),
   notes text,
+  current_season integer default 1,
+  current_episode integer default 0,
+  runtime integer,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
   unique (user_id, tmdb_id, media_type)
 );
+
+-- Migrering om kolumner saknas i befintlig databas:
+alter table public.user_media add column if not exists current_season integer default 1;
+alter table public.user_media add column if not exists current_episode integer default 0;
+alter table public.user_media add column if not exists runtime integer;
 
 -- RLS för user_media
 alter table public.user_media enable row level security;

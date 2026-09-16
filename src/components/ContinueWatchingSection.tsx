@@ -37,10 +37,10 @@ export default function ContinueWatchingSection() {
           <h2 className="text-xl font-bold text-white tracking-tight">Fortsätt titta</h2>
         </div>
         <Link
-          href="/lists"
+          href="/library"
           className="text-xs font-semibold text-rose-400 hover:text-rose-300 flex items-center gap-1 transition-colors"
         >
-          <span>Visa alla i listan</span>
+          <span>Öppna biblioteket</span>
           <ArrowRight className="w-3.5 h-3.5" />
         </Link>
       </div>

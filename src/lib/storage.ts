@@ -280,6 +280,112 @@ export async function markSeasonWatched(
   saveLocalWatchedEpisodes(all);
 }
 
+export async function markNextEpisodeWatched(
+  tmdbId: number,
+  seasonNumber: number,
+  episodeNumber: number,
+  isEndedSeries: boolean = false,
+  isLastEpisodeInShow: boolean = false
+): Promise<UserMediaRecord | null> {
+  const supabase = getSupabaseClient();
+  const now = new Date().toISOString();
+
+  // 1. Mark episode in watched_episodes
+  if (supabase) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from('watched_episodes').upsert({
+        user_id: user.id,
+        tmdb_id: tmdbId,
+        season_number: seasonNumber,
+        episode_number: episodeNumber,
+        watched_at: now,
+      }, { onConflict: 'user_id,tmdb_id,season_number,episode_number' });
+
+      // Determine next status
+      let nextStatus: WatchStatus = 'watching';
+      if (isEndedSeries && isLastEpisodeInShow) {
+        nextStatus = 'completed';
+      }
+
+      // Update user_media current position
+      const { data } = await supabase
+        .from('user_media')
+        .update({
+          current_season: seasonNumber,
+          current_episode: episodeNumber,
+          status: nextStatus,
+          updated_at: now,
+        })
+        .match({ user_id: user.id, tmdb_id: tmdbId, media_type: 'tv' })
+        .select()
+        .single();
+
+      window.dispatchEvent(new Event('bingelog_storage_changed'));
+      return (data as UserMediaRecord) || null;
+    }
+  }
+
+  // Local storage fallback
+  let allEps = getLocalWatchedEpisodes();
+  const exists = allEps.some(
+    (ep) => ep.tmdb_id === tmdbId && ep.season_number === seasonNumber && ep.episode_number === episodeNumber
+  );
+  if (!exists) {
+    allEps.push({
+      tmdb_id: tmdbId,
+      season_number: seasonNumber,
+      episode_number: episodeNumber,
+      watched_at: now,
+    });
+    saveLocalWatchedEpisodes(allEps);
+  }
+
+  const mediaList = getLocalMedia();
+  const idx = mediaList.findIndex((m) => m.tmdb_id === tmdbId && m.media_type === 'tv');
+  let updatedRecord: UserMediaRecord | null = null;
+
+  if (idx >= 0) {
+    let nextStatus = mediaList[idx].status;
+    if (nextStatus === 'watchlist') {
+      nextStatus = 'watching';
+    }
+    if (isEndedSeries && isLastEpisodeInShow) {
+      nextStatus = 'completed';
+    }
+
+    updatedRecord = {
+      ...mediaList[idx],
+      current_season: seasonNumber,
+      current_episode: episodeNumber,
+      status: nextStatus,
+      updated_at: now,
+    };
+    mediaList[idx] = updatedRecord;
+    saveLocalMedia(mediaList);
+  }
+
+  return updatedRecord;
+}
+
+export async function getAllWatchedEpisodesCount(): Promise<number> {
+  const supabase = getSupabaseClient();
+  if (supabase) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { count, error } = await supabase
+        .from('watched_episodes')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+      if (!error && count !== null) {
+        return count;
+      }
+    }
+  }
+
+  return getLocalWatchedEpisodes().length;
+}
+
 export async function syncLocalDataToSupabase(userId: string): Promise<void> {
   const supabase = getSupabaseClient();
   if (!supabase || !userId) return;
@@ -296,6 +402,9 @@ export async function syncLocalDataToSupabase(userId: string): Promise<void> {
         backdrop_path: m.backdrop_path,
         status: m.status,
         user_rating: m.user_rating,
+        current_season: m.current_season || 1,
+        current_episode: m.current_episode || 0,
+        runtime: m.runtime,
         updated_at: m.updated_at || new Date().toISOString(),
       }));
 
