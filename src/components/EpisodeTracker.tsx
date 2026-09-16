@@ -199,68 +199,97 @@ export default function EpisodeTracker({
 
   return (
     <div className="bg-[#171C25] rounded-3xl border border-[#2B3443] p-4 sm:p-6 md:p-8 shadow-xl">
-      {/* Overview Progress Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-[#2B3443]">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 text-xs font-semibold text-[#E9A23B] uppercase tracking-wider mb-1">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Avsnitts-tracker</span>
-          </div>
-          <h2 className="text-xl sm:text-2xl font-bold text-[#ECE9E3] tracking-tight">
-            Dina framsteg i {showTitle}
-          </h2>
-          <p className="text-xs sm:text-sm text-[#8D97A8] mt-0.5">
-            {lastWatchedEpisode ? (
-              <>
-                Senast sedda: <strong className="text-[#ECE9E3]">Säsong {lastWatchedEpisode.season}, Avsnitt {lastWatchedEpisode.episode}</strong>
-              </>
-            ) : (
-              'Du har inte börjat titta än.'
-            )}
-          </p>
-        </div>
-
-        {/* Compact Progress Stats */}
-        <div className="flex items-center gap-4 bg-[#1E2531]/60 px-4 py-2.5 rounded-2xl border border-[#2B3443]/60 self-start sm:self-auto w-full sm:w-auto justify-between sm:justify-start">
-          <div>
-            <div className="text-lg sm:text-xl font-black text-[#ECE9E3] leading-none">
-              {totalWatchedCount} <span className="text-[#8D97A8] text-xs font-normal">/ {totalShowEpisodes} sedda</span>
-            </div>
-            <div className="text-[11px] text-[#8D97A8] mt-0.5">
-              {remainingCount === 0 ? 'Hela serien sedd! 🎉' : `${remainingCount} avsnitt kvar`}
-            </div>
-          </div>
-          <div className="flex items-center gap-2.5 flex-shrink-0">
-            {/* Mini visual circle or badge */}
-            <div className="w-10 h-10 rounded-full border-2 border-[#E9A23B] flex items-center justify-center bg-[#0F1218] text-xs font-bold text-[#E9A23B]">
-              {progressPercentage}%
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Next Up to Watch Banner */}
-      {nextEpisode && (
-        <div className="mt-4 sm:mt-5 p-3.5 rounded-2xl bg-[#1E2531] border border-[#2B3443] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-[#E9A23B]/15 text-[#E9A23B] flex items-center justify-center flex-shrink-0">
-              <Play className="w-4 h-4 fill-current" />
-            </div>
+      {/* Header: Tracked stats when logged in, clean season header with sign-up hint when guest */}
+      {user ? (
+        <>
+          {/* Overview Progress Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-[#2B3443]">
             <div className="min-w-0">
-              <span className="text-[10px] font-bold text-[#E9A23B] uppercase tracking-wide block">Nästa avsnitt att se</span>
-              <p className="text-xs sm:text-sm font-bold text-[#ECE9E3] truncate">
-                Säsong {nextEpisode.season}, Avsnitt {nextEpisode.episode}
-                {nextEpisode.name ? `: ${nextEpisode.name}` : ''}
+              <div className="flex items-center gap-2 text-xs font-semibold text-[#E9A23B] uppercase tracking-wider mb-1">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Avsnitts-tracker</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-bold text-[#ECE9E3] tracking-tight">
+                Dina framsteg i {showTitle}
+              </h2>
+              <p className="text-xs sm:text-sm text-[#8D97A8] mt-0.5">
+                {lastWatchedEpisode ? (
+                  <>
+                    Senast sedda: <strong className="text-[#ECE9E3]">Säsong {lastWatchedEpisode.season}, Avsnitt {lastWatchedEpisode.episode}</strong>
+                  </>
+                ) : (
+                  'Du har inte börjat titta än.'
+                )}
               </p>
             </div>
+
+            {/* Compact Progress Stats */}
+            <div className="flex items-center gap-4 bg-[#1E2531]/60 px-4 py-2.5 rounded-2xl border border-[#2B3443]/60 self-start sm:self-auto w-full sm:w-auto justify-between sm:justify-start">
+              <div>
+                <div className="text-lg sm:text-xl font-black text-[#ECE9E3] leading-none">
+                  {totalWatchedCount} <span className="text-[#8D97A8] text-xs font-normal">/ {totalShowEpisodes} sedda</span>
+                </div>
+                <div className="text-[11px] text-[#8D97A8] mt-0.5">
+                  {remainingCount === 0 ? 'Hela serien sedd! 🎉' : `${remainingCount} avsnitt kvar`}
+                </div>
+              </div>
+              <div className="flex items-center gap-2.5 flex-shrink-0">
+                <div className="w-10 h-10 rounded-full border-2 border-[#E9A23B] flex items-center justify-center bg-[#0F1218] text-xs font-bold text-[#E9A23B]">
+                  {progressPercentage}%
+                </div>
+              </div>
+            </div>
           </div>
+
+          {/* Next Up to Watch Banner */}
+          {nextEpisode && (
+            <div className="mt-4 sm:mt-5 p-3.5 rounded-2xl bg-[#1E2531] border border-[#2B3443] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-[#E9A23B]/15 text-[#E9A23B] flex items-center justify-center flex-shrink-0">
+                  <Play className="w-4 h-4 fill-current" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] font-bold text-[#E9A23B] uppercase tracking-wide block">Nästa avsnitt att se</span>
+                  <p className="text-xs sm:text-sm font-bold text-[#ECE9E3] truncate">
+                    Säsong {nextEpisode.season}, Avsnitt {nextEpisode.episode}
+                    {nextEpisode.name ? `: ${nextEpisode.name}` : ''}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleToggle(nextEpisode!.season, nextEpisode!.episode)}
+                className="flex items-center justify-center gap-1.5 px-4 py-2.5 sm:py-1.5 rounded-xl bg-[#E9A23B] hover:bg-[#F2B04E] active:scale-95 text-[#0F1218] text-xs font-bold shadow-md shadow-[#E9A23B]/20 transition-all cursor-pointer flex-shrink-0"
+              >
+                <Check className="w-4 h-4 stroke-[2.5]" />
+                <span>Markera som sedd</span>
+              </button>
+            </div>
+          )}
+        </>
+      ) : (
+        /* Guest Header */
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-[#2B3443]">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-semibold text-[#8D97A8] uppercase tracking-wider mb-1">
+              <Sparkles className="w-3.5 h-3.5 text-[#E9A23B]" />
+              <span>Avsnittsguide</span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-bold text-[#ECE9E3] tracking-tight">
+              Säsonger & Avsnitt
+            </h2>
+            <p className="text-xs sm:text-sm text-[#8D97A8] mt-0.5">
+              Bläddra bland alla säsonger och avsnitt för {showTitle}.
+            </p>
+          </div>
+
           <button
             type="button"
-            onClick={() => handleToggle(nextEpisode!.season, nextEpisode!.episode)}
-            className="flex items-center justify-center gap-1.5 px-4 py-2.5 sm:py-1.5 rounded-xl bg-[#E9A23B] hover:bg-[#F2B04E] active:scale-95 text-[#0F1218] text-xs font-bold shadow-md shadow-[#E9A23B]/20 transition-all cursor-pointer flex-shrink-0"
+            onClick={() => openAuthModal('signup')}
+            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-[#E9A23B]/15 hover:bg-[#E9A23B]/25 text-[#E9A23B] border border-[#E9A23B]/30 text-xs font-bold transition-all self-start sm:self-auto cursor-pointer"
           >
-            <Check className="w-4 h-4 stroke-[2.5]" />
-            <span>Markera som sedd</span>
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Skapa konto för att bocka av avsnitt</span>
           </button>
         </div>
       )}

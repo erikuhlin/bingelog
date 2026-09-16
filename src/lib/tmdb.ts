@@ -131,6 +131,7 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
     year,
     sortBy = 'popularity.desc',
     page = 1,
+    originalLanguage,
   } = filters;
 
   const baseParams: Record<string, string | number> = {
@@ -144,6 +145,9 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
   }
   if (minRating) {
     baseParams['vote_average.gte'] = minRating;
+  }
+  if (originalLanguage) {
+    baseParams.with_original_language = originalLanguage;
   }
   if (providerId) {
     baseParams.watch_region = 'SE';

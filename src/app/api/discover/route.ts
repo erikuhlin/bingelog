@@ -13,6 +13,8 @@ export async function GET(request: Request) {
   const sortBy = searchParams.get('sortBy') || 'popularity.desc';
   const page = searchParams.get('page') ? parseInt(searchParams.get('page')!, 10) : 1;
 
+  const originalLanguage = searchParams.get('originalLanguage') || undefined;
+
   const filters: DiscoverFilters = {
     mediaType,
     providerId,
@@ -21,6 +23,7 @@ export async function GET(request: Request) {
     year,
     sortBy,
     page,
+    originalLanguage,
   };
 
   try {

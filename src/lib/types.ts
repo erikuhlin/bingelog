@@ -30,6 +30,7 @@ export interface DiscoverFilters {
   year?: number;
   sortBy?: string;
   page?: number;
+  originalLanguage?: string;
 }
 
 export interface Episode {

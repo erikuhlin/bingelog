@@ -36,6 +36,8 @@ export default function ExploreFeed({
   const [mediaType, setMediaType] = useState<'all' | MediaType>(defaultMediaType);
   const [genreId, setGenreId] = useState<number | null>(null);
   const [minRating, setMinRating] = useState<number | null>(null);
+  const [year, setYear] = useState<number | null>(null);
+  const [originalLanguage, setOriginalLanguage] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<string>('popularity.desc');
 
   const [items, setItems] = useState<MediaItem[]>(initialTrending);
@@ -50,6 +52,8 @@ export default function ExploreFeed({
     mediaType !== defaultMediaType ||
     genreId !== null ||
     minRating !== null ||
+    year !== null ||
+    originalLanguage !== null ||
     sortBy !== 'popularity.desc';
 
   const activeFilterCount =
@@ -57,6 +61,8 @@ export default function ExploreFeed({
     (mediaType !== defaultMediaType ? 1 : 0) +
     (genreId ? 1 : 0) +
     (minRating ? 1 : 0) +
+    (year ? 1 : 0) +
+    (originalLanguage ? 1 : 0) +
     (sortBy !== 'popularity.desc' ? 1 : 0);
 
   const handleReset = () => {
@@ -64,6 +70,8 @@ export default function ExploreFeed({
     setMediaType(defaultMediaType);
     setGenreId(null);
     setMinRating(null);
+    setYear(null);
+    setOriginalLanguage(null);
     setSortBy('popularity.desc');
     setPage(1);
   };
@@ -87,6 +95,8 @@ export default function ExploreFeed({
         if (selectedProviderId) params.set('providerId', String(selectedProviderId));
         if (genreId) params.set('genreId', String(genreId));
         if (minRating) params.set('minRating', String(minRating));
+        if (year) params.set('year', String(year));
+        if (originalLanguage) params.set('originalLanguage', originalLanguage);
         if (sortBy) params.set('sortBy', sortBy);
         params.set('page', '1');
 
@@ -113,7 +123,7 @@ export default function ExploreFeed({
     return () => {
       isMounted = false;
     };
-  }, [selectedProviderId, mediaType, genreId, minRating, sortBy, isFiltered, initialTrending]);
+  }, [selectedProviderId, mediaType, genreId, minRating, year, originalLanguage, sortBy, isFiltered, initialTrending]);
 
   // Load more pages
   const handleLoadMore = async () => {
@@ -127,6 +137,8 @@ export default function ExploreFeed({
       if (selectedProviderId) params.set('providerId', String(selectedProviderId));
       if (genreId) params.set('genreId', String(genreId));
       if (minRating) params.set('minRating', String(minRating));
+      if (year) params.set('year', String(year));
+      if (originalLanguage) params.set('originalLanguage', originalLanguage);
       if (sortBy) params.set('sortBy', sortBy);
       params.set('page', String(nextPage));
 
@@ -192,6 +204,10 @@ export default function ExploreFeed({
         onGenreChange={setGenreId}
         minRating={minRating}
         onMinRatingChange={setMinRating}
+        year={year}
+        onYearChange={setYear}
+        originalLanguage={originalLanguage}
+        onOriginalLanguageChange={setOriginalLanguage}
         sortBy={sortBy}
         onSortChange={setSortBy}
         onReset={handleReset}
