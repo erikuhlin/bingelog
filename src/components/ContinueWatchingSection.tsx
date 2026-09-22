@@ -6,11 +6,17 @@ import { Play, ArrowRight, Tv } from 'lucide-react';
 import { getUserMediaList, getShowProgress } from '@/lib/storage';
 import { UserMediaRecord } from '@/lib/types';
 import { getImageUrl } from '@/lib/tmdb';
+import { useAuth } from '@/context/AuthContext';
 
 export default function ContinueWatchingSection() {
+  const { user } = useAuth();
   const [watchingShows, setWatchingShows] = useState<UserMediaRecord[]>([]);
 
   const loadWatching = async () => {
+    if (!user) {
+      setWatchingShows([]);
+      return;
+    }
     const list = await getUserMediaList();
     const active = list.filter((item) => item.media_type === 'tv' && item.status === 'watching');
     setWatchingShows(active);
@@ -21,9 +27,9 @@ export default function ContinueWatchingSection() {
     const handler = () => loadWatching();
     window.addEventListener('bingelog_storage_changed', handler);
     return () => window.removeEventListener('bingelog_storage_changed', handler);
-  }, []);
+  }, [user]);
 
-  if (watchingShows.length === 0) {
+  if (!user || watchingShows.length === 0) {
     return null;
   }
 

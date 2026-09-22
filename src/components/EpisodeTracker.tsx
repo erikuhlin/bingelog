@@ -75,13 +75,17 @@ export default function EpisodeTracker({
     // 1. Initial check from local storage
     refreshFromLocal();
 
-    // 2. Fetch/sync from Supabase on mount or auth change
-    getWatchedEpisodes(showId).then((list) => {
-      const newSet = new Set(list.map((item) => `${item.season_number}-${item.episode_number}`));
-      setWatchedSet(newSet);
-    });
+    // 2. Fetch/sync from Supabase only if user is logged in
+    if (user) {
+      getWatchedEpisodes(showId).then((list) => {
+        const newSet = new Set(list.map((item) => `${item.season_number}-${item.episode_number}`));
+        setWatchedSet(newSet);
+      });
+    } else {
+      refreshFromLocal();
+    }
 
-    // 3. Listen to local storage changes without re-querying remote Supabase during active clicks
+    // 3. Listen to local storage changes
     const handleStorageChange = () => refreshFromLocal();
     window.addEventListener('bingelog_storage_changed', handleStorageChange);
     return () => window.removeEventListener('bingelog_storage_changed', handleStorageChange);

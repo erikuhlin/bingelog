@@ -49,6 +49,16 @@ function saveLocalWatchedEpisodes(episodes: WatchedEpisodeRecord[], emitEvent: b
   }
 }
 
+export function clearLocalData(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(LOCAL_STORAGE_MEDIA_KEY);
+    localStorage.removeItem(LOCAL_STORAGE_EPISODES_KEY);
+  } catch (err) {
+    console.error('Failed to clear local storage:', err);
+  }
+}
+
 export function getShowProgress(tmdbId: number): {
   watchedCount: number;
   latestSeason: number;

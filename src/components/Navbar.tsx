@@ -65,6 +65,22 @@ export default function Navbar() {
     { href: '/library', label: 'Mitt bibliotek', icon: Bookmark },
   ];
 
+  const isLinkActive = (href: string) => {
+    if (href === '/') {
+      return pathname === '/';
+    }
+    if (href === '/movies') {
+      return pathname === '/movies' || pathname.startsWith('/movie/');
+    }
+    if (href === '/shows') {
+      return pathname === '/shows' || pathname.startsWith('/tv/');
+    }
+    if (href === '/library') {
+      return pathname === '/library' || pathname.startsWith('/library/');
+    }
+    return pathname === href;
+  };
+
   return (
     <>
       <header className="sticky top-0 z-40 w-full max-w-full border-b border-[#2B3443] bg-[#0F1218]/90 backdrop-blur-md">
@@ -84,22 +100,25 @@ export default function Navbar() {
             </Link>
 
             {/* Nav links (desktop) */}
-            <nav className="hidden md:flex items-center gap-1">
+            <nav className="hidden md:flex items-center gap-1.5">
               {navLinks.map((link) => {
                 const Icon = link.icon;
-                const isActive = pathname === link.href;
+                const isActive = isLinkActive(link.href);
                 return (
                   <Link
                     key={link.href}
                     href={link.href}
-                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-sm font-medium transition-colors ${
+                    className={`relative flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-sm transition-all ${
                       isActive
-                        ? 'bg-[#1E2531] text-[#E9A23B] shadow-sm font-semibold border border-[#2B3443]'
-                        : 'text-[#8D97A8] hover:text-[#ECE9E3] hover:bg-[#171C25]'
+                        ? 'bg-[#E9A23B]/15 text-[#E9A23B] border border-[#E9A23B]/50 shadow-sm shadow-[#E9A23B]/10 font-bold'
+                        : 'text-[#8D97A8] hover:text-[#ECE9E3] hover:bg-[#171C25] font-medium border border-transparent'
                     }`}
                   >
-                    <Icon className="w-4 h-4" />
-                    {link.label}
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-[#E9A23B] stroke-[2.5]' : 'text-[#8D97A8]'}`} />
+                    <span>{link.label}</span>
+                    {isActive && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#E9A23B] shadow-[0_0_6px_#E9A23B] -ml-0.5" />
+                    )}
                   </Link>
                 );
               })}
@@ -201,19 +220,30 @@ export default function Navbar() {
       </header>
 
       {/* Mobile Fixed Bottom Navigation Bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-[#2B3443] bg-[#0F1218]/95 backdrop-blur-xl px-4 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] flex items-center justify-around shadow-2xl">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-[#2B3443] bg-[#0F1218]/95 backdrop-blur-xl px-2 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] flex items-center justify-around shadow-2xl">
         {navLinks.map((link) => {
           const Icon = link.icon;
-          const isActive = pathname === link.href;
+          const isActive = isLinkActive(link.href);
           return (
             <Link
               key={link.href}
               href={link.href}
-              className={`flex flex-col items-center gap-1 py-1 px-3 text-[11px] font-semibold transition-all active:scale-95 ${
-                isActive ? 'text-[#E9A23B] font-bold' : 'text-[#8D97A8] hover:text-[#ECE9E3]'
+              className={`relative flex flex-col items-center gap-1 py-1 px-3 text-[11px] transition-all active:scale-95 ${
+                isActive ? 'text-[#E9A23B] font-bold' : 'text-[#8D97A8] hover:text-[#ECE9E3] font-medium'
               }`}
             >
-              <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : ''}`} />
+              {isActive && (
+                <span className="absolute -top-2 left-1/2 -translate-x-1/2 w-8 h-1 bg-[#E9A23B] rounded-full shadow-[0_0_8px_#E9A23B]" />
+              )}
+              <div
+                className={`p-1.5 rounded-xl transition-all ${
+                  isActive
+                    ? 'bg-[#E9A23B]/20 text-[#E9A23B] ring-1 ring-[#E9A23B]/40 shadow-sm shadow-[#E9A23B]/20'
+                    : 'text-[#8D97A8]'
+                }`}
+              >
+                <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : ''}`} />
+              </div>
               <span>{link.label}</span>
             </Link>
           );

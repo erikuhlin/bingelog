@@ -100,8 +100,10 @@ export default function AdvancedFilterBar({
               <button
                 type="button"
                 onClick={() => onMediaTypeChange('all')}
-                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
-                  mediaType === 'all' ? 'bg-[#1E2531] text-[#ECE9E3]' : 'text-[#8D97A8] hover:text-[#ECE9E3]'
+                className={`flex-1 py-1.5 text-xs rounded-lg transition-colors cursor-pointer ${
+                  mediaType === 'all'
+                    ? 'bg-[#E9A23B] text-[#0F1218] font-bold shadow-sm'
+                    : 'text-[#8D97A8] hover:text-[#ECE9E3] font-medium'
                 }`}
               >
                 Alla
@@ -109,21 +111,25 @@ export default function AdvancedFilterBar({
               <button
                 type="button"
                 onClick={() => onMediaTypeChange('movie')}
-                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg flex items-center justify-center gap-1 transition-colors cursor-pointer ${
-                  mediaType === 'movie' ? 'bg-[#1E2531] text-[#ECE9E3]' : 'text-[#8D97A8] hover:text-[#ECE9E3]'
+                className={`flex-1 py-1.5 text-xs rounded-lg flex items-center justify-center gap-1 transition-colors cursor-pointer ${
+                  mediaType === 'movie'
+                    ? 'bg-[#E9A23B] text-[#0F1218] font-bold shadow-sm'
+                    : 'text-[#8D97A8] hover:text-[#ECE9E3] font-medium'
                 }`}
               >
-                <Film className="w-3 h-3 text-[#E9A23B]" />
+                <Film className={`w-3 h-3 ${mediaType === 'movie' ? 'text-[#0F1218]' : 'text-[#E9A23B]'}`} />
                 <span>Film</span>
               </button>
               <button
                 type="button"
                 onClick={() => onMediaTypeChange('tv')}
-                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg flex items-center justify-center gap-1 transition-colors cursor-pointer ${
-                  mediaType === 'tv' ? 'bg-[#1E2531] text-[#ECE9E3]' : 'text-[#8D97A8] hover:text-[#ECE9E3]'
+                className={`flex-1 py-1.5 text-xs rounded-lg flex items-center justify-center gap-1 transition-colors cursor-pointer ${
+                  mediaType === 'tv'
+                    ? 'bg-[#E9A23B] text-[#0F1218] font-bold shadow-sm'
+                    : 'text-[#8D97A8] hover:text-[#ECE9E3] font-medium'
                 }`}
               >
-                <Tv className="w-3 h-3 text-[#6FA98A]" />
+                <Tv className={`w-3 h-3 ${mediaType === 'tv' ? 'text-[#0F1218]' : 'text-[#6FA98A]'}`} />
                 <span>Serie</span>
               </button>
             </div>

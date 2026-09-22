@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { getSupabaseClient } from '@/lib/supabase/client';
-import { syncLocalDataToSupabase } from '@/lib/storage';
+import { syncLocalDataToSupabase, clearLocalData } from '@/lib/storage';
 
 interface AuthContextType {
   user: User | null;
@@ -51,13 +51,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth state changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+    } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       setSession(newSession);
       setUser(newSession?.user ?? null);
       setLoading(false);
 
       if (newSession?.user) {
         await syncLocalDataToSupabase(newSession.user.id);
+        window.dispatchEvent(new Event('bingelog_storage_changed'));
+      } else if (event === 'SIGNED_OUT' || !newSession?.user) {
+        clearLocalData();
         window.dispatchEvent(new Event('bingelog_storage_changed'));
       }
     });
@@ -149,10 +152,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     const supabase = getSupabaseClient();
+    clearLocalData();
+    setUser(null);
+    setSession(null);
     if (supabase) {
       await supabase.auth.signOut();
-      window.dispatchEvent(new Event('bingelog_storage_changed'));
     }
+    window.dispatchEvent(new Event('bingelog_storage_changed'));
   };
 
   return (

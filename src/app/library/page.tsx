@@ -423,8 +423,10 @@ function LibraryContent() {
               <button
                 type="button"
                 onClick={() => updateUrl({ type: 'all' })}
-                className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${
-                  typeParam === 'all' ? 'bg-[#1E2531] text-[#ECE9E3] font-semibold' : 'text-[#8D97A8] hover:text-[#ECE9E3]'
+                className={`px-2.5 py-1 rounded-lg text-xs transition-colors cursor-pointer ${
+                  typeParam === 'all'
+                    ? 'bg-[#E9A23B] text-[#0F1218] font-bold shadow-sm'
+                    : 'text-[#8D97A8] hover:text-[#ECE9E3] font-medium'
                 }`}
               >
                 Alla typer
@@ -432,21 +434,25 @@ function LibraryContent() {
               <button
                 type="button"
                 onClick={() => updateUrl({ type: 'tv' })}
-                className={`px-2.5 py-1 rounded-lg font-medium flex items-center gap-1 transition-colors ${
-                  typeParam === 'tv' ? 'bg-[#1E2531] text-[#ECE9E3] font-semibold' : 'text-[#8D97A8] hover:text-[#ECE9E3]'
+                className={`px-2.5 py-1 rounded-lg text-xs flex items-center gap-1 transition-colors cursor-pointer ${
+                  typeParam === 'tv'
+                    ? 'bg-[#E9A23B] text-[#0F1218] font-bold shadow-sm'
+                    : 'text-[#8D97A8] hover:text-[#ECE9E3] font-medium'
                 }`}
               >
-                <Tv className="w-3 h-3 text-sky-400" />
+                <Tv className={`w-3 h-3 ${typeParam === 'tv' ? 'text-[#0F1218]' : 'text-[#6FA98A]'}`} />
                 <span>Serier</span>
               </button>
               <button
                 type="button"
                 onClick={() => updateUrl({ type: 'movie' })}
-                className={`px-2.5 py-1 rounded-lg font-medium flex items-center gap-1 transition-colors ${
-                  typeParam === 'movie' ? 'bg-[#1E2531] text-[#ECE9E3] font-semibold' : 'text-[#8D97A8] hover:text-[#ECE9E3]'
+                className={`px-2.5 py-1 rounded-lg text-xs flex items-center gap-1 transition-colors cursor-pointer ${
+                  typeParam === 'movie'
+                    ? 'bg-[#E9A23B] text-[#0F1218] font-bold shadow-sm'
+                    : 'text-[#8D97A8] hover:text-[#ECE9E3] font-medium'
                 }`}
               >
-                <Film className="w-3 h-3 text-[#E9A23B]" />
+                <Film className={`w-3 h-3 ${typeParam === 'movie' ? 'text-[#0F1218]' : 'text-[#E9A23B]'}`} />
                 <span>Filmer</span>
               </button>
             </div>
