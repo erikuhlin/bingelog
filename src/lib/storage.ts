@@ -95,11 +95,13 @@ export async function getUserMediaList(): Promise<UserMediaRecord[]> {
   if (supabase) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data, error } = await supabase
-          .from('user_media')
-          .select('*')
-          .order('updated_at', { ascending: false });
+      if (!user) {
+        return [];
+      }
+      const { data, error } = await supabase
+        .from('user_media')
+        .select('*')
+        .order('updated_at', { ascending: false });
 
         if (error) {
           console.error('Supabase getUserMediaList error:', error);
@@ -152,6 +154,15 @@ export function getLocalMediaItem(tmdbId: number, mediaType: MediaType): UserMed
 }
 
 export async function getUserMediaItem(tmdbId: number, mediaType: MediaType): Promise<UserMediaRecord | null> {
+  const supabase = getSupabaseClient();
+  if (supabase) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+    } catch {
+      return null;
+    }
+  }
   const localItem = getLocalMediaItem(tmdbId, mediaType);
   if (localItem) return localItem;
   const list = await getUserMediaList();
@@ -304,7 +315,7 @@ export async function syncAllWatchedEpisodes(): Promise<WatchedEpisodeRecord[]> 
 
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return getLocalWatchedEpisodes();
+    if (!user) return [];
 
     const { data, error } = await supabase
       .from('watched_episodes')
@@ -347,19 +358,16 @@ export async function syncAllWatchedEpisodes(): Promise<WatchedEpisodeRecord[]> 
 }
 
 export async function getWatchedEpisodes(tmdbId: number): Promise<{ season_number: number; episode_number: number }[]> {
-  const allLocal = getLocalWatchedEpisodes();
-  const localShow = allLocal.filter((ep) => ep.tmdb_id === tmdbId);
-
   const supabase = getSupabaseClient();
   if (supabase) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data, error } = await supabase
-          .from('watched_episodes')
-          .select('season_number, episode_number, watched_at')
-          .eq('user_id', user.id)
-          .eq('tmdb_id', tmdbId);
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from('watched_episodes')
+        .select('season_number, episode_number, watched_at')
+        .eq('user_id', user.id)
+        .eq('tmdb_id', tmdbId);
 
         if (error) {
           console.error('Supabase getWatchedEpisodes error:', error);
@@ -620,11 +628,11 @@ export async function getAllWatchedEpisodesCount(): Promise<number> {
   if (supabase) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { count, error } = await supabase
-          .from('watched_episodes')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id);
+      if (!user) return 0;
+      const { count, error } = await supabase
+        .from('watched_episodes')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id);
         if (!error && count !== null) {
           return count;
         }

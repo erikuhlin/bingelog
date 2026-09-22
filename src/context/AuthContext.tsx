@@ -45,6 +45,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
       if (session?.user) {
         syncLocalDataToSupabase(session.user.id);
+      } else {
+        clearLocalData();
+        window.dispatchEvent(new Event('bingelog_storage_changed'));
       }
     });
 
@@ -59,7 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (newSession?.user) {
         await syncLocalDataToSupabase(newSession.user.id);
         window.dispatchEvent(new Event('bingelog_storage_changed'));
-      } else if (event === 'SIGNED_OUT' || !newSession?.user) {
+      } else {
         clearLocalData();
         window.dispatchEvent(new Event('bingelog_storage_changed'));
       }
