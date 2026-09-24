@@ -8,6 +8,7 @@ import EpisodeTracker from '@/components/EpisodeTracker';
 import WatchProvidersSection from '@/components/WatchProvidersSection';
 import MediaActionsBar from '@/components/MediaActionsBar';
 import MediaCard from '@/components/MediaCard';
+import DetailBackButton from '@/components/DetailBackButton';
 
 const LANGUAGE_NAMES: Record<string, string> = {
   en: 'Engelska',
@@ -97,13 +98,7 @@ export default async function MediaDetailPage({ params }: PageProps) {
     <div className="space-y-6 sm:space-y-8 md:space-y-10 pb-16 md:pb-8">
       {/* Back button */}
       <div>
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#171C25] hover:bg-[#1E2531] text-xs font-semibold text-[#8D97A8] hover:text-[#ECE9E3] border border-[#2B3443] transition-colors shadow-sm"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Tillbaka till översikten</span>
-        </Link>
+        <DetailBackButton mediaType={mediaType} />
       </div>
 
       {/* Hero Backdrop Header */}

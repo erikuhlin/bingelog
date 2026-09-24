@@ -40,11 +40,6 @@ export default function StatusSelector({
 
   useEffect(() => {
     async function loadStatus() {
-      if (!user) {
-        setCurrentStatus(null);
-        setUserRating(null);
-        return;
-      }
       const item = await getUserMediaItem(tmdbId, mediaType);
       if (item) {
         setCurrentStatus(item.status);
@@ -85,18 +80,10 @@ export default function StatusSelector({
   const handleButtonClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    if (!user) {
-      openAuthModal('login');
-      return;
-    }
     setIsOpen(true);
   };
 
   const handleStatusChange = async (status: WatchStatus) => {
-    if (!user) {
-      openAuthModal('login');
-      return;
-    }
     setLoading(true);
     setCurrentStatus(status);
     setIsOpen(false);
@@ -118,7 +105,6 @@ export default function StatusSelector({
   };
 
   const handleRemove = async () => {
-    if (!user) return;
     setLoading(true);
     setCurrentStatus(null);
     setUserRating(null);
@@ -133,10 +119,6 @@ export default function StatusSelector({
   };
 
   const handleRatingChange = async (rating: number) => {
-    if (!user) {
-      openAuthModal('login');
-      return;
-    }
     const newRating = userRating === rating ? null : rating;
     setUserRating(newRating);
     if (currentStatus) {

@@ -13,10 +13,6 @@ export default function ContinueWatchingSection() {
   const [watchingShows, setWatchingShows] = useState<UserMediaRecord[]>([]);
 
   const loadWatching = async () => {
-    if (!user) {
-      setWatchingShows([]);
-      return;
-    }
     const list = await getUserMediaList();
     const active = list.filter((item) => item.media_type === 'tv' && item.status === 'watching');
     setWatchingShows(active);
@@ -29,7 +25,7 @@ export default function ContinueWatchingSection() {
     return () => window.removeEventListener('bingelog_storage_changed', handler);
   }, [user]);
 
-  if (!user || watchingShows.length === 0) {
+  if (watchingShows.length === 0) {
     return null;
   }
 

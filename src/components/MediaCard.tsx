@@ -44,11 +44,17 @@ export default function MediaCard({ item }: MediaCardProps) {
   const year = item.release_date?.slice(0, 4) || item.first_air_date?.slice(0, 4) || '';
   const detailUrl = `/${item.media_type}/${item.id}`;
 
+  const handleNavigate = () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(`bingelog_scroll_${window.location.pathname}`, String(window.scrollY));
+    }
+  };
+
   return (
     <div className="group relative flex flex-col bg-[#171C25] rounded-2xl border border-[#2B3443] overflow-hidden hover:border-[#E9A23B]/60 transition-all hover:shadow-xl hover:shadow-black/50">
       {/* Poster wrapper */}
       <div className="relative aspect-[2/3] w-full overflow-hidden bg-[#0F1218]">
-        <Link href={detailUrl} className="block w-full h-full">
+        <Link href={detailUrl} onClick={handleNavigate} className="block w-full h-full">
           <img
             src={getImageUrl(item.poster_path, 'w500')}
             alt={item.title}
@@ -103,7 +109,7 @@ export default function MediaCard({ item }: MediaCardProps) {
       {/* Info content & Status button */}
       <div className="p-3 flex flex-col flex-1 justify-between gap-2.5">
         <div>
-          <Link href={detailUrl} className="hover:text-[#E9A23B] transition-colors block">
+          <Link href={detailUrl} onClick={handleNavigate} className="hover:text-[#E9A23B] transition-colors block">
             <h3 className="font-bold text-xs sm:text-sm text-[#ECE9E3] line-clamp-1 leading-snug">
               {item.title}
             </h3>

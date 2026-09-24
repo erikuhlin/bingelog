@@ -207,6 +207,11 @@ export default function HeroCarousel({
               <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                 <Link
                   href={detailUrl}
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      sessionStorage.setItem(`bingelog_scroll_${window.location.pathname}`, String(window.scrollY));
+                    }
+                  }}
                   className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-[#E9A23B] hover:bg-[#F2B04E] text-[#0F1218] font-bold text-xs sm:text-sm transition-all shadow-lg shadow-[#E9A23B]/20 hover:scale-105 active:scale-95 cursor-pointer whitespace-nowrap flex-shrink-0"
                 >
                   <Info className="w-4 h-4" />

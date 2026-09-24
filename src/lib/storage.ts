@@ -96,7 +96,7 @@ export async function getUserMediaList(): Promise<UserMediaRecord[]> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        return [];
+        return localItems;
       }
       const { data, error } = await supabase
         .from('user_media')
@@ -154,17 +154,18 @@ export function getLocalMediaItem(tmdbId: number, mediaType: MediaType): UserMed
 }
 
 export async function getUserMediaItem(tmdbId: number, mediaType: MediaType): Promise<UserMediaRecord | null> {
+  const localItem = getLocalMediaItem(tmdbId, mediaType);
+  if (localItem) return localItem;
+
   const supabase = getSupabaseClient();
   if (supabase) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
+      if (!user) return localItem;
     } catch {
-      return null;
+      return localItem;
     }
   }
-  const localItem = getLocalMediaItem(tmdbId, mediaType);
-  if (localItem) return localItem;
   const list = await getUserMediaList();
   return list.find((m) => m.tmdb_id === tmdbId && m.media_type === mediaType) || null;
 }
@@ -315,7 +316,7 @@ export async function syncAllWatchedEpisodes(): Promise<WatchedEpisodeRecord[]> 
 
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
+    if (!user) return getLocalWatchedEpisodes();
 
     const { data, error } = await supabase
       .from('watched_episodes')
@@ -358,11 +359,16 @@ export async function syncAllWatchedEpisodes(): Promise<WatchedEpisodeRecord[]> 
 }
 
 export async function getWatchedEpisodes(tmdbId: number): Promise<{ season_number: number; episode_number: number }[]> {
+  const allLocal = getLocalWatchedEpisodes();
+  const localShow = allLocal.filter((ep) => ep.tmdb_id === tmdbId);
+
   const supabase = getSupabaseClient();
   if (supabase) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      if (!user) {
+        return localShow.map((ep) => ({ season_number: ep.season_number, episode_number: ep.episode_number }));
+      }
       const { data, error } = await supabase
         .from('watched_episodes')
         .select('season_number, episode_number, watched_at')
@@ -628,7 +634,7 @@ export async function getAllWatchedEpisodesCount(): Promise<number> {
   if (supabase) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return 0;
+      if (!user) return getLocalWatchedEpisodes().length;
       const { count, error } = await supabase
         .from('watched_episodes')
         .select('*', { count: 'exact', head: true })

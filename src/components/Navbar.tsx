@@ -81,13 +81,26 @@ export default function Navbar() {
     return pathname === href;
   };
 
+  const handleNavLinkClick = (href: string, isActive: boolean) => {
+    if (typeof window !== 'undefined') {
+      if (isActive) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      sessionStorage.removeItem(`bingelog_scroll_${href}`);
+    }
+  };
+
   return (
     <>
       <header className="sticky top-0 z-40 w-full max-w-full border-b border-[#2B3443] bg-[#0F1218]/90 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-4 min-w-0">
           {/* Brand */}
           <div className="flex items-center gap-2 sm:gap-4 md:gap-6 flex-shrink-0">
-            <Link href="/" className="flex items-center gap-2 group">
+            <Link
+              href="/"
+              onClick={() => handleNavLinkClick('/', pathname === '/')}
+              className="flex items-center gap-2 group"
+            >
               <BrandLogo size="md" />
               <div className="flex flex-col">
                 <span className="text-base sm:text-xl font-bold tracking-tight text-[#ECE9E3] flex items-center gap-0.5">
@@ -108,6 +121,7 @@ export default function Navbar() {
                   <Link
                     key={link.href}
                     href={link.href}
+                    onClick={() => handleNavLinkClick(link.href, isActive)}
                     className={`relative flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-sm transition-all ${
                       isActive
                         ? 'bg-[#E9A23B]/15 text-[#E9A23B] border border-[#E9A23B]/50 shadow-sm shadow-[#E9A23B]/10 font-bold'
@@ -228,6 +242,7 @@ export default function Navbar() {
             <Link
               key={link.href}
               href={link.href}
+              onClick={() => handleNavLinkClick(link.href, isActive)}
               className={`relative flex flex-col items-center gap-1 py-1 px-3 text-[11px] transition-all active:scale-95 ${
                 isActive ? 'text-[#E9A23B] font-bold' : 'text-[#8D97A8] hover:text-[#ECE9E3] font-medium'
               }`}

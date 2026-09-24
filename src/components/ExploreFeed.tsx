@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import {
   Sparkles,
@@ -47,6 +47,70 @@ export default function ExploreFeed({
   const [hasMore, setHasMore] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
+  const storageKey = `bingelog_explore_state_${defaultMediaType}`;
+  const isRestoredRef = useRef(false);
+
+  // Restore feed state and scroll position on mount if returning from detail view
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(storageKey);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        if (saved && Array.isArray(saved.items) && saved.items.length > 0) {
+          isRestoredRef.current = true;
+          setItems(saved.items);
+          setPage(saved.page || 1);
+          setHasMore(saved.hasMore ?? true);
+          if (saved.selectedProviderId !== undefined) setSelectedProviderId(saved.selectedProviderId);
+          if (saved.mediaType !== undefined) setMediaType(saved.mediaType);
+          if (saved.genreId !== undefined) setGenreId(saved.genreId);
+          if (saved.minRating !== undefined) setMinRating(saved.minRating);
+          if (saved.year !== undefined) setYear(saved.year);
+          if (saved.originalLanguage !== undefined) setOriginalLanguage(saved.originalLanguage);
+          if (saved.sortBy !== undefined) setSortBy(saved.sortBy);
+          if (saved.viewMode !== undefined) setViewMode(saved.viewMode);
+
+          const savedScroll =
+            saved.scrollY ||
+            (typeof window !== 'undefined'
+              ? Number(sessionStorage.getItem(`bingelog_scroll_${window.location.pathname}`))
+              : 0) ||
+            0;
+
+          if (savedScroll > 0) {
+            requestAnimationFrame(() => {
+              setTimeout(() => {
+                window.scrollTo({ top: savedScroll, behavior: 'instant' });
+              }, 40);
+            });
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Could not restore feed state:', err);
+    }
+  }, [storageKey]);
+
+  // Continuously track scroll position throttled
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const onScroll = () => {
+      if (timer) return;
+      timer = setTimeout(() => {
+        timer = null;
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem(`bingelog_scroll_${window.location.pathname}`, String(window.scrollY));
+        }
+      }, 150);
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
+
   const isFiltered =
     selectedProviderId !== null ||
     mediaType !== defaultMediaType ||
@@ -55,6 +119,43 @@ export default function ExploreFeed({
     year !== null ||
     originalLanguage !== null ||
     sortBy !== 'popularity.desc';
+
+  // Persist explore feed state when items, filters, or pagination changes
+  useEffect(() => {
+    if (items.length === 0) return;
+    try {
+      const stateToSave = {
+        items,
+        page,
+        hasMore,
+        selectedProviderId,
+        mediaType,
+        genreId,
+        minRating,
+        year,
+        originalLanguage,
+        sortBy,
+        viewMode,
+        scrollY: typeof window !== 'undefined' ? window.scrollY : 0,
+      };
+      sessionStorage.setItem(storageKey, JSON.stringify(stateToSave));
+    } catch {
+      // Ignore quota errors if storage full
+    }
+  }, [
+    items,
+    page,
+    hasMore,
+    selectedProviderId,
+    mediaType,
+    genreId,
+    minRating,
+    year,
+    originalLanguage,
+    sortBy,
+    viewMode,
+    storageKey,
+  ]);
 
   const activeFilterCount =
     (selectedProviderId ? 1 : 0) +
@@ -66,6 +167,10 @@ export default function ExploreFeed({
     (sortBy !== 'popularity.desc' ? 1 : 0);
 
   const handleReset = () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem(storageKey);
+      sessionStorage.removeItem(`bingelog_scroll_${window.location.pathname}`);
+    }
     setSelectedProviderId(null);
     setMediaType(defaultMediaType);
     setGenreId(null);
@@ -73,11 +178,18 @@ export default function ExploreFeed({
     setYear(null);
     setOriginalLanguage(null);
     setSortBy('popularity.desc');
+    setItems(initialTrending);
     setPage(1);
+    setHasMore(true);
   };
 
   // Fetch initial or updated filters
   useEffect(() => {
+    if (isRestoredRef.current) {
+      isRestoredRef.current = false;
+      return;
+    }
+
     if (!isFiltered) {
       setItems(initialTrending);
       setPage(1);
@@ -330,6 +442,11 @@ export default function ExploreFeed({
                 <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
                   <Link
                     href={detailUrl}
+                    onClick={() => {
+                      if (typeof window !== 'undefined') {
+                        sessionStorage.setItem(`bingelog_scroll_${window.location.pathname}`, String(window.scrollY));
+                      }
+                    }}
                     className="relative w-14 sm:w-16 aspect-[2/3] rounded-xl overflow-hidden bg-[#0F1218] border border-[#2B3443] flex-shrink-0"
                   >
                     <img
@@ -370,7 +487,15 @@ export default function ExploreFeed({
                       )}
                     </div>
 
-                    <Link href={detailUrl} className="block group">
+                    <Link
+                      href={detailUrl}
+                      onClick={() => {
+                        if (typeof window !== 'undefined') {
+                          sessionStorage.setItem(`bingelog_scroll_${window.location.pathname}`, String(window.scrollY));
+                        }
+                      }}
+                      className="block group"
+                    >
                       <h4 className="text-sm font-bold text-[#ECE9E3] group-hover:text-[#E9A23B] transition-colors truncate">
                         {item.title}
                       </h4>
