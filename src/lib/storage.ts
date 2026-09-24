@@ -140,7 +140,6 @@ export async function getUserMediaList(): Promise<UserMediaRecord[]> {
           saveLocalMedia(merged, false);
           return merged;
         }
-      }
     } catch (err) {
       console.error('Error fetching media list from Supabase:', err);
     }
@@ -394,7 +393,6 @@ export async function getWatchedEpisodes(tmdbId: number): Promise<{ season_numbe
             }));
           }
         }
-      }
     } catch (err) {
       console.error('Error fetching watched episodes from Supabase:', err);
     }
@@ -642,7 +640,6 @@ export async function getAllWatchedEpisodesCount(): Promise<number> {
         if (!error && count !== null) {
           return count;
         }
-      }
     } catch (err) {
       console.error('Error in getAllWatchedEpisodesCount:', err);
     }
