@@ -33,6 +33,7 @@
   --color-amber-dim: #7A5A21;
   --color-amber-mid: #B5721E;
   --color-moss: #6FA98A;
+  --breakpoint-xs: 30rem;
 }
 
 html {

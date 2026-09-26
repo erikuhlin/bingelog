@@ -401,10 +401,10 @@ function LibraryContent() {
         </div>
 
         {/* Toolbar: Search, Type filter, Sort, View Toggle */}
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+        <div className="mt-5 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 w-full md:w-auto">
             {/* Search Input */}
-            <div className="relative w-full sm:w-56">
+            <div className="relative w-full sm:w-56 md:w-48 lg:w-56">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#8D97A8]" />
               <input
                 type="text"
@@ -458,7 +458,7 @@ function LibraryContent() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+          <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
             {/* Sort Dropdown */}
             <div className="flex items-center gap-1.5">
               <span className="text-[#8D97A8] hidden sm:inline">Sortera:</span>
@@ -525,7 +525,7 @@ function LibraryContent() {
             </div>
           ) : viewParam === 'grid' ? (
             /* Grid View */
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-4 md:gap-5">
+            <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5 sm:gap-4 md:gap-5">
               {sorted.map((item) => {
                 const isTv = item.media_type === 'tv';
                 const progress = isTv ? getShowProgress(item.tmdb_id) : null;

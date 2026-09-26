@@ -93,27 +93,27 @@ export default function Navbar() {
   return (
     <>
       <header className="sticky top-0 z-40 w-full max-w-full border-b border-[#2B3443] bg-[#0F1218]/90 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-4 min-w-0">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-3 md:gap-4 min-w-0">
           {/* Brand */}
-          <div className="flex items-center gap-2 sm:gap-4 md:gap-6 flex-shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 md:gap-4 lg:gap-6 flex-shrink-0">
             <Link
               href="/"
               onClick={() => handleNavLinkClick('/', pathname === '/')}
-              className="flex items-center gap-2 group"
+              className="flex items-center gap-2 group flex-shrink-0"
             >
               <BrandLogo size="md" />
               <div className="flex flex-col">
-                <span className="text-base sm:text-xl font-bold tracking-tight text-[#ECE9E3] flex items-center gap-0.5">
+                <span className="text-base sm:text-lg lg:text-xl font-bold tracking-tight text-[#ECE9E3] flex items-center gap-0.5">
                   Binge<span className="text-[#E9A23B]">log</span>
                 </span>
-                <span className="text-[10px] text-[#8D97A8] font-medium -mt-1 hidden sm:inline">
+                <span className="text-[10px] text-[#8D97A8] font-medium -mt-1 hidden lg:inline">
                   Track your watch history
                 </span>
               </div>
             </Link>
 
-            {/* Nav links (desktop) */}
-            <nav className="hidden md:flex items-center gap-1.5">
+            {/* Nav links (desktop & tablet) */}
+            <nav className="hidden md:flex items-center gap-1 lg:gap-1.5 flex-shrink-0">
               {navLinks.map((link) => {
                 const Icon = link.icon;
                 const isActive = isLinkActive(link.href);
@@ -122,13 +122,13 @@ export default function Navbar() {
                     key={link.href}
                     href={link.href}
                     onClick={() => handleNavLinkClick(link.href, isActive)}
-                    className={`relative flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-sm transition-all ${
+                    className={`relative flex items-center gap-1.5 lg:gap-2 px-2.5 lg:px-3.5 py-1.5 rounded-xl text-xs lg:text-sm transition-all whitespace-nowrap ${
                       isActive
                         ? 'bg-[#E9A23B]/15 text-[#E9A23B] border border-[#E9A23B]/50 shadow-sm shadow-[#E9A23B]/10 font-bold'
                         : 'text-[#8D97A8] hover:text-[#ECE9E3] hover:bg-[#171C25] font-medium border border-transparent'
                     }`}
                   >
-                    <Icon className={`w-4 h-4 ${isActive ? 'text-[#E9A23B] stroke-[2.5]' : 'text-[#8D97A8]'}`} />
+                    <Icon className={`w-3.5 h-3.5 lg:w-4 lg:h-4 ${isActive ? 'text-[#E9A23B] stroke-[2.5]' : 'text-[#8D97A8]'}`} />
                     <span>{link.label}</span>
                     {isActive && (
                       <span className="w-1.5 h-1.5 rounded-full bg-[#E9A23B] shadow-[0_0_6px_#E9A23B] -ml-0.5" />
@@ -140,8 +140,8 @@ export default function Navbar() {
           </div>
 
           {/* Search bar & Auth */}
-          <div className="flex items-center gap-1.5 sm:gap-3 flex-1 justify-end max-w-md min-w-0">
-            <div ref={searchRef} className="relative w-full min-w-0 max-w-[130px] sm:max-w-xs">
+          <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 flex-1 justify-end min-w-0">
+            <div ref={searchRef} className="relative w-full min-w-[110px] max-w-[140px] sm:max-w-[180px] md:max-w-[200px] lg:max-w-xs">
               <div className="relative flex items-center">
                 <Search className="absolute left-2.5 sm:left-3 w-3.5 h-3.5 text-[#8D97A8] pointer-events-none" />
                 <input
@@ -169,7 +169,7 @@ export default function Navbar() {
 
               {/* Live Search Dropdown */}
               {showDropdown && (
-                <div className="absolute top-full right-0 sm:left-0 sm:right-0 mt-2 w-72 sm:w-auto max-w-[calc(100vw-1.5rem)] bg-[#171C25] border border-[#2B3443] rounded-2xl shadow-2xl overflow-hidden z-50">
+                <div className="absolute top-full right-0 mt-2 w-72 sm:w-80 max-w-[calc(100vw-1.5rem)] bg-[#171C25] border border-[#2B3443] rounded-2xl shadow-2xl overflow-hidden z-50">
                   {isSearching ? (
                     <div className="p-4 text-center text-xs text-[#8D97A8]">Söker...</div>
                   ) : searchResults.length > 0 ? (
@@ -207,20 +207,20 @@ export default function Navbar() {
 
             {/* Auth / Profile Area */}
             {!authLoading && (
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                 {user ? (
                   <UserMenu />
                 ) : (
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => openAuthModal('login')}
-                      className="px-2 sm:px-3 py-1.5 rounded-xl text-xs font-semibold text-[#ECE9E3] hover:bg-[#171C25] border border-transparent hover:border-[#2B3443] transition-colors whitespace-nowrap flex-shrink-0"
+                      className="px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold text-[#ECE9E3] hover:bg-[#171C25] border border-transparent hover:border-[#2B3443] transition-colors whitespace-nowrap flex-shrink-0"
                     >
                       Logga in
                     </button>
                     <button
                       onClick={() => openAuthModal('signup')}
-                      className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#E9A23B] hover:bg-[#F2B04E] text-[#0F1218] shadow-md shadow-[#E9A23B]/20 transition-all whitespace-nowrap"
+                      className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#E9A23B] hover:bg-[#F2B04E] text-[#0F1218] shadow-md shadow-[#E9A23B]/20 transition-all whitespace-nowrap flex-shrink-0"
                     >
                       <UserPlus className="w-3.5 h-3.5" />
                       <span>Skapa konto</span>

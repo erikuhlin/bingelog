@@ -118,9 +118,9 @@ export default async function MediaDetailPage({ params }: PageProps) {
         <div className="relative -mt-16 xs:-mt-24 sm:-mt-36 md:-mt-56 lg:-mt-64 p-4 sm:p-6 md:p-8 lg:p-10 z-10">
 
           {/* DESKTOP LAYOUT (md: and up): 2-Column Showcase */}
-          <div className="hidden md:flex flex-row items-start gap-8 lg:gap-10">
+          <div className="hidden md:flex flex-row items-start gap-6 lg:gap-10">
             {/* Left Column: Poster + Actions + Quick Streaming info */}
-            <div className="w-56 lg:w-64 flex-shrink-0 space-y-3.5">
+            <div className="w-48 lg:w-64 flex-shrink-0 space-y-3.5">
               <div className="w-full aspect-[2/3] rounded-2xl overflow-hidden border border-[#2B3443] shadow-2xl bg-[#0F1218]">
                 <img
                   src={getImageUrl(media.poster_path, 'w500')}
@@ -228,7 +228,7 @@ export default async function MediaDetailPage({ params }: PageProps) {
 
               {/* Title & Tagline */}
               <div>
-                <h1 className="text-3xl lg:text-5xl font-black text-[#ECE9E3] tracking-tight leading-tight">
+                <h1 className="text-2xl md:text-3xl lg:text-5xl font-black text-[#ECE9E3] tracking-tight leading-tight">
                   {media.title}
                 </h1>
 
@@ -298,7 +298,7 @@ export default async function MediaDetailPage({ params }: PageProps) {
               </div>
 
               {/* Quick Facts Strip */}
-              <div className="pt-3 border-t border-[#2B3443]/70 grid grid-cols-2 sm:grid-cols-4 gap-2.5 max-w-2xl">
+              <div className="pt-3 border-t border-[#2B3443]/70 grid grid-cols-2 lg:grid-cols-4 gap-2.5 max-w-2xl">
                 {media.origin_country?.[0] && (
                   <div className="p-2.5 rounded-xl bg-[#0F1218]/50 border border-[#2B3443]/60">
                     <span className="text-[10px] uppercase font-semibold text-[#8D97A8] block">Land</span>

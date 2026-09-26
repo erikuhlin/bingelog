@@ -54,7 +54,7 @@ export default function ContinueWatchingRow({
       </div>
 
       {/* Horizontal scroll row */}
-      <div className="flex items-stretch gap-4 overflow-x-auto pb-3 pt-1 scrollbar-thin scrollbar-thumb-[#2B3443] focus:outline-none">
+      <div className="flex items-stretch gap-3 sm:gap-4 overflow-x-auto pb-3 pt-1 scrollbar-thin scrollbar-thumb-[#2B3443] focus:outline-none overscroll-x-contain">
         {watchingShows.map((show) => {
           const progress = getShowProgress(show.tmdb_id);
           const meta = seriesMeta[show.tmdb_id];
@@ -92,7 +92,7 @@ export default function ContinueWatchingRow({
           return (
             <div
               key={`continue-${show.tmdb_id}`}
-              className="flex-shrink-0 w-80 sm:w-96 p-3.5 rounded-2xl bg-[#171C25] border border-[#2B3443] hover:border-[#E9A23B]/50 transition-all flex flex-col justify-between shadow-lg"
+              className="flex-shrink-0 w-72 xs:w-80 sm:w-88 md:w-96 p-3.5 rounded-2xl bg-[#171C25] border border-[#2B3443] hover:border-[#E9A23B]/50 transition-all flex flex-col justify-between shadow-lg"
             >
               {/* Top part: Poster & Title info */}
               <div className="flex items-start gap-3.5">
