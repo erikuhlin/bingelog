@@ -22,6 +22,35 @@ export interface MediaItem {
   watch_providers?: WatchProvider[];
 }
 
+export interface PersonSearchResult {
+  id: number;
+  name: string;
+  profile_path: string | null;
+  known_for_department?: string;
+  known_for?: {
+    id: number;
+    title?: string;
+    name?: string;
+    media_type: MediaType;
+    poster_path?: string | null;
+  }[];
+}
+
+export interface PersonDetails {
+  id: number;
+  name: string;
+  profile_path: string | null;
+  biography?: string;
+  known_for_department?: string;
+  place_of_birth?: string;
+  birthday?: string;
+}
+
+export interface LiveSearchResults {
+  titles: MediaItem[];
+  actors: PersonSearchResult[];
+}
+
 export interface DiscoverFilters {
   mediaType?: 'all' | 'movie' | 'tv';
   providerIds?: number[];

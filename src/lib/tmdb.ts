@@ -1,4 +1,12 @@
-import { MediaItem, MediaDetail, Season, MediaType } from './types';
+import {
+  MediaItem,
+  MediaDetail,
+  Season,
+  MediaType,
+  PersonSearchResult,
+  PersonDetails,
+  LiveSearchResults,
+} from './types';
 import { MOCK_TRENDING, MOCK_GENRES, MOCK_DETAILS } from './mock-data';
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
@@ -228,6 +236,99 @@ export async function searchMedia(query: string, enrich = false): Promise<MediaI
       (item.original_title && item.original_title.toLowerCase().includes(lowerQuery)) ||
       item.overview.toLowerCase().includes(lowerQuery)
   );
+}
+
+export async function searchMultiLive(query: string): Promise<LiveSearchResults> {
+  const trimmed = query.trim();
+  if (!trimmed) {
+    return { titles: [], actors: [] };
+  }
+
+  const data = await tmdbFetch<{ results: any[] }>('/search/multi', { query: trimmed });
+  if (!data?.results) {
+    return { titles: [], actors: [] };
+  }
+
+  const titles: MediaItem[] = [];
+  const actors: PersonSearchResult[] = [];
+
+  for (const item of data.results) {
+    if (item.media_type === 'movie' || item.media_type === 'tv') {
+      if (titles.length < 8) {
+        titles.push(normalizeMediaItem(item));
+      }
+    } else if (item.media_type === 'person') {
+      if (actors.length < 3) {
+        actors.push({
+          id: item.id,
+          name: item.name,
+          profile_path: item.profile_path,
+          known_for_department: item.known_for_department,
+          known_for: (item.known_for || []).map((k: any) => ({
+            id: k.id,
+            title: k.title || k.name,
+            name: k.name || k.title,
+            media_type: k.media_type,
+            poster_path: k.poster_path,
+          })),
+        });
+      }
+    }
+  }
+
+  return { titles, actors };
+}
+
+export async function getPersonDetails(personId: number): Promise<PersonDetails | null> {
+  const data = await tmdbFetch<any>(`/person/${personId}`);
+  if (!data) return null;
+  return {
+    id: data.id,
+    name: data.name,
+    profile_path: data.profile_path,
+    biography: data.biography,
+    known_for_department: data.known_for_department,
+    place_of_birth: data.place_of_birth,
+    birthday: data.birthday,
+  };
+}
+
+export async function getPersonCombinedCredits(personId: number): Promise<MediaItem[]> {
+  const data = await tmdbFetch<any>(`/person/${personId}/combined_credits`);
+  if (!data?.cast || !Array.isArray(data.cast)) {
+    return [];
+  }
+
+  // Filter out noise: Talk shows (10767), News (10763), and roles containing 'Self'/'Himself'/'Herself'
+  const seenIds = new Set<string>();
+  const cleanItems: MediaItem[] = [];
+
+  for (const c of data.cast) {
+    const key = `${c.media_type}-${c.id}`;
+    if (seenIds.has(key)) continue;
+
+    const charLower = (c.character || '').toLowerCase();
+    const isSelf =
+      charLower.includes('self') ||
+      charLower.includes('himself') ||
+      charLower.includes('herself') ||
+      charLower === 'host' ||
+      charLower === 'guest';
+
+    const genreIds: number[] = c.genre_ids || [];
+    const isTalkOrNews = genreIds.includes(10767) || genreIds.includes(10763);
+
+    if (isSelf || isTalkOrNews) {
+      continue;
+    }
+
+    seenIds.add(key);
+    cleanItems.push(normalizeMediaItem(c));
+  }
+
+  // Sort by popularity descending as default
+  cleanItems.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+  return cleanItems;
 }
 
 export async function getMediaDetails(mediaType: MediaType, id: number): Promise<MediaDetail | null> {

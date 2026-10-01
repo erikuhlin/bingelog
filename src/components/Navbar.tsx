@@ -1,62 +1,33 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Film, Tv, Bookmark, Search, X, Sparkles, UserPlus } from 'lucide-react';
+import { Film, Tv, Bookmark, Search, Sparkles, UserPlus } from 'lucide-react';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
-import { searchMedia, getImageUrl } from '@/lib/tmdb';
-import { MediaItem } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import UserMenu from './UserMenu';
 import AuthModal from './AuthModal';
 import BrandLogo from './BrandLogo';
+import SearchOverlay from './SearchOverlay';
 
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading: authLoading, openAuthModal } = useAuth();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<MediaItem[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const searchRef = useRef<HTMLDivElement>(null);
+  const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false);
 
-  // Debounced search
+  // Global keyboard shortcut (Cmd+K / Ctrl+K)
   useEffect(() => {
-    if (!searchQuery.trim()) {
-      setSearchResults([]);
-      setShowDropdown(false);
-      return;
-    }
-
-    const timer = setTimeout(async () => {
-      setIsSearching(true);
-      const results = await searchMedia(searchQuery);
-      setSearchResults(results.slice(0, 6));
-      setIsSearching(false);
-      setShowDropdown(true);
-    }, 250);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
-  // Click outside to close dropdown
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-        setShowDropdown(false);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsSearchOverlayOpen((prev) => !prev);
       }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
-
-  const handleSelectMedia = (item: MediaItem) => {
-    setShowDropdown(false);
-    setSearchQuery('');
-    router.push(`/${item.media_type}/${item.id}`);
-  };
 
   const navLinks = [
     { href: '/', label: 'Utforska', icon: Sparkles },
@@ -141,70 +112,21 @@ export default function Navbar() {
 
           {/* Search bar & Auth */}
           <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 flex-1 justify-end min-w-0">
-            <div ref={searchRef} className="relative w-full min-w-[110px] max-w-[140px] sm:max-w-[180px] md:max-w-[200px] lg:max-w-xs">
-              <div className="relative flex items-center">
-                <Search className="absolute left-2.5 sm:left-3 w-3.5 h-3.5 text-[#8D97A8] pointer-events-none" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onFocus={() => searchQuery.trim() && setShowDropdown(true)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && searchResults.length > 0) {
-                      handleSelectMedia(searchResults[0]);
-                    }
-                  }}
-                  placeholder="Sök..."
-                  style={{ fontSize: '16px' }}
-                  className="w-full bg-[#171C25] border border-[#2B3443] rounded-full pl-7 sm:pl-8 pr-7 sm:pr-8 py-1.5 text-xs text-[#ECE9E3] placeholder-[#8D97A8] focus:outline-none focus:border-[#E9A23B] focus:ring-1 focus:ring-[#E9A23B] transition-all truncate"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-2 sm:right-2.5 text-[#8D97A8] hover:text-[#ECE9E3]"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
+            {/* Search Trigger Button */}
+            <button
+              type="button"
+              onClick={() => setIsSearchOverlayOpen(true)}
+              className="relative flex items-center justify-between w-full min-w-[110px] max-w-[140px] sm:max-w-[180px] md:max-w-[200px] lg:max-w-xs bg-[#171C25] border border-[#2B3443] hover:border-[#E9A23B]/60 rounded-full pl-3 pr-2 sm:pr-3 py-1.5 text-xs text-[#8D97A8] hover:text-[#ECE9E3] transition-all cursor-pointer group shadow-sm"
+              title="Sök (Cmd+K)"
+            >
+              <div className="flex items-center gap-2 truncate">
+                <Search className="w-3.5 h-3.5 text-[#8D97A8] group-hover:text-[#E9A23B] transition-colors flex-shrink-0" />
+                <span className="truncate">Sök...</span>
               </div>
-
-              {/* Live Search Dropdown */}
-              {showDropdown && (
-                <div className="absolute top-full right-0 mt-2 w-72 sm:w-80 max-w-[calc(100vw-1.5rem)] bg-[#171C25] border border-[#2B3443] rounded-2xl shadow-2xl overflow-hidden z-50">
-                  {isSearching ? (
-                    <div className="p-4 text-center text-xs text-[#8D97A8]">Söker...</div>
-                  ) : searchResults.length > 0 ? (
-                    <div className="py-2 divide-y divide-[#2B3443]/60 max-h-96 overflow-y-auto">
-                      {searchResults.map((item) => (
-                        <button
-                          key={`${item.media_type}-${item.id}`}
-                          onClick={() => handleSelectMedia(item)}
-                          className="w-full px-4 py-2 flex items-center gap-3 hover:bg-[#1E2531] transition-colors text-left"
-                        >
-                          <img
-                            src={getImageUrl(item.poster_path, 'w300')}
-                            alt={item.title}
-                            className="w-9 h-12 object-cover rounded-md bg-[#0F1218] flex-shrink-0"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-semibold text-[#ECE9E3] truncate">{item.title}</p>
-                            <div className="flex items-center gap-2 mt-0.5 text-[11px] text-[#8D97A8]">
-                              <span className="capitalize px-1.5 py-0.5 rounded bg-[#1E2531] text-[10px] text-[#ECE9E3]">
-                                {item.media_type === 'movie' ? 'Film' : 'Serie'}
-                              </span>
-                              <span>{item.release_date?.slice(0, 4) || item.first_air_date?.slice(0, 4) || '–'}</span>
-                              <span className="text-[#E9A23B]">★ {item.vote_average.toFixed(1)}</span>
-                            </div>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="p-4 text-center text-xs text-[#8D97A8]">Inga resultat hittades</div>
-                  )}
-                </div>
-              )}
-            </div>
+              <kbd className="hidden lg:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-semibold text-[#8D97A8] bg-[#0F1218] border border-[#2B3443] rounded-md">
+                ⌘K
+              </kbd>
+            </button>
 
             {/* Auth / Profile Area */}
             {!authLoading && (
@@ -268,6 +190,12 @@ export default function Navbar() {
 
       {/* Global Auth Modal */}
       <AuthModal />
+
+      {/* Global Search Overlay */}
+      <SearchOverlay
+        isOpen={isSearchOverlayOpen}
+        onClose={() => setIsSearchOverlayOpen(false)}
+      />
     </>
   );
 }
