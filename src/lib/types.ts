@@ -24,7 +24,7 @@ export interface MediaItem {
 
 export interface DiscoverFilters {
   mediaType?: 'all' | 'movie' | 'tv';
-  providerId?: number;
+  providerIds?: number[];
   genreId?: number;
   minRating?: number;
   year?: number;

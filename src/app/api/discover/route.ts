@@ -6,7 +6,11 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
 
   const mediaType = (searchParams.get('mediaType') as any) || 'all';
-  const providerId = searchParams.get('providerId') ? parseInt(searchParams.get('providerId')!, 10) : undefined;
+  // Support comma-separated provider IDs: ?providerIds=8,76
+  const rawProviderIds = searchParams.get('providerIds');
+  const providerIds = rawProviderIds
+    ? rawProviderIds.split(',').map(Number).filter((n) => !isNaN(n) && n > 0)
+    : undefined;
   const genreId = searchParams.get('genreId') ? parseInt(searchParams.get('genreId')!, 10) : undefined;
   const minRating = searchParams.get('minRating') ? parseFloat(searchParams.get('minRating')!) : undefined;
   const year = searchParams.get('year') ? parseInt(searchParams.get('year')!, 10) : undefined;
@@ -17,7 +21,7 @@ export async function GET(request: Request) {
 
   const filters: DiscoverFilters = {
     mediaType,
-    providerId,
+    providerIds: providerIds && providerIds.length > 0 ? providerIds : undefined,
     genreId,
     minRating,
     year,

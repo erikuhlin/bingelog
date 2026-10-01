@@ -34,7 +34,7 @@ export default function ExploreFeed({
   defaultMediaType = 'all',
   title,
 }: ExploreFeedProps) {
-  const [selectedProviderId, setSelectedProviderId] = useState<number | null>(null);
+  const [selectedProviderIds, setSelectedProviderIds] = useState<number[]>([]);
   const [mediaType, setMediaType] = useState<'all' | MediaType>(defaultMediaType);
   const [genreId, setGenreId] = useState<number | null>(null);
   const [minRating, setMinRating] = useState<number | null>(null);
@@ -64,7 +64,7 @@ export default function ExploreFeed({
           setItems(saved.items);
           setPage(saved.page || 1);
           setHasMore(saved.hasMore ?? true);
-          if (saved.selectedProviderId !== undefined) setSelectedProviderId(saved.selectedProviderId);
+          if (saved.selectedProviderIds !== undefined) setSelectedProviderIds(Array.isArray(saved.selectedProviderIds) ? saved.selectedProviderIds : []);
           if (saved.mediaType !== undefined) setMediaType(saved.mediaType);
           if (saved.genreId !== undefined) setGenreId(saved.genreId);
           if (saved.minRating !== undefined) setMinRating(saved.minRating);
@@ -115,7 +115,7 @@ export default function ExploreFeed({
   }, []);
 
   const isFiltered =
-    selectedProviderId !== null ||
+    selectedProviderIds.length > 0 ||
     mediaType !== defaultMediaType ||
     genreId !== null ||
     minRating !== null ||
@@ -131,7 +131,7 @@ export default function ExploreFeed({
         items,
         page,
         hasMore,
-        selectedProviderId,
+        selectedProviderIds,
         mediaType,
         genreId,
         minRating,
@@ -149,7 +149,7 @@ export default function ExploreFeed({
     items,
     page,
     hasMore,
-    selectedProviderId,
+    selectedProviderIds,
     mediaType,
     genreId,
     minRating,
@@ -161,7 +161,7 @@ export default function ExploreFeed({
   ]);
 
   const activeFilterCount =
-    (selectedProviderId ? 1 : 0) +
+    (selectedProviderIds.length > 0 ? 1 : 0) +
     (mediaType !== defaultMediaType ? 1 : 0) +
     (genreId ? 1 : 0) +
     (minRating ? 1 : 0) +
@@ -174,7 +174,7 @@ export default function ExploreFeed({
       sessionStorage.removeItem(storageKey);
       sessionStorage.removeItem(`bingelog_scroll_${window.location.pathname}`);
     }
-    setSelectedProviderId(null);
+    setSelectedProviderIds([]);
     setMediaType(defaultMediaType);
     setGenreId(null);
     setMinRating(null);
@@ -207,7 +207,7 @@ export default function ExploreFeed({
       try {
         const params = new URLSearchParams();
         if (mediaType !== 'all') params.set('mediaType', mediaType);
-        if (selectedProviderId) params.set('providerId', String(selectedProviderId));
+        if (selectedProviderIds.length > 0) params.set('providerIds', selectedProviderIds.join(','));
         if (genreId) params.set('genreId', String(genreId));
         if (minRating) params.set('minRating', String(minRating));
         if (year) params.set('year', String(year));
@@ -238,7 +238,7 @@ export default function ExploreFeed({
     return () => {
       isMounted = false;
     };
-  }, [selectedProviderId, mediaType, genreId, minRating, year, originalLanguage, sortBy, isFiltered, initialTrending]);
+  }, [selectedProviderIds, mediaType, genreId, minRating, year, originalLanguage, sortBy, isFiltered, initialTrending]);
 
   // Load more pages
   const handleLoadMore = async () => {
@@ -249,7 +249,7 @@ export default function ExploreFeed({
     try {
       const params = new URLSearchParams();
       if (mediaType !== 'all') params.set('mediaType', mediaType);
-      if (selectedProviderId) params.set('providerId', String(selectedProviderId));
+      if (selectedProviderIds.length > 0) params.set('providerIds', selectedProviderIds.join(','));
       if (genreId) params.set('genreId', String(genreId));
       if (minRating) params.set('minRating', String(minRating));
       if (year) params.set('year', String(year));
@@ -286,9 +286,9 @@ export default function ExploreFeed({
     }
   };
 
-  const selectedProviderName = selectedProviderId
-    ? SWEDISH_STREAMING_PROVIDERS.find((p) => p.id === selectedProviderId)?.name
-    : null;
+  const selectedProviderNames = selectedProviderIds
+    .map((id) => SWEDISH_STREAMING_PROVIDERS.find((p) => p.id === id)?.name)
+    .filter(Boolean) as string[];
 
   return (
     <section className="mb-14 space-y-6 w-full max-w-full overflow-hidden">
@@ -298,16 +298,18 @@ export default function ExploreFeed({
           <span className="text-xs font-bold text-[#8D97A8] uppercase tracking-wider">
             Filtrera efter streamingtjänst
           </span>
-          {selectedProviderName && (
+          {selectedProviderNames.length > 0 && (
             <span className="text-xs font-semibold text-[#E9A23B]">
-              Visar titlar på {selectedProviderName}
+              {selectedProviderNames.length === 1
+                ? `Visar titlar på ${selectedProviderNames[0]}`
+                : `Visar titlar på ${selectedProviderNames.slice(0, -1).join(', ')} och ${selectedProviderNames.at(-1)}`}
             </span>
           )}
         </div>
 
         <ProviderFilterTabs
-          selectedProviderId={selectedProviderId}
-          onSelectProvider={setSelectedProviderId}
+          selectedProviderIds={selectedProviderIds}
+          onSelectProvider={setSelectedProviderIds}
         />
       </div>
 
@@ -317,8 +319,10 @@ export default function ExploreFeed({
           <div className="flex flex-wrap items-center gap-2 min-w-0">
             <Sparkles className="w-5 h-5 text-[#E9A23B] flex-shrink-0" />
             <h2 className="text-base sm:text-xl md:text-2xl font-bold text-[#ECE9E3] tracking-tight truncate">
-              {selectedProviderName
-                ? `Populärt på ${selectedProviderName}`
+              {selectedProviderNames.length === 1
+                ? `Populärt på ${selectedProviderNames[0]}`
+                : selectedProviderNames.length > 1
+                ? `Populärt på ${selectedProviderNames.join(' & ')}`
                 : isFiltered
                 ? 'Filtrerade titlar'
                 : title || 'Trendar i veckan'}

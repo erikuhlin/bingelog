@@ -5,8 +5,8 @@ import { SWEDISH_STREAMING_PROVIDERS, getImageUrl } from '@/lib/tmdb';
 import { Sparkles } from 'lucide-react';
 
 interface ProviderFilterTabsProps {
-  selectedProviderId: number | null;
-  onSelectProvider: (providerId: number | null) => void;
+  selectedProviderIds: number[];
+  onSelectProvider: (providerIds: number[]) => void;
 }
 
 function ProviderLogo({ logoPath, name, bg }: { logoPath: string; name: string; bg?: string }) {
@@ -33,35 +33,45 @@ function ProviderLogo({ logoPath, name, bg }: { logoPath: string; name: string; 
 }
 
 export default function ProviderFilterTabs({
-  selectedProviderId,
+  selectedProviderIds,
   onSelectProvider,
 }: ProviderFilterTabsProps) {
+  const toggle = (id: number) => {
+    if (selectedProviderIds.includes(id)) {
+      onSelectProvider(selectedProviderIds.filter((p) => p !== id));
+    } else {
+      onSelectProvider([...selectedProviderIds, id]);
+    }
+  };
+
+  const isNoneSelected = selectedProviderIds.length === 0;
+
   return (
     <div className="w-full max-w-full overflow-x-auto pb-2 scrollbar-none overscroll-x-contain">
       <div className="flex items-center gap-2 w-max min-w-full py-0.5">
         {/* All providers pill */}
         <button
           type="button"
-          onClick={() => onSelectProvider(null)}
+          onClick={() => onSelectProvider([])}
           className={`flex items-center gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all flex-shrink-0 ${
-            selectedProviderId === null
+            isNoneSelected
               ? 'bg-[#E9A23B] text-[#0F1218] shadow-lg shadow-[#E9A23B]/30 ring-2 ring-[#E9A23B]/50'
               : 'bg-[#171C25] text-[#8D97A8] hover:text-[#ECE9E3] hover:bg-[#1E2531] border border-[#2B3443]'
           }`}
         >
-          <Sparkles className={`w-3.5 h-3.5 ${selectedProviderId === null ? 'text-[#0F1218]' : 'text-[#E9A23B]'}`} />
+          <Sparkles className={`w-3.5 h-3.5 ${isNoneSelected ? 'text-[#0F1218]' : 'text-[#E9A23B]'}`} />
           <span>Alla streamingtjänster</span>
         </button>
 
-        {/* Streaming services */}
+        {/* Streaming services — multi-select */}
         {SWEDISH_STREAMING_PROVIDERS.map((provider) => {
-          const isSelected = selectedProviderId === provider.id;
+          const isSelected = selectedProviderIds.includes(provider.id);
 
           return (
             <button
               key={provider.id}
               type="button"
-              onClick={() => onSelectProvider(isSelected ? null : provider.id)}
+              onClick={() => toggle(provider.id)}
               className={`flex items-center gap-2 sm:gap-2.5 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all flex-shrink-0 border ${
                 isSelected
                   ? 'bg-[#E9A23B] text-[#0F1218] border-[#E9A23B] shadow-lg ring-2 ring-[#E9A23B]/30 scale-105'

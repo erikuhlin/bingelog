@@ -126,7 +126,7 @@ export async function getPopularShows(): Promise<MediaItem[]> {
 export async function discoverMedia(filters: import('./types').DiscoverFilters): Promise<MediaItem[]> {
   const {
     mediaType = 'all',
-    providerId,
+    providerIds,
     genreId,
     minRating,
     year,
@@ -134,6 +134,8 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
     page = 1,
     originalLanguage,
   } = filters;
+
+  const hasProviders = providerIds && providerIds.length > 0;
 
   const baseParams: Record<string, string | number> = {
     page,
@@ -150,27 +152,24 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
   if (originalLanguage) {
     baseParams.with_original_language = originalLanguage;
   }
-  if (providerId) {
+  if (hasProviders) {
     baseParams.watch_region = 'SE';
-    baseParams.with_watch_providers = providerId;
+    // TMDB uses | (OR) to join multiple provider IDs
+    baseParams.with_watch_providers = providerIds!.join('|');
     baseParams.with_watch_monetization_types = 'flatrate';
   }
 
-  const selectedProvider = providerId
-    ? SWEDISH_STREAMING_PROVIDERS.find((p) => p.id === providerId)
-    : null;
-
-  const attachSelectedProvider = (items: MediaItem[]) => {
-    if (!selectedProvider) return items;
+  const attachSelectedProviders = (items: MediaItem[]) => {
+    if (!hasProviders) return items;
+    const selectedProviders = SWEDISH_STREAMING_PROVIDERS.filter((p) => providerIds!.includes(p.id));
+    if (selectedProviders.length === 0) return items;
     return items.map((item) => ({
       ...item,
-      watch_providers: [
-        {
-          provider_id: selectedProvider.id,
-          provider_name: selectedProvider.name,
-          logo_path: selectedProvider.logo_path,
-        },
-      ],
+      watch_providers: selectedProviders.map((p) => ({
+        provider_id: p.id,
+        provider_name: p.name,
+        logo_path: p.logo_path,
+      })),
     }));
   };
 
@@ -179,7 +178,7 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
     if (year) params.primary_release_year = year;
     const data = await tmdbFetch<{ results: any[] }>('/discover/movie', params);
     const items = (data?.results || []).map((m) => normalizeMediaItem({ ...m, media_type: 'movie' }));
-    return attachSelectedProvider(items);
+    return attachSelectedProviders(items);
   }
 
   if (mediaType === 'tv') {
@@ -187,7 +186,7 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
     if (year) params.first_air_date_year = year;
     const data = await tmdbFetch<{ results: any[] }>('/discover/tv', params);
     const items = (data?.results || []).map((t) => normalizeMediaItem({ ...t, media_type: 'tv' }));
-    return attachSelectedProvider(items);
+    return attachSelectedProviders(items);
   }
 
   // If 'all': fetch movie and tv in parallel
@@ -207,7 +206,7 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
   const tvs = (tvRes?.results || []).map((t) => normalizeMediaItem({ ...t, media_type: 'tv' }));
 
   const merged = [...movies, ...tvs].sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
-  return attachSelectedProvider(merged.slice(0, 24));
+  return attachSelectedProviders(merged.slice(0, 24));
 }
 
 export async function searchMedia(query: string, enrich = false): Promise<MediaItem[]> {
