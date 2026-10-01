@@ -312,15 +312,29 @@ function SearchPageContent() {
     <div className="min-h-screen bg-[#0F1218] text-[#ECE9E3] pb-24">
       {/* Header section */}
       <section className="pt-6 sm:pt-10 pb-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-b border-[#2B3443]/60">
-        {/* Back Link */}
+        {/* Navigation / Back / Reset Link */}
         <div className="mb-4">
           <button
             type="button"
-            onClick={() => router.back()}
+            onClick={() => {
+              if (selectedPersons.length > 0 || activeFilterCount > 0) {
+                handleResetFilters();
+              } else if (queryParam) {
+                updateUrl({ q: null });
+              } else {
+                router.push('/');
+              }
+            }}
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#8D97A8] hover:text-[#ECE9E3] transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Tillbaka</span>
+            <span>
+              {selectedPersons.length > 0 || activeFilterCount > 0
+                ? 'Rensa filter & visa alla'
+                : queryParam
+                ? 'Rensa sökning'
+                : 'Tillbaka till Utforska'}
+            </span>
           </button>
         </div>
 

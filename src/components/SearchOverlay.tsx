@@ -16,10 +16,12 @@ import {
   Trash2,
   User,
   Check,
+  ArrowLeft,
 } from 'lucide-react';
 import { searchMultiLive, getImageUrl } from '@/lib/tmdb';
-import { MediaItem, PersonSearchResult, WatchStatus } from '@/lib/types';
+import { MediaItem, PersonSearchResult, WatchStatus, MediaType } from '@/lib/types';
 import { getLocalMedia } from '@/lib/storage';
+import AdvancedFilterBar from './AdvancedFilterBar';
 
 const RECENT_SEARCHES_KEY = 'bingelog_recent_searches';
 const MAX_RECENT_SEARCHES = 6;
@@ -46,6 +48,16 @@ export default function SearchOverlay({
   const [isSearching, setIsSearching] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [userMediaMap, setUserMediaMap] = useState<Record<string, WatchStatus>>({});
+
+  // Advanced filter states
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [mediaType, setMediaType] = useState<'all' | MediaType>('all');
+  const [genreId, setGenreId] = useState<number | null>(null);
+  const [minRating, setMinRating] = useState<number | null>(null);
+  const [year, setYear] = useState<number | null>(null);
+  const [originalLanguage, setOriginalLanguage] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<string>('popularity.desc');
+  const [selectedPersons, setSelectedPersons] = useState<PersonSearchResult[]>([]);
 
   // Sync state when opened
   useEffect(() => {
@@ -181,9 +193,41 @@ export default function SearchOverlay({
   };
 
   const handleOpenAdvanced = () => {
-    onClose();
-    router.push('/search?advanced=true');
+    setShowAdvanced(true);
   };
+
+  const handleApplyAdvanced = () => {
+    const params = new URLSearchParams();
+    if (query.trim()) params.set('q', query.trim());
+    if (selectedPersons.length > 0) params.set('person', selectedPersons.map((p) => p.id).join(','));
+    if (mediaType !== 'all') params.set('type', mediaType);
+    if (genreId) params.set('genre', String(genreId));
+    if (minRating) params.set('minRating', String(minRating));
+    if (year) params.set('year', String(year));
+    if (originalLanguage) params.set('lang', originalLanguage);
+    if (sortBy !== 'popularity.desc') params.set('sort', sortBy);
+    onClose();
+    router.push(`/search?${params.toString()}`);
+  };
+
+  const handleResetAdvanced = () => {
+    setMediaType('all');
+    setGenreId(null);
+    setMinRating(null);
+    setYear(null);
+    setOriginalLanguage(null);
+    setSortBy('popularity.desc');
+    setSelectedPersons([]);
+  };
+
+  const advancedFilterCount =
+    (selectedPersons.length > 0 ? 1 : 0) +
+    (mediaType !== 'all' ? 1 : 0) +
+    (genreId !== null ? 1 : 0) +
+    (minRating !== null ? 1 : 0) +
+    (year !== null ? 1 : 0) +
+    (originalLanguage !== null ? 1 : 0) +
+    (sortBy !== 'popularity.desc' ? 1 : 0);
 
   if (!isOpen) return null;
 
@@ -241,8 +285,52 @@ export default function SearchOverlay({
 
         {/* Scrollable Content Body */}
         <div className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-6">
-          {/* EMPTY STATE: Recent searches & Advanced search */}
-          {!hasQuery && (
+          {/* ADVANCED FILTER VIEW */}
+          {showAdvanced ? (
+            <div className="space-y-4 animate-in fade-in duration-150">
+              <div className="flex items-center justify-between pb-3 border-b border-[#2B3443]/60">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced(false)}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[#E9A23B] hover:text-[#F2B04E] transition-colors cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Tillbaka till snabbsök</span>
+                </button>
+                <span className="text-xs font-bold text-[#ECE9E3]">Avancerade filter</span>
+              </div>
+
+              <AdvancedFilterBar
+                mediaType={mediaType}
+                onMediaTypeChange={setMediaType}
+                genreId={genreId}
+                onGenreChange={setGenreId}
+                minRating={minRating}
+                onMinRatingChange={setMinRating}
+                year={year}
+                onYearChange={setYear}
+                originalLanguage={originalLanguage}
+                onOriginalLanguageChange={setOriginalLanguage}
+                sortBy={sortBy}
+                onSortChange={setSortBy}
+                onReset={handleResetAdvanced}
+                activeFilterCount={advancedFilterCount}
+                selectedPersons={selectedPersons}
+                onPersonsChange={setSelectedPersons}
+              />
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={handleApplyAdvanced}
+                  className="w-full py-3 px-4 rounded-xl bg-[#E9A23B] hover:bg-[#F2B04E] text-[#0F1218] text-xs font-bold transition-all shadow-lg shadow-[#E9A23B]/20 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Search className="w-4 h-4 stroke-[2.5]" />
+                  <span>Visa filtrerade resultat</span>
+                </button>
+              </div>
+            </div>
+          ) : !hasQuery ? (
             <div className="space-y-6 animate-in fade-in duration-150">
               {/* Top Banner: Avancerad sökning */}
               <button
@@ -313,10 +401,8 @@ export default function SearchOverlay({
                 </div>
               )}
             </div>
-          )}
-
-          {/* ACTIVE SEARCH STATE */}
-          {hasQuery && (
+          ) : (
+            /* ACTIVE SEARCH STATE */
             <div className="space-y-6">
               {/* Loading Indicator */}
               {isSearching && (
@@ -482,7 +568,7 @@ export default function SearchOverlay({
         </div>
 
         {/* Footer actions: Enter to see all results / Advanced search */}
-        {hasQuery && (
+        {hasQuery && !showAdvanced && (
           <div className="p-3 sm:p-4 border-t border-[#2B3443] bg-[#171C25] flex flex-col sm:flex-row items-center justify-between gap-2.5">
             <button
               type="button"
