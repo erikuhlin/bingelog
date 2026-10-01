@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Sparkles,
   Loader2,
@@ -15,7 +16,7 @@ import {
   SlidersHorizontal,
   RotateCcw,
 } from 'lucide-react';
-import { MediaItem, MediaType } from '@/lib/types';
+import { MediaItem, MediaType, PersonSearchResult } from '@/lib/types';
 import { getImageUrl } from '@/lib/tmdb';
 import MediaCard from './MediaCard';
 import StatusSelector from './StatusSelector';
@@ -34,6 +35,7 @@ export default function ExploreFeed({
   defaultMediaType = 'all',
   title,
 }: ExploreFeedProps) {
+  const router = useRouter();
   const [selectedProviderIds, setSelectedProviderIds] = useState<number[]>([]);
   const [mediaType, setMediaType] = useState<'all' | MediaType>(defaultMediaType);
   const [genreId, setGenreId] = useState<number | null>(null);
@@ -413,6 +415,19 @@ export default function ExploreFeed({
             onSortChange={setSortBy}
             onReset={handleReset}
             activeFilterCount={activeFilterCount}
+            onPersonsChange={(persons) => {
+              if (persons.length > 0) {
+                const params = new URLSearchParams();
+                params.set('person', persons.map((p) => p.id).join(','));
+                if (mediaType !== 'all') params.set('type', mediaType);
+                if (genreId) params.set('genre', String(genreId));
+                if (minRating) params.set('minRating', String(minRating));
+                if (year) params.set('year', String(year));
+                if (originalLanguage) params.set('lang', originalLanguage);
+                if (sortBy !== 'popularity.desc') params.set('sort', sortBy);
+                router.push(`/search?${params.toString()}`);
+              }
+            }}
           />
         )}
       </div>
