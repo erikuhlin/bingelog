@@ -534,6 +534,7 @@ function LibraryContent() {
                       updateUrl({ q: e.target.value || null });
                     }}
                     placeholder="Filtrera sparade..."
+                    style={{ fontSize: '16px' }}
                     className="w-40 sm:w-48 bg-[#171C25] border border-[#E9A23B]/60 rounded-xl pl-8 pr-7 py-1 text-xs text-[#ECE9E3] placeholder-[#9EA8B6] focus:outline-none"
                     autoFocus
                   />

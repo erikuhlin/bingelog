@@ -155,6 +155,7 @@ export default function Navbar() {
                     }
                   }}
                   placeholder="Sök..."
+                  style={{ fontSize: '16px' }}
                   className="w-full bg-[#171C25] border border-[#2B3443] rounded-full pl-7 sm:pl-8 pr-7 sm:pr-8 py-1.5 text-xs text-[#ECE9E3] placeholder-[#8D97A8] focus:outline-none focus:border-[#E9A23B] focus:ring-1 focus:ring-[#E9A23B] transition-all truncate"
                 />
                 {searchQuery && (
