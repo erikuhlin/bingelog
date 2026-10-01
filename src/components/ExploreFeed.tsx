@@ -12,6 +12,8 @@ import {
   Film,
   Tv,
   Calendar,
+  SlidersHorizontal,
+  RotateCcw,
 } from 'lucide-react';
 import { MediaItem, MediaType } from '@/lib/types';
 import { getImageUrl } from '@/lib/tmdb';
@@ -46,6 +48,7 @@ export default function ExploreFeed({
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const storageKey = `bingelog_explore_state_${defaultMediaType}`;
   const isRestoredRef = useRef(false);
@@ -308,67 +311,106 @@ export default function ExploreFeed({
         />
       </div>
 
-      {/* Advanced Filter Bar */}
-      <AdvancedFilterBar
-        mediaType={mediaType}
-        onMediaTypeChange={setMediaType}
-        genreId={genreId}
-        onGenreChange={setGenreId}
-        minRating={minRating}
-        onMinRatingChange={setMinRating}
-        year={year}
-        onYearChange={setYear}
-        originalLanguage={originalLanguage}
-        onOriginalLanguageChange={setOriginalLanguage}
-        sortBy={sortBy}
-        onSortChange={setSortBy}
-        onReset={handleReset}
-        activeFilterCount={activeFilterCount}
-      />
+      {/* Title & Results count & Action controls (Filter toggle + View Mode switcher on same row) */}
+      <div className="space-y-4 pt-1">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2 min-w-0">
+            <Sparkles className="w-5 h-5 text-[#E9A23B] flex-shrink-0" />
+            <h2 className="text-base sm:text-xl md:text-2xl font-bold text-[#ECE9E3] tracking-tight truncate">
+              {selectedProviderName
+                ? `Populärt på ${selectedProviderName}`
+                : isFiltered
+                ? 'Filtrerade titlar'
+                : title || 'Trendar i veckan'}
+            </h2>
+            <span className="text-xs text-[#8D97A8] font-medium ml-1 flex-shrink-0">
+              ({items.length} titlar)
+            </span>
+          </div>
 
-      {/* Title & Results count & View Mode switcher */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-        <div className="flex flex-wrap items-center gap-2 min-w-0">
-          <Sparkles className="w-5 h-5 text-[#E9A23B] flex-shrink-0" />
-          <h2 className="text-base sm:text-xl md:text-2xl font-bold text-[#ECE9E3] tracking-tight truncate">
-            {selectedProviderName
-              ? `Populärt på ${selectedProviderName}`
-              : isFiltered
-              ? 'Filtrerade titlar'
-              : title || 'Trendar i veckan'}
-          </h2>
-          <span className="text-xs text-[#8D97A8] font-medium ml-1 flex-shrink-0">
-            ({items.length} titlar)
-          </span>
+          {/* Action buttons: Filter toggle & View Mode Switcher on the SAME row */}
+          <div className="flex items-center justify-between sm:justify-end gap-2.5 w-full sm:w-auto">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsFilterOpen(!isFilterOpen)}
+                className={`flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                  isFilterOpen || activeFilterCount > 0
+                    ? 'bg-[#1E2531] text-[#ECE9E3] border-[#2B3443]'
+                    : 'bg-[#171C25] text-[#8D97A8] border-[#2B3443] hover:text-[#ECE9E3]'
+                }`}
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5 text-[#E9A23B]" />
+                <span>Fler filter & sortering</span>
+                {activeFilterCount > 0 && (
+                  <span className="w-4 h-4 rounded-full bg-[#E9A23B] text-[#0F1218] text-[10px] font-black flex items-center justify-center">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+
+              {activeFilterCount > 0 && (
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  title="Återställ alla filter"
+                  className="flex items-center gap-1.5 text-xs text-[#8D97A8] hover:text-[#E9A23B] transition-colors cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Återställ</span>
+                </button>
+              )}
+            </div>
+
+            {/* View Mode Switcher (Grid / List) */}
+            <div className="flex items-center gap-1 bg-[#171C25] p-1 rounded-xl border border-[#2B3443] flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => setViewMode('grid')}
+                title="Rutnätsvy"
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                  viewMode === 'grid'
+                    ? 'bg-[#1E2531] text-[#E9A23B]'
+                    : 'text-[#8D97A8] hover:text-[#ECE9E3]'
+                }`}
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('list')}
+                title="Listvy"
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                  viewMode === 'list'
+                    ? 'bg-[#1E2531] text-[#E9A23B]'
+                    : 'text-[#8D97A8] hover:text-[#ECE9E3]'
+                }`}
+              >
+                <List className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* View Mode Switcher (Grid / List) */}
-        <div className="flex items-center gap-1 self-end sm:self-auto bg-[#171C25] p-1 rounded-xl border border-[#2B3443]">
-          <button
-            type="button"
-            onClick={() => setViewMode('grid')}
-            title="Rutnätsvy"
-            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-              viewMode === 'grid'
-                ? 'bg-[#1E2531] text-[#E9A23B]'
-                : 'text-[#8D97A8] hover:text-[#ECE9E3]'
-            }`}
-          >
-            <LayoutGrid className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('list')}
-            title="Listvy"
-            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-              viewMode === 'list'
-                ? 'bg-[#1E2531] text-[#E9A23B]'
-                : 'text-[#8D97A8] hover:text-[#ECE9E3]'
-            }`}
-          >
-            <List className="w-4 h-4" />
-          </button>
-        </div>
+        {/* Expandable filters box */}
+        {isFilterOpen && (
+          <AdvancedFilterBar
+            mediaType={mediaType}
+            onMediaTypeChange={setMediaType}
+            genreId={genreId}
+            onGenreChange={setGenreId}
+            minRating={minRating}
+            onMinRatingChange={setMinRating}
+            year={year}
+            onYearChange={setYear}
+            originalLanguage={originalLanguage}
+            onOriginalLanguageChange={setOriginalLanguage}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+            onReset={handleReset}
+            activeFilterCount={activeFilterCount}
+          />
+        )}
       </div>
 
       {/* Content Grid / List / Loading */}

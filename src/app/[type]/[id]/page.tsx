@@ -140,37 +140,6 @@ export default async function MediaDetailPage({ params }: PageProps) {
                   trailerVideo={trailer}
                 />
               </div>
-
-              {/* Quick Streaming Service badges under poster if available */}
-              {media.streaming_info?.flatrate && media.streaming_info.flatrate.length > 0 && (
-                <div className="p-3 rounded-2xl bg-[#0F1218]/70 border border-[#2B3443] space-y-2 shadow-sm">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#6FA98A] flex items-center gap-1">
-                    <Tv className="w-3.5 h-3.5 text-[#6FA98A]" />
-                    <span>Streama i Sverige</span>
-                  </span>
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    {media.streaming_info.flatrate.slice(0, 4).map((p) => (
-                      <div
-                        key={p.provider_id}
-                        title={p.provider_name}
-                        className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#1E2531] border border-[#2B3443] text-[10px] font-semibold text-[#ECE9E3] shadow-sm"
-                      >
-                        <img
-                          src={getImageUrl(p.logo_path, 'w300')}
-                          alt={p.provider_name}
-                          className="w-3.5 h-3.5 rounded object-cover"
-                        />
-                        <span className="truncate max-w-[80px]">{p.provider_name}</span>
-                      </div>
-                    ))}
-                    {media.streaming_info.flatrate.length > 4 && (
-                      <span className="text-[10px] font-bold text-[#8D97A8] px-1.5 py-0.5 rounded bg-[#1E2531]">
-                        +{media.streaming_info.flatrate.length - 4} till
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Right Column: Title, Metadata, Tagline, Overview, Quick Facts */}
@@ -421,33 +390,6 @@ export default async function MediaDetailPage({ params }: PageProps) {
                 trailerVideo={trailer}
               />
             </div>
-
-            {/* Quick Streaming info on mobile if available */}
-            {media.streaming_info?.flatrate && media.streaming_info.flatrate.length > 0 && (
-              <div className="p-3 rounded-2xl bg-[#0F1218]/60 border border-[#2B3443] flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-[10px] font-bold text-[#6FA98A] uppercase tracking-wide flex-shrink-0">
-                    Finns på:
-                  </span>
-                  <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
-                    {media.streaming_info.flatrate.slice(0, 3).map((p) => (
-                      <div
-                        key={p.provider_id}
-                        title={p.provider_name}
-                        className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#1E2531] border border-[#2B3443] text-[10px] text-[#ECE9E3] flex-shrink-0"
-                      >
-                        <img
-                          src={getImageUrl(p.logo_path, 'w300')}
-                          alt={p.provider_name}
-                          className="w-3.5 h-3.5 rounded object-cover"
-                        />
-                        <span className="truncate max-w-[65px]">{p.provider_name}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Handling on Mobile */}
             <div className="pt-2 border-t border-[#2B3443]/70">

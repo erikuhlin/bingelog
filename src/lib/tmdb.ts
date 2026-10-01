@@ -59,10 +59,11 @@ export const SWEDISH_STREAMING_PROVIDERS = [
   { id: 1899, name: 'Max', logo_path: '/skypuy7SXuugIQeYg0IglmzoKaS.png', bg: 'bg-blue-600' },
   { id: 337, name: 'Disney+', logo_path: '/5eZ872CghnHFLB1j8grszbrx0dx.png', bg: 'bg-indigo-700' },
   { id: 119, name: 'Prime Video', logo_path: '/gMZdpavHmxFNnLpMHwVxfqeux2g.png', bg: 'bg-sky-600' },
-  { id: 350, name: 'Apple TV', logo_path: '/9icYBfYFcwgCbky5VdGUIKJ4C5i.png', bg: 'bg-zinc-700' },
+  { id: 1773, name: 'SkyShowtime', logo_path: '/ube1pVpP3FklRkeyQjlDkkC3tL2.png', bg: 'bg-indigo-600' },
   { id: 76, name: 'Viaplay', logo_path: '/c1J9PGGowXwW5AxAaZaGipeFu7U.png', bg: 'bg-rose-700' },
   { id: 1944, name: 'TV4 Play', logo_path: '/8sxwkXfXhlIHkAlkZ64kTU9BNyT.png', bg: 'bg-red-700' },
   { id: 493, name: 'SVT Play', logo_path: '/vMU9xqjyIsOplkdSCRveond8fxV.png', bg: 'bg-emerald-600' },
+  { id: 350, name: 'Apple TV', logo_path: '/9icYBfYFcwgCbky5VdGUIKJ4C5i.png', bg: 'bg-zinc-700' },
 ];
 
 export async function getItemWatchProviders(mediaType: MediaType, id: number): Promise<any[]> {
