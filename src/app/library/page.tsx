@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useTransition, Suspense } from 'react';
+import React, { useState, useEffect, useTransition, Suspense, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -16,11 +16,16 @@ import {
   LayoutGrid,
   List,
   UserPlus,
+  Play,
+  X,
+  Check,
+  RotateCcw,
 } from 'lucide-react';
 import {
   getUserMediaList,
   getAllWatchedEpisodesCount,
   markNextEpisodeWatched,
+  unmarkEpisodeWatched,
   getShowProgress,
   syncAllWatchedEpisodes,
 } from '@/lib/storage';
@@ -53,8 +58,22 @@ function LibraryContent() {
   const [items, setItems] = useState<UserMediaRecord[]>([]);
   const [totalEpisodesCount, setTotalEpisodesCount] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState(queryParam);
+  const [isSearchOpen, setIsSearchOpen] = useState(Boolean(queryParam));
   const [seriesMeta, setSeriesMeta] = useState<Record<number, SeriesMetaInfo>>({});
   const [isLoading, setIsLoading] = useState(true);
+
+  // Undo Toast state
+  const [undoToast, setUndoToast] = useState<{
+    showId: number;
+    showTitle: string;
+    season: number;
+    episode: number;
+    prevSeason: number;
+    prevEpisode: number;
+    prevStatus: WatchStatus;
+  } | null>(null);
+  const undoTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Helper to update URL query params
   const updateUrl = (updates: Record<string, string | null>) => {
@@ -162,6 +181,63 @@ function LibraryContent() {
       await markNextEpisodeWatched(show.tmdb_id, nextSeason, nextEpisode, isEnded);
     } catch (err) {
       console.error('Error marking episode watched:', err);
+      loadData();
+    }
+  };
+
+  const handleQuickMarkNext = async (
+    show: UserMediaRecord,
+    nextSeason: number,
+    nextEpisode: number
+  ) => {
+    const prevSeason = show.current_season || 1;
+    const prevEpisode = show.current_episode || 0;
+    const prevStatus = show.status;
+
+    await handleMarkNextWatched(show, nextSeason, nextEpisode);
+
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    setUndoToast({
+      showId: show.tmdb_id,
+      showTitle: show.title,
+      season: nextSeason,
+      episode: nextEpisode,
+      prevSeason,
+      prevEpisode,
+      prevStatus,
+    });
+
+    undoTimerRef.current = setTimeout(() => {
+      setUndoToast(null);
+    }, 5000);
+  };
+
+  const handleUndo = async () => {
+    if (!undoToast) return;
+    const { showId, season, episode, prevSeason, prevEpisode, prevStatus } = undoToast;
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    setUndoToast(null);
+
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.tmdb_id === showId && item.media_type === 'tv') {
+          return {
+            ...item,
+            current_season: prevSeason,
+            current_episode: prevEpisode,
+            status: prevStatus,
+            updated_at: new Date().toISOString(),
+          };
+        }
+        return item;
+      })
+    );
+    setTotalEpisodesCount((prev) => Math.max(0, prev - 1));
+
+    try {
+      await unmarkEpisodeWatched(showId, season, episode, prevSeason, prevEpisode, prevStatus);
+    } catch (err) {
+      console.error('Error undoing episode watched:', err);
       loadData();
     }
   };
@@ -327,19 +403,14 @@ function LibraryContent() {
 
       {/* 1. Header with Stats */}
       <div>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-black text-[#ECE9E3] tracking-tight flex items-center gap-2.5">
-              <Bookmark className="w-7 h-7 text-[#E9A23B]" />
-              <span>{user ? `${displayName}s bibliotek` : 'Ditt bibliotek'}</span>
-            </h1>
-            <p className="text-sm text-[#8D97A8] mt-1">
-              Din samling, dina sedda avsnitt och din historik samlad på ett ställe.
-            </p>
-          </div>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+          <h1 className="text-2xl sm:text-3xl font-black text-[#ECE9E3] tracking-tight flex items-center gap-2.5">
+            <Bookmark className="w-6 h-6 sm:w-7 sm:h-7 text-[#E9A23B]" />
+            <span>{user ? `${displayName}s bibliotek` : 'Ditt bibliotek'}</span>
+          </h1>
         </div>
 
-        {/* 3 Key Stats Numbers */}
+        {/* Compact Key Stats Row */}
         <LibraryStatsHeader
           totalTitles={counts.all}
           totalWatchedEpisodes={totalEpisodesCount}
@@ -347,7 +418,7 @@ function LibraryContent() {
         />
       </div>
 
-      {/* 2. "Fortsätt titta" — Horizontal Row */}
+      {/* 2. "Fortsätt titta" & "Väntar på ny säsong" */}
       <ContinueWatchingRow
         items={items}
         seriesMeta={seriesMeta}
@@ -356,132 +427,171 @@ function LibraryContent() {
 
       {/* 3. The Collection — Filterable List & Grid */}
       <section aria-label="Samlingen">
-        {/* Status Tabs (role="tablist" / role="tab") */}
-        <div
-          role="tablist"
-          aria-label="Statusfilter"
-          className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none border-b border-[#2B3443]"
-        >
-          {[
-            { id: 'all', label: 'Alla', count: counts.all, icon: Sparkles },
-            { id: 'watching', label: 'Tittar på', count: counts.watching, icon: Eye },
-            { id: 'watchlist', label: 'Vill se', count: counts.watchlist, icon: Bookmark },
-            { id: 'completed', label: 'Har sett', count: counts.completed, icon: CheckCircle2 },
-            { id: 'dropped', label: 'Avbrutna', count: counts.dropped, icon: XCircle },
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const isSelected = statusParam === tab.id;
+        {/* Sticky Status Tabs with Right Fade on mobile */}
+        <div className="sticky top-16 z-30 bg-[#0F1218]/95 backdrop-blur-md pt-2 pb-1 border-b border-[#2B3443]">
+          <div className="relative">
+            <div
+              role="tablist"
+              aria-label="Statusfilter"
+              className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-none"
+            >
+              {[
+                { id: 'all', label: 'Alla', count: counts.all, icon: Sparkles },
+                { id: 'watching', label: 'Tittar på', count: counts.watching, icon: Eye },
+                { id: 'watchlist', label: 'Vill se', count: counts.watchlist, icon: Bookmark },
+                { id: 'completed', label: 'Har sett', count: counts.completed, icon: CheckCircle2 },
+                { id: 'dropped', label: 'Avbrutna', count: counts.dropped, icon: XCircle },
+              ].map((tab) => {
+                const Icon = tab.icon;
+                const isSelected = statusParam === tab.id;
 
-            return (
-              <button
-                key={tab.id}
-                role="tab"
-                id={`tab-${tab.id}`}
-                aria-selected={isSelected}
-                aria-controls={`panel-${tab.id}`}
-                onClick={() => updateUrl({ status: tab.id })}
-                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all focus-visible:ring-2 focus-visible:ring-[#E9A23B] focus-visible:outline-none ${
-                  isSelected
-                    ? 'bg-[#E9A23B] text-[#0F1218] shadow-md shadow-[#E9A23B]/20 font-bold'
-                    : 'text-[#8D97A8] hover:text-[#ECE9E3] hover:bg-[#171C25]'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{tab.label}</span>
-                <span
-                  className={`px-1.5 py-0.5 rounded-md text-[10px] ${
-                    isSelected ? 'bg-[#0F1218]/20 text-[#0F1218] font-black' : 'bg-[#1E2531] text-[#8D97A8]'
-                  }`}
-                >
-                  {tab.count}
-                </span>
-              </button>
-            );
-          })}
+                return (
+                  <button
+                    key={tab.id}
+                    role="tab"
+                    id={`tab-${tab.id}`}
+                    aria-selected={isSelected}
+                    aria-controls={`panel-${tab.id}`}
+                    onClick={() => updateUrl({ status: tab.id })}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all focus-visible:ring-2 focus-visible:ring-[#E9A23B] focus-visible:outline-none cursor-pointer flex-shrink-0 ${
+                      isSelected
+                        ? 'bg-[#E9A23B] text-[#0F1218] shadow-md shadow-[#E9A23B]/20 font-bold'
+                        : 'text-[#9EA8B6] hover:text-[#ECE9E3] hover:bg-[#171C25]'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    <span>{tab.label}</span>
+                    <span
+                      className={`px-1.5 py-0.5 rounded-md text-[10px] ${
+                        isSelected ? 'bg-[#0F1218]/20 text-[#0F1218] font-black' : 'bg-[#1E2531] text-[#9EA8B6]'
+                      }`}
+                    >
+                      {tab.count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            {/* Visual gradient fade indicating scrollable tabs on small screens */}
+            <div className="pointer-events-none absolute right-0 top-0 bottom-1.5 w-8 bg-gradient-to-l from-[#0F1218] to-transparent sm:hidden" />
+          </div>
         </div>
 
-        {/* Toolbar: Search, Type filter, Sort, View Toggle */}
-        <div className="mt-5 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
-          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 w-full md:w-auto">
-            {/* Search Input */}
-            <div className="relative w-full sm:w-56 md:w-48 lg:w-56">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#8D97A8]" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  updateUrl({ q: e.target.value || null });
-                }}
-                placeholder="Sök i biblioteket..."
-                className="w-full bg-[#171C25] border border-[#2B3443] rounded-xl pl-8 pr-3 py-1.5 text-xs text-[#ECE9E3] placeholder-[#8D97A8] focus:outline-none focus:border-[#E9A23B] focus-visible:ring-1 focus-visible:ring-[#E9A23B]"
-              />
-            </div>
-
-            {/* Type Filter */}
-            <div className="flex items-center gap-1.5 bg-[#171C25] p-0.5 rounded-xl border border-[#2B3443]">
-              <button
-                type="button"
-                onClick={() => updateUrl({ type: 'all' })}
-                className={`px-2.5 py-1 rounded-lg text-xs transition-colors cursor-pointer ${
-                  typeParam === 'all'
-                    ? 'bg-[#E9A23B] text-[#0F1218] font-bold shadow-sm'
-                    : 'text-[#8D97A8] hover:text-[#ECE9E3] font-medium'
-                }`}
-              >
-                Alla typer
-              </button>
-              <button
-                type="button"
-                onClick={() => updateUrl({ type: 'tv' })}
-                className={`px-2.5 py-1 rounded-lg text-xs flex items-center gap-1 transition-colors cursor-pointer ${
-                  typeParam === 'tv'
-                    ? 'bg-[#E9A23B] text-[#0F1218] font-bold shadow-sm'
-                    : 'text-[#8D97A8] hover:text-[#ECE9E3] font-medium'
-                }`}
-              >
-                <Tv className={`w-3 h-3 ${typeParam === 'tv' ? 'text-[#0F1218]' : 'text-[#6FA98A]'}`} />
-                <span>Serier</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => updateUrl({ type: 'movie' })}
-                className={`px-2.5 py-1 rounded-lg text-xs flex items-center gap-1 transition-colors cursor-pointer ${
-                  typeParam === 'movie'
-                    ? 'bg-[#E9A23B] text-[#0F1218] font-bold shadow-sm'
-                    : 'text-[#8D97A8] hover:text-[#ECE9E3] font-medium'
-                }`}
-              >
-                <Film className={`w-3 h-3 ${typeParam === 'movie' ? 'text-[#0F1218]' : 'text-[#E9A23B]'}`} />
-                <span>Filmer</span>
-              </button>
-            </div>
+        {/* Compact Single-Row Toolbar */}
+        <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+          {/* Left: Type / Format chips */}
+          <div className="flex items-center gap-1 bg-[#171C25] p-1 rounded-xl border border-[#2B3443] self-start">
+            <button
+              type="button"
+              onClick={() => updateUrl({ type: 'all' })}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                typeParam === 'all'
+                  ? 'bg-[#E9A23B] text-[#0F1218] font-bold shadow-sm'
+                  : 'text-[#9EA8B6] hover:text-[#ECE9E3]'
+              }`}
+            >
+              Alla
+            </button>
+            <button
+              type="button"
+              onClick={() => updateUrl({ type: 'tv' })}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                typeParam === 'tv'
+                  ? 'bg-[#E9A23B] text-[#0F1218] font-bold shadow-sm'
+                  : 'text-[#9EA8B6] hover:text-[#ECE9E3]'
+              }`}
+            >
+              <Tv className={`w-3.5 h-3.5 ${typeParam === 'tv' ? 'text-[#0F1218]' : 'text-[#6FA98A]'}`} />
+              <span>Serier</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => updateUrl({ type: 'movie' })}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                typeParam === 'movie'
+                  ? 'bg-[#E9A23B] text-[#0F1218] font-bold shadow-sm'
+                  : 'text-[#9EA8B6] hover:text-[#ECE9E3]'
+              }`}
+            >
+              <Film className={`w-3.5 h-3.5 ${typeParam === 'movie' ? 'text-[#0F1218]' : 'text-[#E9A23B]'}`} />
+              <span>Filmer</span>
+            </button>
           </div>
 
-          <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
+          {/* Right: Expandable Search, Sort, View Toggle */}
+          <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
+            {/* Expandable Search Input / Button */}
+            <div className="relative flex items-center">
+              {isSearchOpen ? (
+                <div className="flex items-center relative animate-in fade-in zoom-in-95 duration-150">
+                  <Search className="w-3.5 h-3.5 text-[#9EA8B6] absolute left-2.5 pointer-events-none" />
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      updateUrl({ q: e.target.value || null });
+                    }}
+                    placeholder="Filtrera sparade..."
+                    className="w-40 sm:w-48 bg-[#171C25] border border-[#E9A23B]/60 rounded-xl pl-8 pr-7 py-1 text-xs text-[#ECE9E3] placeholder-[#9EA8B6] focus:outline-none"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSearchOpen(false);
+                      setSearchQuery('');
+                      updateUrl({ q: null });
+                    }}
+                    className="absolute right-2 text-[#9EA8B6] hover:text-[#ECE9E3] p-0.5"
+                    title="Stäng sök"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSearchOpen(true);
+                    setTimeout(() => searchInputRef.current?.focus(), 50);
+                  }}
+                  title="Filtrera bland sparade"
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border transition-colors cursor-pointer ${
+                    searchQuery
+                      ? 'bg-[#E9A23B]/20 text-[#E9A23B] border-[#E9A23B]/50'
+                      : 'bg-[#171C25] text-[#9EA8B6] border-[#2B3443] hover:text-[#ECE9E3]'
+                  }`}
+                >
+                  <Search className="w-3.5 h-3.5" />
+                  {searchQuery && <span className="text-[11px] truncate max-w-[80px]">{searchQuery}</span>}
+                </button>
+              )}
+            </div>
+
             {/* Sort Dropdown */}
             <div className="flex items-center gap-1.5">
-              <span className="text-[#8D97A8] hidden sm:inline">Sortera:</span>
               <select
                 value={sortParam}
                 onChange={(e) => updateUrl({ sort: e.target.value })}
-                className="bg-[#171C25] border border-[#2B3443] rounded-xl px-2.5 py-1 text-xs text-[#ECE9E3] focus:outline-none focus:border-[#E9A23B]"
+                className="bg-[#171C25] border border-[#2B3443] rounded-xl px-2.5 py-1.5 text-xs text-[#ECE9E3] focus:outline-none focus:border-[#E9A23B] cursor-pointer"
               >
-                <option value="updated">Senast uppdaterad</option>
+                <option value="updated">Senast sedd/ändrad</option>
                 <option value="rating">Mitt betyg (högst)</option>
                 <option value="title">Titel (A–Ö)</option>
               </select>
             </div>
 
             {/* View Mode Toggle (Grid vs List) */}
-            <div className="flex items-center gap-1 bg-[#171C25] p-0.5 rounded-xl border border-[#2B3443]">
+            <div className="flex items-center gap-1 bg-[#171C25] p-0.5 rounded-xl border border-[#2B3443] flex-shrink-0">
               <button
                 type="button"
                 aria-pressed={viewParam === 'grid'}
                 aria-label="Rutnätsvy"
                 onClick={() => updateUrl({ view: 'grid' })}
-                className={`p-1.5 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-[#E9A23B] ${
-                  viewParam === 'grid' ? 'bg-[#1E2531] text-[#E9A23B]' : 'text-[#8D97A8] hover:text-[#ECE9E3]'
+                className={`p-1.5 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-[#E9A23B] cursor-pointer ${
+                  viewParam === 'grid' ? 'bg-[#1E2531] text-[#E9A23B]' : 'text-[#9EA8B6] hover:text-[#ECE9E3]'
                 }`}
                 title="Rutnät"
               >
@@ -492,8 +602,8 @@ function LibraryContent() {
                 aria-pressed={viewParam === 'list'}
                 aria-label="Listvy"
                 onClick={() => updateUrl({ view: 'list' })}
-                className={`p-1.5 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-[#E9A23B] ${
-                  viewParam === 'list' ? 'bg-[#1E2531] text-[#E9A23B]' : 'text-[#8D97A8] hover:text-[#ECE9E3]'
+                className={`p-1.5 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-[#E9A23B] cursor-pointer ${
+                  viewParam === 'list' ? 'bg-[#1E2531] text-[#E9A23B]' : 'text-[#9EA8B6] hover:text-[#ECE9E3]'
                 }`}
                 title="Lista"
               >
@@ -554,9 +664,9 @@ function LibraryContent() {
 
                       {/* Status indicator badge (top-right) */}
                       <div className="absolute top-2 right-2 pointer-events-none">
-                        {item.status === 'watching' && isTv && curEp > 0 ? (
+                        {item.status === 'watching' && isTv ? (
                           <span className="px-1.5 py-0.5 rounded-md bg-[#E9A23B] text-[#0F1218] text-[10px] font-black tracking-tight shadow-md">
-                            S{curSeason} A{curEp}
+                            {curEp >= totalInSeason ? `Klar med S${curSeason}` : `Nästa: S${curSeason} A${curEp + 1}`}
                           </span>
                         ) : item.status === 'completed' ? (
                           <span className="px-1.5 py-0.5 rounded-md bg-[#6FA98A] text-[#0F1218] text-[10px] font-bold shadow-md">
@@ -600,15 +710,31 @@ function LibraryContent() {
                         </div>
                       </div>
 
-                      <div className="pt-1 border-t border-[#2B3443]/50">
+                      <div className="pt-2 border-t border-[#2B3443]/50 flex items-center justify-between gap-1.5">
                         <StatusSelector
                           tmdbId={item.tmdb_id}
                           mediaType={item.media_type}
                           title={item.title}
                           posterPath={item.poster_path}
                           backdropPath={item.backdrop_path}
-                          className="w-full"
+                          variant="compact"
+                          className="flex-1 min-w-0"
                         />
+                        {item.status === 'watching' && isTv && curEp < totalInSeason && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleQuickMarkNext(item, curSeason, curEp + 1);
+                            }}
+                            title={`Markera S${curSeason} A${curEp + 1} som sedd`}
+                            className="flex-shrink-0 h-7 px-2 rounded-xl bg-[#E9A23B]/15 hover:bg-[#E9A23B] text-[#E9A23B] hover:text-[#0F1218] border border-[#E9A23B]/30 hover:border-[#E9A23B] text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer"
+                          >
+                            <Check className="w-3 h-3 stroke-[2.5]" />
+                            <span>+1</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -667,29 +793,52 @@ function LibraryContent() {
                     </div>
 
                     {/* Middle: Position (Hidden on small screens) */}
-                    <div className="hidden md:block w-36 text-xs text-[#ECE9E3] text-left">
+                    <div className="hidden md:block w-44 text-xs text-[#ECE9E3] text-left">
                       {isTv ? (
                         curEp > 0 ? (
-                          <span>
-                            S{curSeason} A{curEp} <span className="text-[#8D97A8]">·</span> {epsLeft} kvar
-                          </span>
+                          curEp >= totalInSeason ? (
+                            <span className="text-[#6FA98A] font-medium">Klar med S{curSeason}</span>
+                          ) : (
+                            <span>
+                              <strong className="text-[#E9A23B]">Nästa: S{curSeason} A{curEp + 1}</strong>{' '}
+                              <span className="text-[#9EA8B6]">· {epsLeft} kvar</span>
+                            </span>
+                          )
                         ) : (
-                          <span className="text-[#8D97A8]">Ej påbörjad</span>
+                          <span className="text-[#9EA8B6]">Ej påbörjad</span>
                         )
                       ) : (
-                        <span className="text-[#8D97A8]">—</span>
+                        <span className="text-[#9EA8B6]">—</span>
                       )}
                     </div>
 
-                    {/* Right: Status selector */}
-                    <div className="w-36 sm:w-44 flex-shrink-0">
-                      <StatusSelector
-                        tmdbId={item.tmdb_id}
-                        mediaType={item.media_type}
-                        title={item.title}
-                        posterPath={item.poster_path}
-                        backdropPath={item.backdrop_path}
-                      />
+                    {/* Right: Actions */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {item.status === 'watching' && isTv && curEp < totalInSeason && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleQuickMarkNext(item, curSeason, curEp + 1);
+                          }}
+                          title={`Markera S${curSeason} A${curEp + 1} som sedd`}
+                          className="h-8 px-2.5 rounded-xl bg-[#E9A23B]/15 hover:bg-[#E9A23B] text-[#E9A23B] hover:text-[#0F1218] border border-[#E9A23B]/30 hover:border-[#E9A23B] text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                          <span>+1 avsnitt</span>
+                        </button>
+                      )}
+                      <div className="w-32 sm:w-36 flex-shrink-0">
+                        <StatusSelector
+                          tmdbId={item.tmdb_id}
+                          mediaType={item.media_type}
+                          title={item.title}
+                          posterPath={item.poster_path}
+                          backdropPath={item.backdrop_path}
+                          variant="compact"
+                        />
+                      </div>
                     </div>
                   </div>
                 );
@@ -697,6 +846,39 @@ function LibraryContent() {
             </div>
           )}
         </div>
+
+        {/* Undo Toast */}
+        {undoToast && (
+          <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-4 duration-200">
+            <div className="flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-[#171C25] border border-[#E9A23B]/50 shadow-2xl shadow-black/80 text-xs text-[#ECE9E3]">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-[#E9A23B] animate-pulse" />
+                <span>
+                  Markerade <strong>S{undoToast.season} A{undoToast.episode}</strong> som sedd
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleUndo}
+                className="px-2.5 py-1 rounded-lg bg-[#E9A23B] text-[#0F1218] font-bold hover:bg-[#F2B04E] transition-colors flex items-center gap-1 cursor-pointer"
+              >
+                <RotateCcw className="w-3 h-3 stroke-[2.5]" />
+                <span>Ångra</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+                  setUndoToast(null);
+                }}
+                className="text-[#9EA8B6] hover:text-[#ECE9E3] p-0.5"
+                title="Stäng"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );

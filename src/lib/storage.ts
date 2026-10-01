@@ -627,6 +627,71 @@ export async function markNextEpisodeWatched(
   return updatedRecord;
 }
 
+export async function unmarkEpisodeWatched(
+  tmdbId: number,
+  seasonNumber: number,
+  episodeNumber: number,
+  previousSeason: number,
+  previousEpisode: number,
+  previousStatus: WatchStatus = 'watching'
+): Promise<void> {
+  const supabase = getSupabaseClient();
+  const now = new Date().toISOString();
+
+  // 1. Remove from local watched episodes
+  let all = getLocalWatchedEpisodes();
+  all = all.filter(
+    (ep) => !(ep.tmdb_id === tmdbId && ep.season_number === seasonNumber && ep.episode_number === episodeNumber)
+  );
+  saveLocalWatchedEpisodes(all, false);
+
+  // 2. Revert local user_media record
+  const mediaList = getLocalMedia();
+  const idx = mediaList.findIndex((m) => m.tmdb_id === tmdbId && m.media_type === 'tv');
+  if (idx >= 0) {
+    mediaList[idx] = {
+      ...mediaList[idx],
+      current_season: previousSeason,
+      current_episode: previousEpisode,
+      status: previousStatus,
+      updated_at: now,
+    };
+    saveLocalMedia(mediaList, true);
+  } else {
+    window.dispatchEvent(new Event('bingelog_storage_changed'));
+  }
+
+  // 3. Persist to Supabase if logged in
+  if (supabase) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from('watched_episodes')
+          .delete()
+          .match({
+            user_id: user.id,
+            tmdb_id: tmdbId,
+            season_number: seasonNumber,
+            episode_number: episodeNumber,
+          });
+
+        await supabase
+          .from('user_media')
+          .update({
+            current_season: previousSeason,
+            current_episode: previousEpisode,
+            status: previousStatus,
+            updated_at: now,
+          })
+          .match({ user_id: user.id, tmdb_id: tmdbId, media_type: 'tv' });
+      }
+    } catch (err) {
+      console.error('Error in unmarkEpisodeWatched:', err);
+    }
+  }
+}
+
 export async function getAllWatchedEpisodesCount(): Promise<number> {
   const supabase = getSupabaseClient();
   if (supabase) {

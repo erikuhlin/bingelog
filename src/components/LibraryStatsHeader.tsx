@@ -15,48 +15,41 @@ export default function LibraryStatsHeader({
   totalRuntimeMinutes,
 }: LibraryStatsHeaderProps) {
   const formatRuntime = (mins: number) => {
-    if (!mins || mins <= 0) return null;
-    const days = (mins / (60 * 24)).toFixed(1);
-    return `${days} dagar`;
+    if (!mins || mins <= 0) return '0 h';
+    if (mins < 60) return `${mins} min`;
+    const days = Math.floor(mins / (24 * 60));
+    const hours = Math.floor((mins % (24 * 60)) / 60);
+
+    if (days > 0) {
+      return hours > 0 ? `${days} d ${hours} h` : `${days} d`;
+    }
+    const remMins = mins % 60;
+    return remMins > 0 ? `${hours} h ${remMins} m` : `${hours} h`;
   };
 
-  const daysString = formatRuntime(totalRuntimeMinutes);
+  const timeString = formatRuntime(totalRuntimeMinutes);
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 md:gap-4 mt-6">
+    <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-3 text-xs">
       {/* Stat 1: Titles */}
-      <div className="bg-[#171C25] border border-[#2B3443] rounded-2xl p-4 flex items-center gap-3.5 shadow-sm">
-        <div className="w-10 h-10 rounded-xl bg-[#E9A23B]/10 text-[#E9A23B] flex items-center justify-center flex-shrink-0">
-          <Film className="w-5 h-5" />
-        </div>
-        <div>
-          <p className="text-[11px] font-semibold text-[#8D97A8] uppercase tracking-wider">Titlar</p>
-          <p className="text-xl md:text-2xl font-black text-[#ECE9E3]">{totalTitles}</p>
-        </div>
+      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#171C25] border border-[#2B3443] shadow-sm">
+        <Film className="w-3.5 h-3.5 text-[#E9A23B]" />
+        <span className="font-bold text-[#ECE9E3]">{totalTitles}</span>
+        <span className="text-[#9EA8B6]">{totalTitles === 1 ? 'titel' : 'titlar'}</span>
       </div>
 
       {/* Stat 2: Watched Episodes */}
-      <div className="bg-[#171C25] border border-[#2B3443] rounded-2xl p-4 flex items-center gap-3.5 shadow-sm">
-        <div className="w-10 h-10 rounded-xl bg-[#6FA98A]/10 text-[#6FA98A] flex items-center justify-center flex-shrink-0">
-          <CheckCircle2 className="w-5 h-5" />
-        </div>
-        <div>
-          <p className="text-[11px] font-semibold text-[#8D97A8] uppercase tracking-wider">Avsnitt sedda</p>
-          <p className="text-xl md:text-2xl font-black text-[#ECE9E3]">{totalWatchedEpisodes}</p>
-        </div>
+      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#171C25] border border-[#2B3443] shadow-sm">
+        <CheckCircle2 className="w-3.5 h-3.5 text-[#6FA98A]" />
+        <span className="font-bold text-[#ECE9E3]">{totalWatchedEpisodes}</span>
+        <span className="text-[#9EA8B6]">sedda avsnitt</span>
       </div>
 
-      {/* Stat 3: Total watch time (days) */}
-      <div className="col-span-2 sm:col-span-1 bg-[#171C25] border border-[#2B3443] rounded-2xl p-4 flex items-center gap-3.5 shadow-sm">
-        <div className="w-10 h-10 rounded-xl bg-[#B5721E]/15 text-[#E9A23B] flex items-center justify-center flex-shrink-0">
-          <Clock className="w-5 h-5" />
-        </div>
-        <div>
-          <p className="text-[11px] font-semibold text-[#8D97A8] uppercase tracking-wider">Speltid</p>
-          <p className="text-xl md:text-2xl font-black text-[#ECE9E3]">
-            {daysString ? daysString : `${Math.round(totalWatchedEpisodes * 0.75)} timmar`}
-          </p>
-        </div>
+      {/* Stat 3: Total watch time */}
+      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#171C25] border border-[#2B3443] shadow-sm">
+        <Clock className="w-3.5 h-3.5 text-[#E9A23B]" />
+        <span className="font-bold text-[#ECE9E3]">{timeString}</span>
+        <span className="text-[#9EA8B6]">sedd tid</span>
       </div>
     </div>
   );

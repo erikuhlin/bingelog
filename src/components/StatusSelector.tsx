@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Bookmark, Eye, CheckCircle2, XCircle, Trash2, Star, X, Check } from 'lucide-react';
+import { Bookmark, Eye, CheckCircle2, XCircle, Trash2, Star, X, Check, ChevronDown } from 'lucide-react';
 import { WatchStatus, MediaType } from '@/lib/types';
 import { getUserMediaItem, saveUserMedia, removeUserMedia } from '@/lib/storage';
 import { getImageUrl } from '@/lib/tmdb';
@@ -16,6 +16,7 @@ interface StatusSelectorProps {
   backdropPath: string | null;
   className?: string;
   showRating?: boolean;
+  variant?: 'default' | 'compact' | 'chip';
 }
 
 export default function StatusSelector({
@@ -26,6 +27,7 @@ export default function StatusSelector({
   backdropPath,
   className = '',
   showRating = false,
+  variant = 'default',
 }: StatusSelectorProps) {
   const { user, openAuthModal } = useAuth();
   const [currentStatus, setCurrentStatus] = useState<WatchStatus | null>(null);
@@ -311,6 +313,8 @@ export default function StatusSelector({
     )
   ) : null;
 
+  const isCompact = variant === 'compact' || variant === 'chip';
+
   return (
     <div className={`relative ${className}`}>
       <div className="flex items-center gap-2 w-full">
@@ -318,19 +322,25 @@ export default function StatusSelector({
           <button
             type="button"
             onClick={handleButtonClick}
-            className={`w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${statusConfigs[currentStatus].bg} ${statusConfigs[currentStatus].color} ${statusConfigs[currentStatus].border} hover:opacity-90 shadow-sm cursor-pointer`}
+            className={`w-full flex items-center ${isCompact ? 'justify-between px-2.5 py-1 text-[11px] rounded-lg' : 'justify-center px-3 py-1.5 text-xs rounded-xl'} font-semibold border transition-all ${statusConfigs[currentStatus].bg} ${statusConfigs[currentStatus].color} ${statusConfigs[currentStatus].border} hover:opacity-90 shadow-sm cursor-pointer`}
           >
-            {React.createElement(statusConfigs[currentStatus].icon, { className: 'w-3.5 h-3.5' })}
-            <span>{statusConfigs[currentStatus].label}</span>
+            <div className="flex items-center gap-1.5 truncate">
+              {React.createElement(statusConfigs[currentStatus].icon, { className: isCompact ? 'w-3 h-3 flex-shrink-0' : 'w-3.5 h-3.5 flex-shrink-0' })}
+              <span className="truncate">{statusConfigs[currentStatus].label}</span>
+            </div>
+            {isCompact && <ChevronDown className="w-3 h-3 opacity-60 flex-shrink-0" />}
           </button>
         ) : (
           <button
             type="button"
             onClick={handleButtonClick}
-            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#171C25] hover:bg-[#1E2531] text-[#ECE9E3] border border-[#2B3443] transition-all shadow-sm hover:border-[#E9A23B]/40 cursor-pointer"
+            className={`w-full flex items-center ${isCompact ? 'justify-between px-2.5 py-1 text-[11px] rounded-lg' : 'justify-center px-3 py-1.5 text-xs rounded-xl'} font-semibold bg-[#171C25] hover:bg-[#1E2531] text-[#ECE9E3] border border-[#2B3443] transition-all shadow-sm hover:border-[#E9A23B]/40 cursor-pointer`}
           >
-            <Bookmark className="w-3.5 h-3.5 text-[#E9A23B]" />
-            <span>Lägg till</span>
+            <div className="flex items-center gap-1.5 truncate">
+              <Bookmark className={`${isCompact ? 'w-3 h-3' : 'w-3.5 h-3.5'} text-[#E9A23B] flex-shrink-0`} />
+              <span className="truncate">Lägg till</span>
+            </div>
+            {isCompact && <ChevronDown className="w-3 h-3 opacity-60 flex-shrink-0" />}
           </button>
         )}
       </div>
