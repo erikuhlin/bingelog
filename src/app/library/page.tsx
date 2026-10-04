@@ -131,6 +131,8 @@ function LibraryContent() {
             runtime: data.runtime || 45,
             status: data.status,
             next_air_date: data.next_episode_to_air?.air_date || null,
+            next_episode: data.next_episode_to_air || null,
+            last_episode: data.last_episode_to_air || null,
             seasons: data.seasons || [],
           };
         });

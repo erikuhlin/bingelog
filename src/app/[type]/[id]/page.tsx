@@ -67,6 +67,26 @@ function formatSwedishDate(dateStr?: string | null): string | null {
   }
 }
 
+function getRelativeDateLabel(dateStr?: string | null): string | null {
+  if (!dateStr) return null;
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const target = new Date(dateStr);
+    target.setHours(0, 0, 0, 0);
+    const diffDays = Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return 'idag';
+    if (diffDays === 1) return 'imorgon';
+    if (diffDays === 2) return 'i övermorgon';
+    if (diffDays > 2 && diffDays <= 7) return `om ${diffDays} dagar`;
+    if (diffDays > 7 && diffDays <= 30) return `om ${Math.round(diffDays / 7)} veckor`;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 interface PageProps {
   params: Promise<{
     type: string;
@@ -93,6 +113,23 @@ export default async function MediaDetailPage({ params }: PageProps) {
     media.release_date?.slice(0, 4) || media.first_air_date?.slice(0, 4) || '';
 
   const trailer = media.videos?.[0];
+
+  const nowMs = Date.now();
+
+  // Find upcoming season if any
+  const upcomingSeason = media.media_type === 'tv'
+    ? media.seasons?.find((s) => {
+        if (!s.air_date) return false;
+        const d = new Date(s.air_date).getTime();
+        return d > nowMs;
+      })
+    : null;
+
+  // Next episode to air
+  const nextEpisode = media.media_type === 'tv' ? media.next_episode_to_air : null;
+  const nextEpisodeIsFuture = nextEpisode?.air_date
+    ? new Date(nextEpisode.air_date).getTime() >= nowMs - (1000 * 60 * 60 * 24)
+    : false;
 
   return (
     <div className="space-y-6 sm:space-y-8 md:space-y-10 pb-16 md:pb-8">
@@ -191,6 +228,24 @@ export default async function MediaDetailPage({ params }: PageProps) {
                 {media.status && STATUS_NAMES[media.status] && (
                   <span className="px-2.5 py-1 rounded-full bg-[#1E2531] border border-[#2B3443] text-xs font-medium text-[#8D97A8]">
                     {STATUS_NAMES[media.status]}
+                  </span>
+                )}
+
+                {upcomingSeason && (
+                  <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E9A23B]/15 border border-[#E9A23B]/40 text-xs font-bold text-[#E9A23B] shadow-sm">
+                    <Sparkles className="w-3.5 h-3.5 text-[#E9A23B]" />
+                    <span>
+                      Säsong {upcomingSeason.season_number} {getRelativeDateLabel(upcomingSeason.air_date) ? `kommer ${getRelativeDateLabel(upcomingSeason.air_date)}` : `släpps ${formatSwedishDate(upcomingSeason.air_date)}`}
+                    </span>
+                  </span>
+                )}
+
+                {!upcomingSeason && nextEpisode && nextEpisodeIsFuture && (
+                  <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E9A23B]/15 border border-[#E9A23B]/40 text-xs font-bold text-[#E9A23B] shadow-sm">
+                    <Clock className="w-3.5 h-3.5 text-[#E9A23B]" />
+                    <span>
+                      S{nextEpisode.season_number} A{nextEpisode.episode_number} {getRelativeDateLabel(nextEpisode.air_date) ? `släpps ${getRelativeDateLabel(nextEpisode.air_date)}` : `sänds ${formatSwedishDate(nextEpisode.air_date)}`}
+                    </span>
                   </span>
                 )}
               </div>
@@ -443,6 +498,53 @@ export default async function MediaDetailPage({ params }: PageProps) {
 
         </div>
       </div>
+
+      {/* Upcoming season or episode highlight card */}
+      {media.media_type === 'tv' && (upcomingSeason || (nextEpisode && nextEpisodeIsFuture)) && (
+        <section className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-[#171C25] via-[#1E2531] to-[#171C25] border border-[#E9A23B]/35 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3.5 min-w-0">
+            <div className="w-11 h-11 rounded-2xl bg-[#E9A23B]/15 text-[#E9A23B] border border-[#E9A23B]/30 flex items-center justify-center flex-shrink-0 mt-0.5 sm:mt-0 shadow-inner">
+              <Sparkles className="w-5 h-5 fill-[#E9A23B]/20" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] uppercase font-black text-[#E9A23B] tracking-wider px-2 py-0.5 rounded-md bg-[#E9A23B]/15 border border-[#E9A23B]/30">
+                  {upcomingSeason ? 'Kommande säsong' : 'Kommande avsnitt'}
+                </span>
+                {nextEpisode?.name && !upcomingSeason && (
+                  <span className="text-xs text-[#8D97A8] truncate max-w-[200px] sm:max-w-xs">&ldquo;{nextEpisode.name}&rdquo;</span>
+                )}
+              </div>
+              <p className="text-sm sm:text-base font-bold text-[#ECE9E3] mt-1">
+                {upcomingSeason ? (
+                  <>
+                    Säsong {upcomingSeason.season_number}{' '}
+                    <span className="text-[#E9A23B]">
+                      {getRelativeDateLabel(upcomingSeason.air_date)
+                        ? `har premiär ${getRelativeDateLabel(upcomingSeason.air_date)}`
+                        : `släpps ${formatSwedishDate(upcomingSeason.air_date)}`}
+                    </span>
+                    {upcomingSeason.episode_count ? ` (${upcomingSeason.episode_count} nya avsnitt)` : ''}
+                  </>
+                ) : (
+                  <>
+                    Säsong {nextEpisode!.season_number}, Avsnitt {nextEpisode!.episode_number}{' '}
+                    <span className="text-[#E9A23B]">
+                      {getRelativeDateLabel(nextEpisode!.air_date)
+                        ? `sänds ${getRelativeDateLabel(nextEpisode!.air_date)}`
+                        : `sänds den ${formatSwedishDate(nextEpisode!.air_date)}`}
+                    </span>
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+          <div className="text-xs text-[#ECE9E3] flex items-center gap-2 self-start sm:self-auto bg-[#0F1218]/80 px-3.5 py-2 rounded-2xl border border-[#2B3443] flex-shrink-0">
+            <Calendar className="w-4 h-4 text-[#E9A23B]" />
+            <span className="font-semibold">{formatSwedishDate(upcomingSeason?.air_date || nextEpisode?.air_date)}</span>
+          </div>
+        </section>
+      )}
 
       {/* Swedish Watch Providers (Stream, Hyr, Köp) */}
       <WatchProvidersSection providers={media.streaming_info} />

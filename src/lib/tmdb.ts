@@ -412,6 +412,28 @@ export async function getMediaDetails(mediaType: MediaType, id: number): Promise
         })),
       } : undefined,
       recommendations: recommendations.length > 0 ? recommendations : undefined,
+      next_episode_to_air: data.next_episode_to_air
+        ? {
+            id: data.next_episode_to_air.id,
+            name: data.next_episode_to_air.name,
+            overview: data.next_episode_to_air.overview,
+            air_date: data.next_episode_to_air.air_date,
+            episode_number: data.next_episode_to_air.episode_number,
+            season_number: data.next_episode_to_air.season_number,
+            still_path: data.next_episode_to_air.still_path,
+          }
+        : null,
+      last_episode_to_air: data.last_episode_to_air
+        ? {
+            id: data.last_episode_to_air.id,
+            name: data.last_episode_to_air.name,
+            overview: data.last_episode_to_air.overview,
+            air_date: data.last_episode_to_air.air_date,
+            episode_number: data.last_episode_to_air.episode_number,
+            season_number: data.last_episode_to_air.season_number,
+            still_path: data.last_episode_to_air.still_path,
+          }
+        : null,
     };
   }
 

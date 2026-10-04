@@ -131,6 +131,24 @@ export interface MediaDetail extends MediaItem {
     buy?: WatchProvider[];
   };
   recommendations?: MediaItem[];
+  next_episode_to_air?: {
+    id: number;
+    name: string;
+    overview: string;
+    air_date: string | null;
+    episode_number: number;
+    season_number: number;
+    still_path?: string | null;
+  } | null;
+  last_episode_to_air?: {
+    id: number;
+    name: string;
+    overview: string;
+    air_date: string | null;
+    episode_number: number;
+    season_number: number;
+    still_path?: string | null;
+  } | null;
 }
 
 export interface UserMediaRecord {

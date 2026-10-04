@@ -353,6 +353,9 @@ export default function EpisodeTracker({
             const isComplete = season.episode_count
               ? seasonWatchedCount >= season.episode_count
               : false;
+            const isFutureSeason = season.air_date
+              ? new Date(season.air_date).getTime() > Date.now()
+              : false;
 
             return (
               <button
@@ -366,7 +369,11 @@ export default function EpisodeTracker({
                 }`}
               >
                 <span>Säsong {season.season_number}</span>
-                {isComplete ? (
+                {isFutureSeason ? (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-[#E9A23B]/20 text-[#E9A23B] border border-[#E9A23B]/40 font-semibold">
+                    Kommande
+                  </span>
+                ) : isComplete ? (
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#6FA98A] fill-[#6FA98A]/20" />
                 ) : (
                   <span className="text-[10px] opacity-70">
@@ -400,6 +407,9 @@ export default function EpisodeTracker({
           const isWatched = watchedSet.has(
             `${episode.season_number}-${episode.episode_number}`
           );
+          const isFutureEpisode = episode.air_date
+            ? new Date(episode.air_date).getTime() > Date.now()
+            : false;
 
           return (
             <div
@@ -434,7 +444,7 @@ export default function EpisodeTracker({
 
                 {/* Episode Meta */}
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="text-[11px] sm:text-xs font-bold text-[#8D97A8]">
                       Avsnitt {episode.episode_number}
                     </span>
@@ -443,6 +453,11 @@ export default function EpisodeTracker({
                         • {episode.runtime} min
                       </span>
                     ) : null}
+                    {isFutureEpisode && episode.air_date && (
+                      <span className="text-[10px] font-bold text-[#E9A23B] px-1.5 py-0.5 rounded-md bg-[#E9A23B]/10 border border-[#E9A23B]/25">
+                        Sänds {new Date(episode.air_date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}
+                      </span>
+                    )}
                   </div>
                   <h4 className="text-xs sm:text-sm font-semibold text-[#ECE9E3] truncate">
                     {episode.name || `Avsnitt ${episode.episode_number}`}

@@ -7,10 +7,17 @@ interface SeriesMetadata {
     season_number: number;
     episode_count: number;
     name?: string;
+    air_date?: string | null;
   }[];
   status?: string;
   next_episode_to_air?: {
-    air_date: string;
+    air_date: string | null;
+    episode_number: number;
+    season_number: number;
+    name?: string;
+  } | null;
+  last_episode_to_air?: {
+    air_date: string | null;
     episode_number: number;
     season_number: number;
     name?: string;
@@ -72,12 +79,21 @@ export async function GET(request: Request) {
                     name: data.next_episode_to_air.name,
                   }
                 : null,
+              last_episode_to_air: data.last_episode_to_air
+                ? {
+                    air_date: data.last_episode_to_air.air_date,
+                    episode_number: data.last_episode_to_air.episode_number,
+                    season_number: data.last_episode_to_air.season_number,
+                    name: data.last_episode_to_air.name,
+                  }
+                : null,
               seasons: (data.seasons || [])
                 .filter((s: any) => s.season_number > 0)
                 .map((s: any) => ({
                   season_number: s.season_number,
                   episode_count: s.episode_count || 0,
                   name: s.name,
+                  air_date: s.air_date || null,
                 })),
             };
 
