@@ -4,6 +4,7 @@ import HeroCarousel from '@/components/HeroCarousel';
 import HorizontalMediaRow from '@/components/HorizontalMediaRow';
 import ContinueWatchingSection from '@/components/ContinueWatchingSection';
 import ExploreFeed from '@/components/ExploreFeed';
+import { MediaItem } from '@/lib/types';
 
 export default async function HomePage() {
   const trending = await getTrendingMedia();
@@ -12,37 +13,40 @@ export default async function HomePage() {
 
   // Top 5 trending items for hero carousel
   const carouselItems = trending.slice(0, 5);
-  // Remaining trending items for the explore feed
+  // Remaining trending items for dedicated "Trendar i veckan" carousel
   const trendingList = trending.slice(5);
+
+  // Combine popular movies and shows for initial streaming catalog feed
+  const popularCombined: MediaItem[] = [];
+  const maxLen = Math.max(popularMovies.length, popularShows.length);
+  for (let i = 0; i < maxLen; i++) {
+    if (i < popularMovies.length) popularCombined.push(popularMovies[i]);
+    if (i < popularShows.length) popularCombined.push(popularShows[i]);
+  }
 
   return (
     <div className="w-full max-w-full overflow-hidden">
-      {/* Hero Carousel with top trending titles */}
+      {/* 1. Hero Carousel with top trending titles (#1–#5) */}
       {carouselItems.length > 0 && <HeroCarousel items={carouselItems} />}
 
-      {/* Continue Watching Section (Active Series for authenticated user) */}
+      {/* 2. "Tittar på" - Active Series with progress bar for user */}
       <ContinueWatchingSection />
 
-      {/* Horizontal Scroll Row for Popular Movies */}
-      <HorizontalMediaRow
-        title="Populära filmer just nu"
-        iconType="film"
-        iconColor="text-[#E9A23B]"
-        items={popularMovies}
-        moreLink={{ href: '/movies', label: 'Visa fler filmer' }}
-      />
+      {/* 3. Dedicated Horizontal Carousel for "Trendar i veckan" (#6–#20) */}
+      {trendingList.length > 0 && (
+        <HorizontalMediaRow
+          title="Trendar i veckan"
+          iconType="sparkles"
+          iconColor="text-[#E9A23B]"
+          items={trendingList}
+        />
+      )}
 
-      {/* Horizontal Scroll Row for Popular Shows */}
-      <HorizontalMediaRow
-        title="Populära serier just nu"
-        iconType="tv"
-        iconColor="text-[#6FA98A]"
-        items={popularShows}
-        moreLink={{ href: '/shows', label: 'Visa fler serier' }}
+      {/* 4. Streaming Hub & Catalog Discovery (Quick tabs: Alla/Filmer/Serier + Streaming-tjänster) */}
+      <ExploreFeed
+        initialTrending={popularCombined.length > 0 ? popularCombined : trending}
+        title="Populärt på streaming"
       />
-
-      {/* Dynamic Explore & Streaming Filter Feed with Pagination & Grid/List views */}
-      <ExploreFeed initialTrending={trendingList.length > 0 ? trendingList : trending} />
     </div>
   );
 }

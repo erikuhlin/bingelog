@@ -292,20 +292,95 @@ export default function ExploreFeed({
     .map((id) => SWEDISH_STREAMING_PROVIDERS.find((p) => p.id === id)?.name)
     .filter(Boolean) as string[];
 
+  const getHeaderTitle = () => {
+    const typeLabel = mediaType === 'movie' ? 'filmer' : mediaType === 'tv' ? 'serier' : 'titlar';
+    const typePrefix =
+      mediaType === 'movie'
+        ? 'Populära filmer'
+        : mediaType === 'tv'
+        ? 'Populära serier'
+        : 'Populärt';
+
+    if (selectedProviderNames.length === 1) {
+      return `${typePrefix} på ${selectedProviderNames[0]}`;
+    }
+    if (selectedProviderNames.length > 1) {
+      return `${typePrefix} på ${selectedProviderNames.join(' & ')}`;
+    }
+    if (isFiltered) {
+      if (
+        mediaType !== defaultMediaType &&
+        genreId === null &&
+        minRating === null &&
+        year === null &&
+        originalLanguage === null &&
+        sortBy === 'popularity.desc'
+      ) {
+        return `${typePrefix} på streaming`;
+      }
+      return `Filtrerade ${typeLabel}`;
+    }
+    return title || 'Populärt på streaming';
+  };
+
   return (
     <section className="mb-14 space-y-6 w-full max-w-full overflow-hidden">
-      {/* Streaming Provider Quick Tabs */}
+      {/* Streaming Provider Quick Tabs & Media Type Switcher */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-[#8D97A8] uppercase tracking-wider">
-            Filtrera efter streamingtjänst
-          </span>
-          {selectedProviderNames.length > 0 && (
-            <span className="text-xs font-semibold text-[#E9A23B]">
-              {selectedProviderNames.length === 1
-                ? `Visar titlar på ${selectedProviderNames[0]}`
-                : `Visar titlar på ${selectedProviderNames.slice(0, -1).join(', ')} och ${selectedProviderNames.at(-1)}`}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-[#8D97A8] uppercase tracking-wider">
+              Filtrera efter streamingtjänst
             </span>
+            {selectedProviderNames.length > 0 && (
+              <span className="text-xs font-semibold text-[#E9A23B] hidden sm:inline">
+                • {selectedProviderNames.length === 1
+                  ? selectedProviderNames[0]
+                  : `${selectedProviderNames.slice(0, -1).join(', ')} och ${selectedProviderNames.at(-1)}`}
+              </span>
+            )}
+          </div>
+
+          {/* Quick Media Type Pills (Alla / Filmer / Serier) */}
+          {defaultMediaType === 'all' && (
+            <div className="flex items-center gap-1 p-1 rounded-2xl bg-[#171C25] border border-[#2B3443] w-fit self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setMediaType('all')}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  mediaType === 'all'
+                    ? 'bg-[#E9A23B] text-[#0F1218] shadow-md shadow-[#E9A23B]/20'
+                    : 'text-[#8D97A8] hover:text-[#ECE9E3]'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Alla</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMediaType('movie')}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  mediaType === 'movie'
+                    ? 'bg-[#E9A23B] text-[#0F1218] shadow-md shadow-[#E9A23B]/20'
+                    : 'text-[#8D97A8] hover:text-[#ECE9E3]'
+                }`}
+              >
+                <Film className="w-3.5 h-3.5" />
+                <span>Filmer</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMediaType('tv')}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  mediaType === 'tv'
+                    ? 'bg-[#E9A23B] text-[#0F1218] shadow-md shadow-[#E9A23B]/20'
+                    : 'text-[#8D97A8] hover:text-[#ECE9E3]'
+                }`}
+              >
+                <Tv className="w-3.5 h-3.5" />
+                <span>Serier</span>
+              </button>
+            </div>
           )}
         </div>
 
@@ -321,13 +396,7 @@ export default function ExploreFeed({
           <div className="flex flex-wrap items-center gap-2 min-w-0">
             <Sparkles className="w-5 h-5 text-[#E9A23B] flex-shrink-0" />
             <h2 className="text-base sm:text-xl md:text-2xl font-bold text-[#ECE9E3] tracking-tight truncate">
-              {selectedProviderNames.length === 1
-                ? `Populärt på ${selectedProviderNames[0]}`
-                : selectedProviderNames.length > 1
-                ? `Populärt på ${selectedProviderNames.join(' & ')}`
-                : isFiltered
-                ? 'Filtrerade titlar'
-                : title || 'Trendar i veckan'}
+              {getHeaderTitle()}
             </h2>
             <span className="text-xs text-[#8D97A8] font-medium ml-1 flex-shrink-0">
               ({items.length} titlar)
