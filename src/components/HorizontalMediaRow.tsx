@@ -50,7 +50,7 @@ export default function HorizontalMediaRow({
   if (!items || items.length === 0) return null;
 
   return (
-    <section className="mb-8 sm:mb-14 relative group w-full max-w-full overflow-hidden">
+    <section className="mb-8 sm:mb-14 relative w-full max-w-full overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between mb-3 sm:mb-4 gap-2 min-w-0">
         <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">

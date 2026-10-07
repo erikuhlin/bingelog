@@ -377,21 +377,30 @@ export async function getWatchedEpisodes(tmdbId: number): Promise<{ season_numbe
         if (error) {
           console.error('Supabase getWatchedEpisodes error:', error);
         } else if (data) {
-          // If localShow had no records for this show, populate from cloud
-          if (localShow.length === 0 && data.length > 0) {
-            const newRecords: WatchedEpisodeRecord[] = data.map((d) => ({
+          // Merge local and cloud episodes for this show (union)
+          const map = new Map<string, WatchedEpisodeRecord>();
+          (data as any[]).forEach((d) => {
+            map.set(`${d.season_number}-${d.episode_number}`, {
               tmdb_id: tmdbId,
               season_number: d.season_number,
               episode_number: d.episode_number,
               watched_at: d.watched_at || new Date().toISOString(),
-            }));
-            const otherShows = allLocal.filter((ep) => ep.tmdb_id !== tmdbId);
-            saveLocalWatchedEpisodes([...otherShows, ...newRecords], false);
-            return newRecords.map((ep) => ({
-              season_number: ep.season_number,
-              episode_number: ep.episode_number,
-            }));
-          }
+            });
+          });
+          localShow.forEach((l) => {
+            const key = `${l.season_number}-${l.episode_number}`;
+            if (!map.has(key)) {
+              map.set(key, l);
+            }
+          });
+
+          const mergedShow = Array.from(map.values());
+          const otherShows = allLocal.filter((ep) => ep.tmdb_id !== tmdbId);
+          saveLocalWatchedEpisodes([...otherShows, ...mergedShow], false);
+          return mergedShow.map((ep) => ({
+            season_number: ep.season_number,
+            episode_number: ep.episode_number,
+          }));
         }
     } catch (err) {
       console.error('Error fetching watched episodes from Supabase:', err);

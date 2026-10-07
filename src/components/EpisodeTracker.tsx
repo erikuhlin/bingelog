@@ -26,6 +26,7 @@ export default function EpisodeTracker({
   const [selectedSeasonNumber, setSelectedSeasonNumber] = useState<number>(
     seasons[0]?.season_number || 1
   );
+  const [hasManuallySelectedSeason, setHasManuallySelectedSeason] = useState(false);
   const [watchedSet, setWatchedSet] = useState<Set<string>>(new Set());
   const [seasonEpisodesCache, setSeasonEpisodesCache] = useState<Record<number, Episode[]>>({});
   const [loadingSeason, setLoadingSeason] = useState(false);
@@ -142,6 +143,16 @@ export default function EpisodeTracker({
       }
     }
   }
+
+  // Auto-select season where the user is currently watching (if not manually chosen)
+  useEffect(() => {
+    if (hasManuallySelectedSeason) return;
+    if (nextEpisode?.season) {
+      setSelectedSeasonNumber(nextEpisode.season);
+    } else if (lastWatchedEpisode?.season) {
+      setSelectedSeasonNumber(lastWatchedEpisode.season);
+    }
+  }, [nextEpisode?.season, lastWatchedEpisode?.season, hasManuallySelectedSeason]);
 
   // Handle toggling an episode
   const handleToggle = async (seasonNum: number, episodeNum: number) => {
@@ -361,7 +372,10 @@ export default function EpisodeTracker({
               <button
                 key={season.season_number}
                 type="button"
-                onClick={() => setSelectedSeasonNumber(season.season_number)}
+                onClick={() => {
+                  setHasManuallySelectedSeason(true);
+                  setSelectedSeasonNumber(season.season_number);
+                }}
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
                   isSelected
                     ? 'bg-[#E9A23B] text-[#0F1218] shadow-md'
