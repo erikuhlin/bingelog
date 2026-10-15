@@ -9,6 +9,7 @@ import StatusSelector from './StatusSelector';
 
 interface MediaCardProps {
   item: MediaItem;
+  subtitle?: string;
 }
 
 function ProviderMiniBadge({ logoPath, name }: { logoPath: string; name: string }) {
@@ -40,7 +41,7 @@ function ProviderMiniBadge({ logoPath, name }: { logoPath: string; name: string 
   );
 }
 
-export default function MediaCard({ item }: MediaCardProps) {
+export default function MediaCard({ item, subtitle }: MediaCardProps) {
   const year = item.release_date?.slice(0, 4) || item.first_air_date?.slice(0, 4) || '';
   const detailUrl = `/${item.media_type}/${item.id}`;
 
@@ -114,6 +115,11 @@ export default function MediaCard({ item }: MediaCardProps) {
               {item.title}
             </h3>
           </Link>
+          {subtitle && (
+            <p className="text-[11px] text-[#E9A23B] font-medium truncate mt-0.5" title={subtitle}>
+              {subtitle}
+            </p>
+          )}
           <div className="flex items-center justify-between text-[11px] text-[#8D97A8] mt-1">
             <span>{year || '–'}</span>
             {item.origin_country?.[0] && (

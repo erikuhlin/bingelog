@@ -1,7 +1,7 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { Star, Clock, Calendar, ArrowLeft, Film, Tv, Sparkles, UserCheck } from 'lucide-react';
+import { Star, Clock, Calendar, ArrowLeft, Film, Tv, Sparkles, UserCheck, Clapperboard, User } from 'lucide-react';
 import { getMediaDetails, getImageUrl, getBackdropUrl } from '@/lib/tmdb';
 import { MediaType } from '@/lib/types';
 import EpisodeTracker from '@/components/EpisodeTracker';
@@ -269,29 +269,77 @@ export default async function MediaDetailPage({ params }: PageProps) {
                 )}
               </div>
 
-              {/* Directors, Creators & Cast Highlights */}
+              {/* Directors, Creators, Writers & Cast Highlights */}
               <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-[#8D97A8]">
                 {media.directors && media.directors.length > 0 && (
                   <p>
                     <span className="text-[#8D97A8]/70">Regi:</span>{' '}
-                    <strong className="text-[#ECE9E3] font-semibold">
-                      {media.directors.map((d) => d.name).join(', ')}
-                    </strong>
+                    <span className="text-[#ECE9E3] font-semibold">
+                      {media.directors.map((d, idx) => (
+                        <React.Fragment key={d.id}>
+                          {idx > 0 && ', '}
+                          <Link
+                            href={`/person/${d.id}`}
+                            className="hover:text-[#E9A23B] transition-colors underline-offset-2 hover:underline"
+                          >
+                            {d.name}
+                          </Link>
+                        </React.Fragment>
+                      ))}
+                    </span>
                   </p>
                 )}
                 {media.created_by && media.created_by.length > 0 && (
                   <p>
                     <span className="text-[#8D97A8]/70">Skapare:</span>{' '}
-                    <strong className="text-[#ECE9E3] font-semibold">
-                      {media.created_by.map((c) => c.name).join(', ')}
-                    </strong>
+                    <span className="text-[#ECE9E3] font-semibold">
+                      {media.created_by.map((c, idx) => (
+                        <React.Fragment key={c.id}>
+                          {idx > 0 && ', '}
+                          <Link
+                            href={`/person/${c.id}`}
+                            className="hover:text-[#E9A23B] transition-colors underline-offset-2 hover:underline"
+                          >
+                            {c.name}
+                          </Link>
+                        </React.Fragment>
+                      ))}
+                    </span>
+                  </p>
+                )}
+                {media.writers && media.writers.length > 0 && (
+                  <p>
+                    <span className="text-[#8D97A8]/70">Manus:</span>{' '}
+                    <span className="text-[#ECE9E3] font-semibold">
+                      {media.writers.slice(0, 3).map((w, idx) => (
+                        <React.Fragment key={w.id}>
+                          {idx > 0 && ', '}
+                          <Link
+                            href={`/person/${w.id}`}
+                            className="hover:text-[#E9A23B] transition-colors underline-offset-2 hover:underline"
+                          >
+                            {w.name}
+                          </Link>
+                        </React.Fragment>
+                      ))}
+                    </span>
                   </p>
                 )}
                 {media.credits?.cast && media.credits.cast.length > 0 && (
                   <p>
                     <span className="text-[#8D97A8]/70">I rollerna:</span>{' '}
                     <span className="text-[#ECE9E3]/90">
-                      {media.credits.cast.slice(0, 3).map((a) => a.name).join(', ')}
+                      {media.credits.cast.slice(0, 3).map((a, idx) => (
+                        <React.Fragment key={a.id}>
+                          {idx > 0 && ', '}
+                          <Link
+                            href={`/person/${a.id}`}
+                            className="hover:text-[#E9A23B] transition-colors underline-offset-2 hover:underline"
+                          >
+                            {a.name}
+                          </Link>
+                        </React.Fragment>
+                      ))}
                     </span>
                   </p>
                 )}
@@ -407,13 +455,50 @@ export default async function MediaDetailPage({ params }: PageProps) {
                   </p>
                 )}
 
-                {(media.directors || media.created_by) && (
+                {media.directors && media.directors.length > 0 && (
                   <p className="text-[11px] text-[#8D97A8] mt-1 line-clamp-1">
-                    <span className="text-[#8D97A8]/70">
-                      {media.directors ? 'Regi:' : 'Skapare:'}
-                    </span>{' '}
+                    <span className="text-[#8D97A8]/70">Regi:</span>{' '}
                     <span className="text-[#ECE9E3] font-medium">
-                      {(media.directors || media.created_by)!.map((p) => p.name).join(', ')}
+                      {media.directors.map((d, idx) => (
+                        <React.Fragment key={d.id}>
+                          {idx > 0 && ', '}
+                          <Link href={`/person/${d.id}`} className="hover:text-[#E9A23B] transition-colors">
+                            {d.name}
+                          </Link>
+                        </React.Fragment>
+                      ))}
+                    </span>
+                  </p>
+                )}
+
+                {media.created_by && media.created_by.length > 0 && (
+                  <p className="text-[11px] text-[#8D97A8] mt-1 line-clamp-1">
+                    <span className="text-[#8D97A8]/70">Skapare:</span>{' '}
+                    <span className="text-[#ECE9E3] font-medium">
+                      {media.created_by.map((c, idx) => (
+                        <React.Fragment key={c.id}>
+                          {idx > 0 && ', '}
+                          <Link href={`/person/${c.id}`} className="hover:text-[#E9A23B] transition-colors">
+                            {c.name}
+                          </Link>
+                        </React.Fragment>
+                      ))}
+                    </span>
+                  </p>
+                )}
+
+                {media.writers && media.writers.length > 0 && !media.directors && (
+                  <p className="text-[11px] text-[#8D97A8] mt-1 line-clamp-1">
+                    <span className="text-[#8D97A8]/70">Manus:</span>{' '}
+                    <span className="text-[#ECE9E3] font-medium">
+                      {media.writers.slice(0, 2).map((w, idx) => (
+                        <React.Fragment key={w.id}>
+                          {idx > 0 && ', '}
+                          <Link href={`/person/${w.id}`} className="hover:text-[#E9A23B] transition-colors">
+                            {w.name}
+                          </Link>
+                        </React.Fragment>
+                      ))}
                     </span>
                   </p>
                 )}
@@ -562,6 +647,71 @@ export default async function MediaDetailPage({ params }: PageProps) {
         </section>
       )}
 
+      {/* Regi & Manus Section */}
+      {(() => {
+        const keyCrew: { id: number; name: string; role: string; profile_path: string | null }[] = [];
+        const seenCrewIds = new Set<number>();
+        media.directors?.forEach((d) => {
+          if (!seenCrewIds.has(d.id)) {
+            seenCrewIds.add(d.id);
+            keyCrew.push({ id: d.id, name: d.name, role: 'Regissör', profile_path: d.profile_path || null });
+          }
+        });
+        media.created_by?.forEach((c) => {
+          if (!seenCrewIds.has(c.id)) {
+            seenCrewIds.add(c.id);
+            keyCrew.push({ id: c.id, name: c.name, role: 'Skapare', profile_path: c.profile_path || null });
+          }
+        });
+        media.writers?.forEach((w) => {
+          if (!seenCrewIds.has(w.id)) {
+            seenCrewIds.add(w.id);
+            keyCrew.push({ id: w.id, name: w.name, role: w.job || 'Manus', profile_path: w.profile_path || null });
+          }
+        });
+
+        if (keyCrew.length === 0) return null;
+
+        return (
+          <section className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Clapperboard className="w-5 h-5 text-[#E9A23B]" />
+              <h2 className="text-lg md:text-xl font-bold text-[#ECE9E3] tracking-tight">
+                Regi &amp; Manus
+              </h2>
+            </div>
+
+            <div className="flex overflow-x-auto gap-3 pb-3 scrollbar-none sm:grid sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 sm:overflow-visible snap-x">
+              {keyCrew.map((crew) => (
+                <Link
+                  key={`crew-${crew.id}`}
+                  href={`/person/${crew.id}`}
+                  className="w-28 sm:w-auto flex-shrink-0 p-3 rounded-2xl bg-[#171C25] border border-[#2B3443] hover:border-[#E9A23B]/60 text-center flex flex-col items-center shadow-sm snap-start group transition-all hover:bg-[#1E2531]/80 cursor-pointer"
+                >
+                  <div className="w-16 h-16 rounded-full overflow-hidden bg-[#1E2531] mb-2 border border-[#2B3443] group-hover:border-[#E9A23B]/60 transition-colors flex items-center justify-center">
+                    {crew.profile_path ? (
+                      <img
+                        src={getImageUrl(crew.profile_path, 'w300')}
+                        alt={crew.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      />
+                    ) : (
+                      <User className="w-6 h-6 text-[#8D97A8]" />
+                    )}
+                  </div>
+                  <h4 className="text-xs font-semibold text-[#ECE9E3] group-hover:text-[#E9A23B] transition-colors truncate w-full">
+                    {crew.name}
+                  </h4>
+                  <p className="text-[11px] text-[#E9A23B] font-medium truncate w-full mt-0.5">
+                    {crew.role}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </section>
+        );
+      })()}
+
       {/* Cast Section */}
       {media.credits?.cast && media.credits.cast.length > 0 && (
         <section className="space-y-3">
@@ -574,24 +724,29 @@ export default async function MediaDetailPage({ params }: PageProps) {
 
           <div className="flex overflow-x-auto gap-3 pb-3 scrollbar-none sm:grid sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 sm:overflow-visible snap-x">
             {media.credits.cast.map((actor) => (
-              <div
+              <Link
                 key={actor.id}
-                className="w-28 sm:w-auto flex-shrink-0 p-3 rounded-2xl bg-[#171C25] border border-[#2B3443] text-center flex flex-col items-center shadow-sm snap-start"
+                href={`/person/${actor.id}`}
+                className="w-28 sm:w-auto flex-shrink-0 p-3 rounded-2xl bg-[#171C25] border border-[#2B3443] hover:border-[#E9A23B]/60 text-center flex flex-col items-center shadow-sm snap-start group transition-all hover:bg-[#1E2531]/80 cursor-pointer"
               >
-                <div className="w-16 h-16 rounded-full overflow-hidden bg-[#1E2531] mb-2 border border-[#2B3443]">
-                  <img
-                    src={getImageUrl(actor.profile_path, 'w300')}
-                    alt={actor.name}
-                    className="w-full h-full object-cover"
-                  />
+                <div className="w-16 h-16 rounded-full overflow-hidden bg-[#1E2531] mb-2 border border-[#2B3443] group-hover:border-[#E9A23B]/60 transition-colors flex items-center justify-center">
+                  {actor.profile_path ? (
+                    <img
+                      src={getImageUrl(actor.profile_path, 'w300')}
+                      alt={actor.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    />
+                  ) : (
+                    <User className="w-6 h-6 text-[#8D97A8]" />
+                  )}
                 </div>
-                <h4 className="text-xs font-semibold text-[#ECE9E3] truncate w-full">
+                <h4 className="text-xs font-semibold text-[#ECE9E3] group-hover:text-[#E9A23B] transition-colors truncate w-full">
                   {actor.name}
                 </h4>
                 <p className="text-[11px] text-[#8D97A8] truncate w-full mt-0.5">
                   {actor.character}
                 </p>
-              </div>
+              </Link>
             ))}
           </div>
         </section>

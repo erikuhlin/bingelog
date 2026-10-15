@@ -5,6 +5,8 @@ import {
   MediaType,
   PersonSearchResult,
   PersonDetails,
+  PersonCreditItem,
+  PersonGroupedCredits,
   LiveSearchResults,
 } from './types';
 import { MOCK_TRENDING, MOCK_GENRES, MOCK_DETAILS } from './mock-data';
@@ -281,7 +283,34 @@ export async function searchMultiLive(query: string): Promise<LiveSearchResults>
 
 export async function getPersonDetails(personId: number): Promise<PersonDetails | null> {
   const data = await tmdbFetch<any>(`/person/${personId}`);
-  if (!data) return null;
+  if (!data) {
+    // Basic mock fallbacks for common demos
+    if (personId === 525) {
+      return {
+        id: 525,
+        name: 'Christopher Nolan',
+        profile_path: '/xuAIuYSmsUzKlUMBFGVZaWsY3Z5.jpg',
+        known_for_department: 'Directing',
+        place_of_birth: 'London, England, UK',
+        birthday: '1970-07-30',
+        biography: 'Christopher Edward Nolan är en brittisk-amerikansk filmregissör, manusförfattare och producent känd för filmer som Oppenheimer, Inception, Interstellar och The Dark Knight-trilogin.',
+        imdb_id: 'nm0634240',
+      };
+    }
+    if (personId === 1190668) {
+      return {
+        id: 1190668,
+        name: 'Timothée Chalamet',
+        profile_path: '/BE2sdjpgsa2rNTFa66f7upkaOP.jpg',
+        known_for_department: 'Acting',
+        place_of_birth: 'New York City, New York, USA',
+        birthday: '1995-12-27',
+        biography: 'Timothée Hal Chalamet är en amerikansk skådespelare känd för sina roller i Dune, Wonka och Call Me by Your Name.',
+        imdb_id: 'nm3154303',
+      };
+    }
+    return null;
+  }
   return {
     id: data.id,
     name: data.name,
@@ -290,45 +319,168 @@ export async function getPersonDetails(personId: number): Promise<PersonDetails 
     known_for_department: data.known_for_department,
     place_of_birth: data.place_of_birth,
     birthday: data.birthday,
+    deathday: data.deathday,
+    imdb_id: data.imdb_id,
+    also_known_as: data.also_known_as,
+  };
+}
+
+export async function getPersonGroupedCredits(personId: number): Promise<PersonGroupedCredits> {
+  const data = await tmdbFetch<any>(`/person/${personId}/combined_credits`);
+  if (!data) {
+    return { all: [], acting: [], directing: [], writing: [] };
+  }
+
+  const actingList: PersonCreditItem[] = [];
+  const directingList: PersonCreditItem[] = [];
+  const writingList: PersonCreditItem[] = [];
+
+  // Track combined roles per media item: `${media_type}-${id}` -> PersonCreditItem & { rolesSet: Set<string> }
+  const allMap = new Map<string, PersonCreditItem & { rolesSet: Set<string> }>();
+
+  // Helper to ensure media item in allMap
+  const recordInAllMap = (baseItem: PersonCreditItem, roleText: string) => {
+    const key = `${baseItem.media_type}-${baseItem.id}`;
+    if (!allMap.has(key)) {
+      allMap.set(key, {
+        ...baseItem,
+        rolesSet: new Set([roleText]),
+      });
+    } else {
+      const existing = allMap.get(key)!;
+      existing.rolesSet.add(roleText);
+      // Keep higher popularity/ratings if available
+      if ((baseItem.popularity || 0) > (existing.popularity || 0)) {
+        existing.popularity = baseItem.popularity;
+      }
+    }
+  };
+
+  // 1. Process Cast (Acting)
+  if (Array.isArray(data.cast)) {
+    const seenActing = new Set<string>();
+
+    for (const c of data.cast) {
+      if (!c.id) continue;
+      const key = `${c.media_type || 'movie'}-${c.id}`;
+
+      // Filter noise: Talk shows (10767), News (10763), Reality (10764), and roles containing 'Self'/'Himself'/'Herself'/'Host'/'Guest'
+      const charLower = (c.character || '').toLowerCase();
+      const isSelf =
+        charLower.includes('self') ||
+        charLower.includes('himself') ||
+        charLower.includes('herself') ||
+        charLower === 'host' ||
+        charLower === 'guest';
+
+      const genreIds: number[] = c.genre_ids || [];
+      const isTalkOrNews = genreIds.includes(10767) || genreIds.includes(10763);
+
+      if (isSelf || isTalkOrNews) {
+        continue;
+      }
+
+      const normalized = normalizeMediaItem(c);
+      const character = c.character?.trim() || undefined;
+      const roleLabel = character || 'Skådespelare';
+
+      const item: PersonCreditItem = {
+        ...normalized,
+        character,
+        department: 'Acting',
+        roles: [roleLabel],
+      };
+
+      if (!seenActing.has(key)) {
+        seenActing.add(key);
+        actingList.push(item);
+      }
+
+      recordInAllMap(item, roleLabel);
+    }
+  }
+
+  // 2. Process Crew (Directing & Writing)
+  if (Array.isArray(data.crew)) {
+    const seenDirecting = new Set<string>();
+    const seenWriting = new Set<string>();
+
+    for (const c of data.crew) {
+      if (!c.id) continue;
+      const key = `${c.media_type || 'movie'}-${c.id}`;
+      const job = (c.job || '').trim();
+      const dept = (c.department || '').trim();
+
+      // Check Directing
+      const isDirecting = dept === 'Directing' && (job === 'Director' || job === 'Co-Director');
+
+      // Check Writing
+      const isWriting =
+        dept === 'Writing' ||
+        ['Screenplay', 'Writer', 'Story', 'Original Story', 'Author', 'Co-Writer', 'Creator'].includes(job);
+
+      if (isDirecting) {
+        const normalized = normalizeMediaItem(c);
+        const roleLabel = job === 'Co-Director' ? 'Medregissör' : 'Regissör';
+        const item: PersonCreditItem = {
+          ...normalized,
+          job: roleLabel,
+          department: 'Directing',
+          roles: [roleLabel],
+        };
+
+        if (!seenDirecting.has(key)) {
+          seenDirecting.add(key);
+          directingList.push(item);
+        }
+
+        recordInAllMap(item, roleLabel);
+      }
+
+      if (isWriting) {
+        const normalized = normalizeMediaItem(c);
+        let roleLabel = 'Manus';
+        if (job === 'Writer') roleLabel = 'Författare';
+        else if (job === 'Screenplay') roleLabel = 'Manus';
+        else if (job === 'Story' || job === 'Original Story') roleLabel = 'Berättelse';
+        else if (job === 'Creator') roleLabel = 'Skapare';
+
+        const item: PersonCreditItem = {
+          ...normalized,
+          job: roleLabel,
+          department: 'Writing',
+          roles: [roleLabel],
+        };
+
+        if (!seenWriting.has(key)) {
+          seenWriting.add(key);
+          writingList.push(item);
+        }
+
+        recordInAllMap(item, roleLabel);
+      }
+    }
+  }
+
+  const sortByPopularity = (list: PersonCreditItem[]) =>
+    list.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+
+  const allList: PersonCreditItem[] = Array.from(allMap.values()).map((val) => ({
+    ...val,
+    roles: Array.from(val.rolesSet),
+  }));
+
+  return {
+    all: sortByPopularity(allList),
+    acting: sortByPopularity(actingList),
+    directing: sortByPopularity(directingList),
+    writing: sortByPopularity(writingList),
   };
 }
 
 export async function getPersonCombinedCredits(personId: number): Promise<MediaItem[]> {
-  const data = await tmdbFetch<any>(`/person/${personId}/combined_credits`);
-  if (!data?.cast || !Array.isArray(data.cast)) {
-    return [];
-  }
-
-  // Filter out noise: Talk shows (10767), News (10763), and roles containing 'Self'/'Himself'/'Herself'
-  const seenIds = new Set<string>();
-  const cleanItems: MediaItem[] = [];
-
-  for (const c of data.cast) {
-    const key = `${c.media_type}-${c.id}`;
-    if (seenIds.has(key)) continue;
-
-    const charLower = (c.character || '').toLowerCase();
-    const isSelf =
-      charLower.includes('self') ||
-      charLower.includes('himself') ||
-      charLower.includes('herself') ||
-      charLower === 'host' ||
-      charLower === 'guest';
-
-    const genreIds: number[] = c.genre_ids || [];
-    const isTalkOrNews = genreIds.includes(10767) || genreIds.includes(10763);
-
-    if (isSelf || isTalkOrNews) {
-      continue;
-    }
-
-    seenIds.add(key);
-    cleanItems.push(normalizeMediaItem(c));
-  }
-
-  // Sort by popularity descending as default
-  cleanItems.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
-  return cleanItems;
+  const grouped = await getPersonGroupedCredits(personId);
+  return grouped.all;
 }
 
 export async function getMediaDetails(mediaType: MediaType, id: number): Promise<MediaDetail | null> {
@@ -343,14 +495,36 @@ export async function getMediaDetails(mediaType: MediaType, id: number): Promise
       (v: any) => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser')
     ) || [];
 
-    const directors = data.credits?.crew
+    const directorsMap = new Map<number, { id: number; name: string; profile_path: string | null }>();
+    data.credits?.crew
       ?.filter((c: any) => c.job === 'Director')
-      ?.map((c: any) => ({ id: c.id, name: c.name })) || [];
+      ?.forEach((c: any) => {
+        if (!directorsMap.has(c.id)) {
+          directorsMap.set(c.id, { id: c.id, name: c.name, profile_path: c.profile_path || null });
+        }
+      });
+    const directors = Array.from(directorsMap.values());
+
+    const writersMap = new Map<number, { id: number; name: string; job?: string; profile_path: string | null }>();
+    data.credits?.crew
+      ?.filter((c: any) =>
+        c.department === 'Writing' ||
+        ['Screenplay', 'Writer', 'Story', 'Original Story', 'Author', 'Co-Writer'].includes(c.job)
+      )
+      ?.forEach((c: any) => {
+        if (!writersMap.has(c.id)) {
+          let jobLabel = 'Manus';
+          if (c.job === 'Writer') jobLabel = 'Författare';
+          else if (c.job === 'Story' || c.job === 'Original Story') jobLabel = 'Berättelse';
+          writersMap.set(c.id, { id: c.id, name: c.name, job: jobLabel, profile_path: c.profile_path || null });
+        }
+      });
+    const writers = Array.from(writersMap.values());
 
     const createdBy = data.created_by?.map((c: any) => ({
       id: c.id,
       name: c.name,
-      profile_path: c.profile_path,
+      profile_path: c.profile_path || null,
     })) || [];
 
     const recommendations = data.recommendations?.results
@@ -379,6 +553,7 @@ export async function getMediaDetails(mediaType: MediaType, id: number): Promise
       seasons: data.seasons?.filter((s: any) => s.season_number > 0),
       created_by: createdBy.length > 0 ? createdBy : undefined,
       directors: directors.length > 0 ? directors : undefined,
+      writers: writers.length > 0 ? writers : undefined,
       credits: data.credits ? {
         cast: data.credits.cast?.slice(0, 10).map((c: any) => ({
           id: c.id,

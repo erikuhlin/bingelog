@@ -385,8 +385,23 @@ function SearchPageContent() {
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="px-2 py-0.5 rounded-md bg-[#E9A23B]/20 text-[#E9A23B] text-xs font-bold border border-[#E9A23B]/30">
-                  {selectedPersons.length === 1 ? 'Skådespelare' : `${selectedPersons.length} skådespelare`}
+                  {selectedPersons.length === 1
+                    ? selectedPersons[0].known_for_department === 'Directing'
+                      ? 'Regissör'
+                      : selectedPersons[0].known_for_department === 'Writing'
+                      ? 'Manusförfattare'
+                      : 'Skådespelare'
+                    : `${selectedPersons.length} medverkande`}
                 </span>
+                {selectedPersons.length === 1 && (
+                  <Link
+                    href={`/person/${selectedPersons[0].id}`}
+                    className="inline-flex items-center gap-1 text-xs font-bold text-[#E9A23B] hover:text-[#F2B04E] underline-offset-2 hover:underline transition-colors"
+                  >
+                    <span>Visa profilsida</span>
+                    <span>→</span>
+                  </Link>
+                )}
                 {activeFilterCount > 1 && (
                   <span className="text-xs text-[#E9A23B] font-semibold">
                     +{activeFilterCount - 1} aktiva filter
@@ -399,7 +414,7 @@ function SearchPageContent() {
                   : `Titlar med ${selectedPersons.map((p) => p.name).join(' & ')}`}
               </h1>
               <p className="text-xs sm:text-sm text-[#8D97A8] mt-1">
-                Visar {filteredItems.length} matchande produktioner (filtrerat från talkshows och gästspel)
+                Visar {filteredItems.length} matchande produktioner inom skådespeleri, regi och manus
               </p>
             </div>
           </div>

@@ -181,7 +181,7 @@ export default function SearchOverlay({
   const handleSelectActor = (actor: PersonSearchResult) => {
     saveRecentSearch(actor.name);
     onClose();
-    router.push(`/search?person=${actor.id}`);
+    router.push(`/person/${actor.id}`);
   };
 
   const handleFullSearch = (searchQueryToUse?: string) => {

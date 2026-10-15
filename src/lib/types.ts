@@ -44,6 +44,23 @@ export interface PersonDetails {
   known_for_department?: string;
   place_of_birth?: string;
   birthday?: string;
+  deathday?: string;
+  imdb_id?: string;
+  also_known_as?: string[];
+}
+
+export interface PersonCreditItem extends MediaItem {
+  character?: string;
+  job?: string;
+  department?: string;
+  roles?: string[];
+}
+
+export interface PersonGroupedCredits {
+  all: PersonCreditItem[];
+  acting: PersonCreditItem[];
+  directing: PersonCreditItem[];
+  writing: PersonCreditItem[];
 }
 
 export interface LiveSearchResults {
@@ -114,6 +131,13 @@ export interface MediaDetail extends MediaItem {
   directors?: {
     id: number;
     name: string;
+    profile_path?: string | null;
+  }[];
+  writers?: {
+    id: number;
+    name: string;
+    job?: string;
+    profile_path?: string | null;
   }[];
   credits?: {
     cast: {
