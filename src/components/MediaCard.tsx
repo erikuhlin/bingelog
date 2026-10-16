@@ -80,12 +80,20 @@ export default function MediaCard({ item, subtitle }: MediaCardProps) {
             )}
           </span>
 
-          {item.vote_average > 0 && (
+          {item.vote_average > 0 ? (
             <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#0F1218]/90 backdrop-blur-md text-[10px] font-bold text-[#E9A23B] border border-[#2B3443] shadow-sm">
               <Star className="w-3 h-3 fill-[#E9A23B] text-[#E9A23B]" />
               <span>{item.vote_average.toFixed(1)}</span>
             </span>
-          )}
+          ) : item.upcoming_season ? (
+            <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#E9A23B] text-[#0F1218] text-[10px] font-black shadow-sm">
+              <span>S{item.upcoming_season}</span>
+            </span>
+          ) : item.upcoming_date ? (
+            <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#E9A23B]/20 text-[#E9A23B] border border-[#E9A23B]/40 text-[10px] font-bold shadow-sm">
+              <span>Kommande</span>
+            </span>
+          ) : null}
         </div>
 
         {/* Streaming provider badges on bottom-left of cover */}
@@ -115,9 +123,9 @@ export default function MediaCard({ item, subtitle }: MediaCardProps) {
               {item.title}
             </h3>
           </Link>
-          {subtitle && (
-            <p className="text-[11px] text-[#E9A23B] font-medium truncate mt-0.5" title={subtitle}>
-              {subtitle}
+          {(subtitle || item.upcoming_label) && (
+            <p className="text-[11px] text-[#E9A23B] font-medium truncate mt-0.5" title={subtitle || item.upcoming_label}>
+              {subtitle || item.upcoming_label}
             </p>
           )}
           <div className="flex items-center justify-between text-[11px] text-[#8D97A8] mt-1">

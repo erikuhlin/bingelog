@@ -20,6 +20,9 @@ export interface MediaItem {
   origin_country?: string[];
   original_language?: string;
   watch_providers?: WatchProvider[];
+  upcoming_date?: string | null;
+  upcoming_label?: string;
+  upcoming_season?: number;
 }
 
 export interface PersonSearchResult {

@@ -2,13 +2,14 @@
 
 import React, { useRef } from 'react';
 import Link from 'next/link';
-import { Film, Tv, Sparkles, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Film, Tv, Sparkles, Calendar, Clock, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { MediaItem } from '@/lib/types';
 import MediaCard from './MediaCard';
 
 interface HorizontalMediaRowProps {
   title: string;
-  iconType?: 'film' | 'tv' | 'sparkles';
+  description?: string;
+  iconType?: 'film' | 'tv' | 'sparkles' | 'calendar' | 'clock';
   iconColor?: string;
   items: MediaItem[];
   moreLink?: {
@@ -19,6 +20,7 @@ interface HorizontalMediaRowProps {
 
 export default function HorizontalMediaRow({
   title,
+  description,
   iconType,
   iconColor = 'text-[#E9A23B]',
   items,
@@ -33,6 +35,10 @@ export default function HorizontalMediaRow({
       ? Tv
       : iconType === 'sparkles'
       ? Sparkles
+      : iconType === 'calendar'
+      ? Calendar
+      : iconType === 'clock'
+      ? Clock
       : null;
 
   const scrollLeft = () => {
@@ -53,11 +59,16 @@ export default function HorizontalMediaRow({
     <section className="mb-8 sm:mb-14 relative w-full max-w-full overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between mb-3 sm:mb-4 gap-2 min-w-0">
-        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
-          {IconComponent && <IconComponent className={`w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 ${iconColor}`} />}
-          <h2 className="text-base sm:text-xl md:text-2xl font-bold text-[#ECE9E3] tracking-tight truncate">
-            {title}
-          </h2>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {IconComponent && <IconComponent className={`w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 ${iconColor}`} />}
+            <h2 className="text-base sm:text-xl md:text-2xl font-bold text-[#ECE9E3] tracking-tight truncate">
+              {title}
+            </h2>
+          </div>
+          {description && (
+            <p className="text-xs text-[#8D97A8] mt-0.5 truncate">{description}</p>
+          )}
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">

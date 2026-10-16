@@ -9,7 +9,14 @@ import {
   PersonGroupedCredits,
   LiveSearchResults,
 } from './types';
-import { MOCK_TRENDING, MOCK_GENRES, MOCK_DETAILS } from './mock-data';
+import {
+  MOCK_TRENDING,
+  MOCK_GENRES,
+  MOCK_DETAILS,
+  MOCK_UPCOMING_MOVIES,
+  MOCK_UPCOMING_NEW_SHOWS,
+  MOCK_UPCOMING_SEASONS,
+} from './mock-data';
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
@@ -131,6 +138,191 @@ export async function getPopularShows(): Promise<MediaItem[]> {
     return enrichItemsWithProviders(list);
   }
   return MOCK_TRENDING.filter((item) => item.media_type === 'tv');
+}
+
+export function formatUpcomingDateLabel(
+  dateStr?: string | null,
+  type?: 'movie' | 'tv' | 'season',
+  seasonNumber?: number
+): string {
+  if (!dateStr) {
+    if (seasonNumber) return `Säsong ${seasonNumber} • Kommer snart`;
+    return 'Kommer snart';
+  }
+
+  let formattedDate = dateStr;
+  try {
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) {
+      const now = new Date();
+      const isDifferentYear = d.getFullYear() !== now.getFullYear();
+      formattedDate = d.toLocaleDateString('sv-SE', {
+        day: 'numeric',
+        month: 'short',
+        ...(isDifferentYear ? { year: 'numeric' } : {}),
+      });
+    }
+  } catch {
+    // Keep dateStr
+  }
+
+  if (seasonNumber) {
+    return `Säsong ${seasonNumber} • ${formattedDate}`;
+  }
+
+  return `Premiär ${formattedDate}`;
+}
+
+export async function getUpcomingMovies(): Promise<MediaItem[]> {
+  const today = new Date().toISOString().split('T')[0];
+
+  const data = await tmdbFetch<{ results: any[] }>('/movie/upcoming', {
+    page: 1,
+    region: 'SE',
+  });
+
+  let results = data?.results || [];
+
+  if (results.length < 6) {
+    const discoverData = await tmdbFetch<{ results: any[] }>('/discover/movie', {
+      'primary_release_date.gte': today,
+      sort_by: 'popularity.desc',
+      page: 1,
+    });
+    if (discoverData?.results) {
+      const existingIds = new Set(results.map((r: any) => r.id));
+      for (const item of discoverData.results) {
+        if (!existingIds.has(item.id)) {
+          results.push(item);
+          existingIds.add(item.id);
+        }
+      }
+    }
+  }
+
+  if (results.length > 0) {
+    const todayMs = new Date(today).getTime();
+    const list = results
+      .map((item) => normalizeMediaItem({ ...item, media_type: 'movie' }))
+      .filter((item) => {
+        if (!item.release_date) return false;
+        return new Date(item.release_date).getTime() >= todayMs;
+      })
+      .sort((a, b) => {
+        const dateA = new Date(a.release_date!).getTime();
+        const dateB = new Date(b.release_date!).getTime();
+        return dateA - dateB;
+      })
+      .map((item) => ({
+        ...item,
+        upcoming_date: item.release_date,
+        upcoming_label: formatUpcomingDateLabel(item.release_date, 'movie'),
+      }));
+
+    if (list.length > 0) {
+      return list.slice(0, 16);
+    }
+  }
+
+  return MOCK_UPCOMING_MOVIES;
+}
+
+export async function getUpcomingNewShows(): Promise<MediaItem[]> {
+  const today = new Date().toISOString().split('T')[0];
+
+  const data = await tmdbFetch<{ results: any[] }>('/discover/tv', {
+    'first_air_date.gte': today,
+    sort_by: 'popularity.desc',
+    page: 1,
+  });
+
+  if (data?.results && data.results.length > 0) {
+    const todayMs = new Date(today).getTime();
+    const list = data.results
+      .map((item) => normalizeMediaItem({ ...item, media_type: 'tv' }))
+      .filter((item) => {
+        if (!item.first_air_date) return false;
+        return new Date(item.first_air_date).getTime() >= todayMs;
+      })
+      .sort((a, b) => {
+        const dateA = new Date(a.first_air_date!).getTime();
+        const dateB = new Date(b.first_air_date!).getTime();
+        return dateA - dateB;
+      })
+      .map((item) => ({
+        ...item,
+        upcoming_date: item.first_air_date,
+        upcoming_label: formatUpcomingDateLabel(item.first_air_date, 'tv'),
+      }));
+
+    if (list.length > 0) {
+      return list.slice(0, 16);
+    }
+  }
+
+  return MOCK_UPCOMING_NEW_SHOWS;
+}
+
+export async function getUpcomingSeasons(): Promise<MediaItem[]> {
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
+  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  // Discover returning shows that have an air_date in the future
+  const data = await tmdbFetch<{ results: any[] }>('/discover/tv', {
+    'air_date.gte': today,
+    'first_air_date.lte': yesterday,
+    sort_by: 'popularity.desc',
+    page: 1,
+  });
+
+  if (data?.results && data.results.length > 0) {
+    const candidates = data.results.slice(0, 15);
+    const enrichedList: MediaItem[] = [];
+
+    // Fetch details to find exact upcoming season
+    const detailPromises = candidates.map((item) => getMediaDetails('tv', item.id));
+    const details = await Promise.all(detailPromises);
+
+    const todayMs = now.getTime();
+
+    for (const d of details) {
+      if (!d) continue;
+
+      // Find future season
+      const futureSeason = d.seasons?.find((s) => {
+        if (!s.air_date || s.season_number <= 0) return false;
+        return new Date(s.air_date).getTime() >= todayMs;
+      });
+
+      // Next episode
+      const nextEp = d.next_episode_to_air;
+      const nextEpIsFuture = nextEp?.air_date && new Date(nextEp.air_date).getTime() >= todayMs;
+
+      const seasonNum = futureSeason?.season_number || (nextEpIsFuture ? nextEp.season_number : null);
+      const airDate = futureSeason?.air_date || (nextEpIsFuture ? nextEp.air_date : null);
+
+      if (seasonNum && airDate) {
+        enrichedList.push({
+          ...d,
+          upcoming_season: seasonNum,
+          upcoming_date: airDate,
+          upcoming_label: formatUpcomingDateLabel(airDate, 'season', seasonNum),
+        });
+      }
+    }
+
+    if (enrichedList.length > 0) {
+      enrichedList.sort((a, b) => {
+        const dateA = a.upcoming_date ? new Date(a.upcoming_date).getTime() : Infinity;
+        const dateB = b.upcoming_date ? new Date(b.upcoming_date).getTime() : Infinity;
+        return dateA - dateB;
+      });
+      return enrichedList.slice(0, 16);
+    }
+  }
+
+  return MOCK_UPCOMING_SEASONS;
 }
 
 export async function discoverMedia(filters: import('./types').DiscoverFilters): Promise<MediaItem[]> {
