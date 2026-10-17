@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Film, Tv, RotateCcw, User, Search, X, Loader2 } from 'lucide-react';
 import { MOCK_GENRES } from '@/lib/mock-data';
 import { MediaType, PersonSearchResult } from '@/lib/types';
-import { searchMultiLive, getImageUrl } from '@/lib/tmdb';
+import { searchMultiLive, getImageUrl, SWEDISH_STREAMING_PROVIDERS } from '@/lib/tmdb';
 
 interface AdvancedFilterBarProps {
   mediaType: 'all' | MediaType;
@@ -23,10 +23,13 @@ interface AdvancedFilterBarProps {
   activeFilterCount: number;
   selectedPersons?: PersonSearchResult[];
   onPersonsChange?: (persons: PersonSearchResult[]) => void;
+  providerIds?: number[];
+  onProviderChange?: (ids: number[]) => void;
 }
 
 const YEAR_OPTIONS = [
   { label: 'Alla år', value: null },
+  { label: '2026', value: 2026 },
   { label: '2025', value: 2025 },
   { label: '2024', value: 2024 },
   { label: '2023', value: 2023 },
@@ -57,6 +60,8 @@ export default function AdvancedFilterBar({
   activeFilterCount,
   selectedPersons = [],
   onPersonsChange,
+  providerIds = [],
+  onProviderChange,
 }: AdvancedFilterBarProps) {
   const [personQuery, setPersonQuery] = useState('');
   const [personResults, setPersonResults] = useState<PersonSearchResult[]>([]);
@@ -382,6 +387,43 @@ export default function AdvancedFilterBar({
             ))}
           </div>
         </div>
+
+        {/* Streamingtjänster (om callback är tillhandahållen) */}
+        {onProviderChange && (
+          <div className="md:col-span-2 lg:col-span-3 pt-2 border-t border-[#2B3443]/60">
+            <label className="block text-[11px] font-semibold text-[#8D97A8] mb-1.5">
+              Streamingtjänster i Sverige
+            </label>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {SWEDISH_STREAMING_PROVIDERS.map((p) => {
+                const isSelected = providerIds.includes(p.id);
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => {
+                      if (isSelected) {
+                        onProviderChange(providerIds.filter((id) => id !== p.id));
+                      } else {
+                        onProviderChange([...providerIds, p.id]);
+                      }
+                    }}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-[#E9A23B] text-[#0F1218] border-[#E9A23B] font-bold shadow-sm'
+                        : 'bg-[#0F1218] text-[#8D97A8] border-[#2B3443] hover:text-[#ECE9E3] hover:border-[#8D97A8]'
+                    }`}
+                  >
+                    <span className="w-3.5 h-3.5 rounded overflow-hidden flex-shrink-0">
+                      <img src={getImageUrl(p.logo_path, 'w300')} alt={p.name} className="w-full h-full object-cover" />
+                    </span>
+                    <span>{p.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 3. Sortering & Återställ row */}
@@ -393,6 +435,7 @@ export default function AdvancedFilterBar({
               { label: 'Mest populära', value: 'popularity.desc' },
               { label: 'Högst betyg', value: 'vote_average.desc' },
               { label: 'Nyast utgivning', value: 'primary_release_date.desc' },
+              { label: 'Klassiker / Äldst', value: 'primary_release_date.asc' },
             ].map((s) => (
               <button
                 key={s.value}

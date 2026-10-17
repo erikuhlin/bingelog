@@ -17,7 +17,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { MediaItem, MediaType, PersonSearchResult } from '@/lib/types';
-import { getImageUrl } from '@/lib/tmdb';
+import { getImageUrl, getMediaGenreNames } from '@/lib/tmdb';
 import MediaCard from './MediaCard';
 import StatusSelector from './StatusSelector';
 import ProviderFilterTabs from './ProviderFilterTabs';
@@ -562,6 +562,7 @@ export default function ExploreFeed({
             const year =
               item.release_date?.slice(0, 4) || item.first_air_date?.slice(0, 4) || '';
             const detailUrl = `/${item.media_type}/${item.id}`;
+            const genreNames = getMediaGenreNames(item, 2);
 
             return (
               <div
@@ -601,6 +602,12 @@ export default function ExploreFeed({
                           </>
                         )}
                       </span>
+
+                      {genreNames.length > 0 && (
+                        <span className="text-[10px] text-[#8D97A8] hidden xs:inline">
+                          • {genreNames.join(', ')}
+                        </span>
+                      )}
 
                       {year && (
                         <span className="text-[10px] text-[#8D97A8] flex items-center gap-1">

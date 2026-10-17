@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { Star, Film, Tv } from 'lucide-react';
 import { MediaItem } from '@/lib/types';
-import { getImageUrl } from '@/lib/tmdb';
+import { getImageUrl, getMediaGenreNames } from '@/lib/tmdb';
 import StatusSelector from './StatusSelector';
 
 interface MediaCardProps {
@@ -44,6 +44,8 @@ function ProviderMiniBadge({ logoPath, name }: { logoPath: string; name: string 
 export default function MediaCard({ item, subtitle }: MediaCardProps) {
   const year = item.release_date?.slice(0, 4) || item.first_air_date?.slice(0, 4) || '';
   const detailUrl = `/${item.media_type}/${item.id}`;
+  const genreNames = getMediaGenreNames(item, 2);
+  const genresText = genreNames.join(' • ');
 
   const handleNavigate = () => {
     if (typeof window !== 'undefined') {
@@ -126,6 +128,11 @@ export default function MediaCard({ item, subtitle }: MediaCardProps) {
           {(subtitle || item.upcoming_label) && (
             <p className="text-[11px] text-[#E9A23B] font-medium truncate mt-0.5" title={subtitle || item.upcoming_label}>
               {subtitle || item.upcoming_label}
+            </p>
+          )}
+          {genresText && (
+            <p className="text-[11px] text-[#8D97A8] font-medium truncate mt-0.5" title={genresText}>
+              {genresText}
             </p>
           )}
           <div className="flex items-center justify-between text-[11px] text-[#8D97A8] mt-1">

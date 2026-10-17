@@ -436,6 +436,68 @@ export async function getUpcomingSeasons(limit = 16): Promise<MediaItem[]> {
   }).slice(0, limit);
 }
 
+export const GENRE_MAP: Record<number, string> = {
+  28: 'Action',
+  12: 'Äventyr',
+  16: 'Animering',
+  35: 'Komedi',
+  80: 'Kriminalare',
+  99: 'Dokumentär',
+  18: 'Drama',
+  10751: 'Familj',
+  14: 'Fantasy',
+  36: 'Historia',
+  27: 'Skräck',
+  10402: 'Musik',
+  9648: 'Mysterium',
+  10749: 'Romantik',
+  878: 'Sci-Fi',
+  10770: 'TV-film',
+  53: 'Thriller',
+  10752: 'Krig',
+  37: 'Western',
+  10759: 'Action & Äventyr',
+  10762: 'Barn',
+  10763: 'Nyheter',
+  10764: 'Reality',
+  10765: 'Sci-Fi & Fantasy',
+  10766: 'Såpopera',
+  10767: 'Talkshow',
+  10768: 'Krig & Politik',
+};
+
+export const RELATED_GENRES: Record<number, number[]> = {
+  28: [28, 10759],
+  12: [12, 10759],
+  10759: [10759, 28, 12],
+  878: [878, 10765],
+  14: [14, 10765],
+  10765: [10765, 878, 14],
+  10752: [10752, 10768],
+  10768: [10768, 10752],
+  10751: [10751, 10762],
+  10762: [10762, 10751],
+};
+
+export function matchesGenre(itemGenreIds: number[] | undefined, targetGenreId: number): boolean {
+  if (!itemGenreIds || itemGenreIds.length === 0) return false;
+  const related = RELATED_GENRES[targetGenreId] || [targetGenreId];
+  return related.some((g) => itemGenreIds.includes(g));
+}
+
+export function getMediaGenreNames(item: MediaItem, max = 2): string[] {
+  if (item.genres && item.genres.length > 0) {
+    return item.genres.slice(0, max).map((g) => g.name);
+  }
+  if (item.genre_ids && item.genre_ids.length > 0) {
+    return item.genre_ids
+      .map((id) => GENRE_MAP[id])
+      .filter(Boolean)
+      .slice(0, max);
+  }
+  return [];
+}
+
 export async function discoverMedia(filters: import('./types').DiscoverFilters): Promise<MediaItem[]> {
   const {
     mediaType = 'all',
@@ -452,13 +514,9 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
 
   const baseParams: Record<string, string | number> = {
     page,
-    sort_by: sortBy,
     'vote_count.gte': sortBy === 'vote_average.desc' ? 100 : 15,
   };
 
-  if (genreId) {
-    baseParams.with_genres = genreId;
-  }
   if (minRating) {
     baseParams['vote_average.gte'] = minRating;
   }
@@ -471,6 +529,37 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
     baseParams.with_watch_providers = providerIds!.join('|');
     baseParams.with_watch_monetization_types = 'flatrate';
   }
+
+  // Cross-map genre for Movie vs TV queries
+  let movieGenresParam = genreId ? String(genreId) : undefined;
+  let tvGenresParam = genreId ? String(genreId) : undefined;
+
+  if (genreId === 28 || genreId === 12) {
+    movieGenresParam = String(genreId);
+    tvGenresParam = '10759';
+  } else if (genreId === 10759) {
+    movieGenresParam = '28|12';
+    tvGenresParam = '10759';
+  } else if (genreId === 878 || genreId === 14) {
+    movieGenresParam = String(genreId);
+    tvGenresParam = '10765';
+  } else if (genreId === 10765) {
+    movieGenresParam = '878|14';
+    tvGenresParam = '10765';
+  } else if (genreId === 10752) {
+    movieGenresParam = '10752';
+    tvGenresParam = '10768';
+  } else if (genreId === 10768) {
+    movieGenresParam = '10752';
+    tvGenresParam = '10768';
+  }
+
+  const getTvSortBy = (sort: string) => {
+    if (sort.startsWith('primary_release_date.')) {
+      return sort.replace('primary_release_date.', 'first_air_date.');
+    }
+    return sort;
+  };
 
   const attachSelectedProviders = (items: MediaItem[]) => {
     if (!hasProviders) return items;
@@ -487,7 +576,8 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
   };
 
   if (mediaType === 'movie') {
-    const params = { ...baseParams };
+    const params = { ...baseParams, sort_by: sortBy };
+    if (movieGenresParam) params.with_genres = movieGenresParam;
     if (year) params.primary_release_year = year;
     const data = await tmdbFetch<{ results: any[] }>('/discover/movie', params);
     const items = (data?.results || []).map((m) => normalizeMediaItem({ ...m, media_type: 'movie' }));
@@ -495,7 +585,8 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
   }
 
   if (mediaType === 'tv') {
-    const params = { ...baseParams };
+    const params = { ...baseParams, sort_by: getTvSortBy(sortBy) };
+    if (tvGenresParam) params.with_genres = tvGenresParam;
     if (year) params.first_air_date_year = year;
     const data = await tmdbFetch<{ results: any[] }>('/discover/tv', params);
     const items = (data?.results || []).map((t) => normalizeMediaItem({ ...t, media_type: 'tv' }));
@@ -503,12 +594,13 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
   }
 
   // If 'all': fetch movie and tv in parallel
-  const movieParams = { ...baseParams };
-  const tvParams = { ...baseParams };
-  if (year) {
-    movieParams.primary_release_year = year;
-    tvParams.first_air_date_year = year;
-  }
+  const movieParams = { ...baseParams, sort_by: sortBy };
+  if (movieGenresParam) movieParams.with_genres = movieGenresParam;
+  if (year) movieParams.primary_release_year = year;
+
+  const tvParams = { ...baseParams, sort_by: getTvSortBy(sortBy) };
+  if (tvGenresParam) tvParams.with_genres = tvGenresParam;
+  if (year) tvParams.first_air_date_year = year;
 
   const [movieRes, tvRes] = await Promise.all([
     tmdbFetch<{ results: any[] }>('/discover/movie', movieParams),
@@ -1202,6 +1294,8 @@ export async function getGenres(): Promise<{ id: number; name: string }[]> {
 }
 
 export function normalizeMediaItem(item: any): MediaItem {
+  const genreIds = item.genre_ids || (Array.isArray(item.genres) ? item.genres.map((g: any) => g.id) : []);
+
   return {
     id: item.id,
     title: item.title || item.name,
@@ -1209,12 +1303,13 @@ export function normalizeMediaItem(item: any): MediaItem {
     overview: item.overview || '',
     poster_path: item.poster_path,
     backdrop_path: item.backdrop_path,
-    media_type: (item.media_type === 'tv' || !item.title && item.name) ? 'tv' : 'movie',
+    media_type: (item.media_type === 'tv' || (!item.title && item.name)) ? 'tv' : 'movie',
     release_date: item.release_date,
     first_air_date: item.first_air_date,
     vote_average: Math.round((item.vote_average || 0) * 10) / 10,
     vote_count: item.vote_count || 0,
-    genre_ids: item.genre_ids || [],
+    genre_ids: genreIds,
+    genres: Array.isArray(item.genres) ? item.genres : undefined,
     origin_country: item.origin_country || [],
     original_language: item.original_language,
   };

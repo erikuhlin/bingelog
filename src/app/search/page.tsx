@@ -21,6 +21,7 @@ import {
   getPersonCombinedCredits,
   searchMedia,
   getImageUrl,
+  matchesGenre,
 } from '@/lib/tmdb';
 import { MediaItem, PersonDetails, PersonSearchResult, MediaType } from '@/lib/types';
 import { MOCK_GENRES } from '@/lib/mock-data';
@@ -42,17 +43,22 @@ function SearchPageContent() {
   const typeParam = (searchParams.get('type') as 'all' | MediaType) || 'all';
   const sortParam = searchParams.get('sort') || 'popularity.desc';
   const isAdvancedParam = searchParams.get('advanced') === 'true';
+  const providersParam = useMemo(() => {
+    const raw = searchParams.get('providers');
+    return raw ? raw.split(',').map(Number).filter((n) => !isNaN(n) && n > 0) : [];
+  }, [searchParams]);
 
   // State
   const [inputQuery, setInputQuery] = useState(queryParam);
   const [mediaType, setMediaType] = useState<'all' | MediaType>(typeParam);
   const [genreId, setGenreId] = useState<number | null>(genreParam);
+  const [providerIds, setProviderIds] = useState<number[]>(providersParam);
   const [minRating, setMinRating] = useState<number | null>(ratingParam);
   const [year, setYear] = useState<number | null>(yearParam);
   const [originalLanguage, setOriginalLanguage] = useState<string | null>(langParam);
   const [sortBy, setSortBy] = useState<string>(sortParam);
   const [selectedPersons, setSelectedPersons] = useState<PersonSearchResult[]>([]);
-  const [isFilterOpen, setIsFilterOpen] = useState(isAdvancedParam || Boolean(genreParam || ratingParam || yearParam || langParam));
+  const [isFilterOpen, setIsFilterOpen] = useState(isAdvancedParam || Boolean(genreParam || ratingParam || yearParam || langParam || providersParam.length > 0));
 
   const [rawItems, setRawItems] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,6 +80,14 @@ function SearchPageContent() {
   useEffect(() => {
     setMediaType(typeParam);
   }, [typeParam]);
+
+  // Sync providerIds when providersParam changes in URL
+  useEffect(() => {
+    setProviderIds(providersParam);
+    if (providersParam.length > 0) {
+      setIsFilterOpen(true);
+    }
+  }, [providersParam]);
 
   // Load initial person(s) if personParam is provided in URL
   useEffect(() => {
@@ -125,6 +139,7 @@ function SearchPageContent() {
     (selectedPersons.length > 0 ? 1 : 0) +
     (mediaType !== 'all' ? 1 : 0) +
     (genreId !== null ? 1 : 0) +
+    (providerIds.length > 0 ? 1 : 0) +
     (minRating !== null ? 1 : 0) +
     (year !== null ? 1 : 0) +
     (originalLanguage !== null ? 1 : 0) +
@@ -134,6 +149,7 @@ function SearchPageContent() {
   const handleResetFilters = () => {
     setMediaType('all');
     setGenreId(null);
+    setProviderIds([]);
     setMinRating(null);
     setYear(null);
     setOriginalLanguage(null);
@@ -142,6 +158,7 @@ function SearchPageContent() {
     updateUrl({
       type: null,
       genre: null,
+      providers: null,
       minRating: null,
       year: null,
       lang: null,
@@ -159,6 +176,10 @@ function SearchPageContent() {
   const handleGenreChange = (id: number | null) => {
     setGenreId(id);
     updateUrl({ genre: id ? String(id) : null });
+  };
+  const handleProviderChange = (ids: number[]) => {
+    setProviderIds(ids);
+    updateUrl({ providers: ids.length > 0 ? ids.join(',') : null });
   };
   const handleMinRatingChange = (rating: number | null) => {
     setMinRating(rating);
@@ -226,6 +247,7 @@ function SearchPageContent() {
           // Discover by filter when no query is present
           const params = new URLSearchParams();
           if (mediaType !== 'all') params.set('mediaType', mediaType);
+          if (providerIds.length > 0) params.set('providerIds', providerIds.join(','));
           if (genreId) params.set('genreId', String(genreId));
           if (minRating) params.set('minRating', String(minRating));
           if (year) params.set('year', String(year));
@@ -257,7 +279,7 @@ function SearchPageContent() {
     return () => {
       isMounted = false;
     };
-  }, [selectedPersons, queryParam, activeFilterCount, genreId, minRating, year, originalLanguage, sortBy, mediaType]);
+  }, [selectedPersons, queryParam, activeFilterCount, genreId, providerIds, minRating, year, originalLanguage, sortBy, mediaType]);
 
   // Apply local filters and sort
   const filteredItems = useMemo(() => {
@@ -268,7 +290,7 @@ function SearchPageContent() {
         if (mediaType === 'tv' && item.media_type !== 'tv') return false;
 
         // Genre
-        if (genreId && (!item.genre_ids || !item.genre_ids.includes(genreId))) {
+        if (genreId && !matchesGenre(item.genre_ids, genreId)) {
           return false;
         }
 
@@ -501,6 +523,20 @@ function SearchPageContent() {
                 </button>
               </span>
             )}
+
+            {providerIds.length > 0 && (
+              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#E9A23B]/15 border border-[#E9A23B]/30 text-xs font-bold text-[#E9A23B]">
+                <span>{providerIds.length} streamingtjänster</span>
+                <button
+                  type="button"
+                  onClick={() => handleProviderChange([])}
+                  className="hover:text-[#ECE9E3] p-0.5 cursor-pointer"
+                  title="Ta bort streamingfilter"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
           </div>
 
           {filteredItems.length > 0 && (
@@ -520,6 +556,8 @@ function SearchPageContent() {
             onMediaTypeChange={handleMediaTypeChange}
             genreId={genreId}
             onGenreChange={handleGenreChange}
+            providerIds={providerIds}
+            onProviderChange={handleProviderChange}
             minRating={minRating}
             onMinRatingChange={handleMinRatingChange}
             year={year}

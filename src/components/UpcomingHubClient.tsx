@@ -18,6 +18,7 @@ import {
   X,
 } from 'lucide-react';
 import { MediaItem } from '@/lib/types';
+import { getMediaGenreNames } from '@/lib/tmdb';
 import MediaCard from './MediaCard';
 
 interface UpcomingHubClientProps {
@@ -415,6 +416,7 @@ export default function UpcomingHubClient({
           <div className="space-y-2.5">
             {filteredItems.map((item) => {
               const countdown = getCountdownLabel(item.upcoming_date);
+              const genreNames = getMediaGenreNames(item, 2);
               return (
                 <div
                   key={`upcoming-list-${item.media_type}-${item.id}-${item.upcoming_season || 'main'}`}
@@ -437,6 +439,11 @@ export default function UpcomingHubClient({
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#1E2531] border border-[#2B3443] text-[#ECE9E3]">
                         {item.media_type === 'movie' ? 'Film' : 'Serie'}
                       </span>
+                      {genreNames.length > 0 && (
+                        <span className="text-[10px] text-[#8D97A8] font-medium hidden sm:inline">
+                          • {genreNames.join(', ')}
+                        </span>
+                      )}
                       {item.upcoming_label && (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#E9A23B]/15 border border-[#E9A23B]/30 text-[#E9A23B]">
                           {item.upcoming_label}
