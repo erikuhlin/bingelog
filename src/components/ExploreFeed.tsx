@@ -73,9 +73,13 @@ export default function ExploreFeed({
   const storageKey = `bingelog_explore_state_${defaultMediaType}`;
   const isRestoredRef = useRef(false);
 
-  // Restore feed state and scroll position on mount if returning from detail view
+  // Restore feed state and scroll position on mount ONLY if returning from detail view via back button
   useEffect(() => {
     try {
+      const isBackNav = sessionStorage.getItem('bingelog_back_nav') === '1';
+      if (!isBackNav) return;
+      sessionStorage.removeItem('bingelog_back_nav');
+
       const raw = sessionStorage.getItem(storageKey);
       if (raw) {
         const saved = JSON.parse(raw);
@@ -456,8 +460,48 @@ export default function ExploreFeed({
             </span>
           </div>
 
-          {/* Action buttons: Filter toggle & View Mode Switcher on the SAME row */}
-          <div className="flex items-center justify-between sm:justify-end gap-2.5 w-full sm:w-auto">
+          {/* Action buttons: Media Type Pills (if hideProviderTabs) + Filter toggle & View Mode Switcher */}
+          <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2.5 w-full sm:w-auto">
+            {hideProviderTabs && defaultMediaType === 'all' && (
+              <div className="flex items-center gap-1 p-1 rounded-xl bg-[#171C25] border border-[#2B3443]">
+                <button
+                  type="button"
+                  onClick={() => setMediaType('all')}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                    mediaType === 'all'
+                      ? 'bg-[#E9A23B] text-[#0F1218] shadow-sm'
+                      : 'text-[#8D97A8] hover:text-[#ECE9E3]'
+                  }`}
+                >
+                  <Sparkles className="w-3 h-3" />
+                  <span>Alla</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMediaType('movie')}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                    mediaType === 'movie'
+                      ? 'bg-[#E9A23B] text-[#0F1218] shadow-sm'
+                      : 'text-[#8D97A8] hover:text-[#ECE9E3]'
+                  }`}
+                >
+                  <Film className="w-3 h-3" />
+                  <span>Filmer</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMediaType('tv')}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                    mediaType === 'tv'
+                      ? 'bg-[#E9A23B] text-[#0F1218] shadow-sm'
+                      : 'text-[#8D97A8] hover:text-[#ECE9E3]'
+                  }`}
+                >
+                  <Tv className="w-3 h-3" />
+                  <span>Serier</span>
+                </button>
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <button
                 type="button"

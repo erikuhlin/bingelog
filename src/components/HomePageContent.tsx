@@ -87,7 +87,7 @@ export default function HomePageContent({
       <ForYouSection />
 
       {/* 6. Dedicated Horizontal Carousel for "Trendar i veckan" (#6–#20) */}
-      {trendingList.length > 0 && selectedProviderIds.length === 0 && (
+      {trendingList.length > 0 && (
         <HorizontalMediaRow
           title="Trendar i veckan"
           iconType="sparkles"

@@ -13,6 +13,9 @@ export default function DetailBackButton({ mediaType }: DetailBackButtonProps) {
   const router = useRouter();
 
   const handleBack = () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('bingelog_back_nav', '1');
+    }
     if (typeof window !== 'undefined' && window.history.length > 1) {
       router.back();
     } else {

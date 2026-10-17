@@ -109,25 +109,39 @@ export const NETWORK_TO_SWEDISH_PROVIDER: Record<string, { id: number; name: str
   Showtime: { id: 1773, name: 'SkyShowtime', logo_path: '/ube1pVpP3FklRkeyQjlDkkC3tL2.png' },
 };
 
+const watchProvidersCache = new Map<string, any[]>();
+
 export async function getItemWatchProviders(
   mediaType: MediaType,
   id: number,
   includeRentBuy = false
 ): Promise<any[]> {
+  const cacheKey = `${mediaType}_${id}_${includeRentBuy ? 'rb' : 'stream'}`;
+  if (watchProvidersCache.has(cacheKey)) {
+    return watchProvidersCache.get(cacheKey)!;
+  }
+
   const data = await tmdbFetch<any>(`/${mediaType}/${id}/watch/providers`);
   const se = data?.results?.SE;
-  if (!se) return [];
-  if (includeRentBuy) {
-    const combined = [...(se.flatrate || []), ...(se.rent || []), ...(se.buy || [])];
-    const unique = new Map<number, any>();
-    for (const p of combined) {
-      if (p?.provider_id && !unique.has(p.provider_id)) {
-        unique.set(p.provider_id, p);
-      }
-    }
-    return Array.from(unique.values());
+  if (!se) {
+    watchProvidersCache.set(cacheKey, []);
+    return [];
   }
-  return se.flatrate || [];
+
+  const streamProviders = [...(se.flatrate || []), ...(se.free || []), ...(se.ads || [])];
+  const sourceList = includeRentBuy
+    ? [...streamProviders, ...(se.rent || []), ...(se.buy || [])]
+    : streamProviders;
+
+  const unique = new Map<number, any>();
+  for (const p of sourceList) {
+    if (p?.provider_id && !unique.has(p.provider_id)) {
+      unique.set(p.provider_id, p);
+    }
+  }
+  const result = Array.from(unique.values());
+  watchProvidersCache.set(cacheKey, result);
+  return result;
 }
 
 export async function enrichItemsWithProviders(
@@ -562,7 +576,7 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
     newReleasesOnly = false,
   } = filters;
 
-  const hasProviders = providerIds && providerIds.length > 0;
+  const hasProviders = Boolean(providerIds && providerIds.length > 0);
   const now = new Date();
   const today = now.toISOString().split('T')[0];
   const daysAgo = (days: number) =>
@@ -571,7 +585,7 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
   const baseParams: Record<string, string | number> = {
     page,
     'vote_count.gte':
-      sortBy === 'vote_average.desc' ? 100 : hasProviders || newReleasesOnly ? 3 : 15,
+      sortBy === 'vote_average.desc' ? 100 : hasProviders || newReleasesOnly ? 2 : 15,
   };
 
   if (minRating) {
@@ -588,7 +602,7 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
     baseParams.with_release_type = '2|3';
     if (!year) {
       baseParams['primary_release_date.lte'] = today;
-      baseParams['primary_release_date.gte'] = daysAgo(75);
+      baseParams['primary_release_date.gte'] = daysAgo(90);
     }
     baseParams['vote_count.gte'] = 3;
   } else if (monetizationType === 'rent_buy') {
@@ -596,13 +610,14 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
     baseParams.with_watch_monetization_types = 'rent|buy';
     if (!year && sortBy === 'popularity.desc') {
       baseParams['primary_release_date.lte'] = today;
-      baseParams['primary_release_date.gte'] = daysAgo(240);
+      baseParams['primary_release_date.gte'] = daysAgo(300);
     }
     baseParams['vote_count.gte'] = 5;
   } else if (monetizationType === 'flatrate' || hasProviders || newReleasesOnly) {
     baseParams.watch_region = 'SE';
     baseParams.with_watch_providers = hasProviders ? providerIds!.join('|') : allSwedishProviderIds;
-    baseParams.with_watch_monetization_types = 'flatrate';
+    // Include free & ads so SVT Play and TV4 Play titles are included
+    baseParams.with_watch_monetization_types = 'flatrate|free|ads';
   }
 
   // Cross-map genre for Movie vs TV queries
@@ -636,12 +651,39 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
     return sort;
   };
 
+  const formatReleaseSubtitle = (dateStr?: string) => {
+    if (!dateStr) return undefined;
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return undefined;
+      return `Släppt ${d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}`;
+    } catch {
+      return undefined;
+    }
+  };
+
   const finalizeResults = async (items: MediaItem[]): Promise<MediaItem[]> => {
-    // If exactly 1 provider is selected, attach it directly for instant display
+    let list = items;
+
+    if (newReleasesOnly) {
+      // Sort newest releases first and add release date label
+      list = [...list]
+        .sort((a, b) => {
+          const dateA = a.release_date || a.first_air_date || '';
+          const dateB = b.release_date || b.first_air_date || '';
+          return dateB.localeCompare(dateA);
+        })
+        .map((item) => ({
+          ...item,
+          upcoming_label: formatReleaseSubtitle(item.release_date || item.first_air_date),
+        }));
+    }
+
+    // If exactly 1 provider is selected, attach it directly for instant display without extra API calls
     if (hasProviders && providerIds!.length === 1) {
       const selected = SWEDISH_STREAMING_PROVIDERS.find((p) => p.id === providerIds![0]);
       if (selected) {
-        return items.map((item) => ({
+        return list.map((item) => ({
           ...item,
           watch_providers: [
             {
@@ -655,28 +697,34 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
     }
 
     if (monetizationType === 'theatrical') {
-      const enriched = await enrichItemsWithProviders(items, false);
+      const enriched = await enrichItemsWithProviders(list, false);
       return enriched.map((item) => ({
         ...item,
         release_service: item.release_service || 'På bio',
+        upcoming_label: item.upcoming_label || 'Visas på bio nu',
       }));
     }
 
     if (monetizationType === 'rent_buy') {
-      return enrichItemsWithProviders(items, true);
+      return enrichItemsWithProviders(list, true);
     }
 
-    // Enrich with actual SE flatrate providers
-    return enrichItemsWithProviders(items, false);
+    if (newReleasesOnly || monetizationType === 'flatrate' || hasProviders) {
+      return enrichItemsWithProviders(list, false);
+    }
+
+    return list;
   };
 
   if (mediaType === 'movie') {
-    const params: Record<string, string | number> = { ...baseParams, sort_by: sortBy };
+    const effectiveSort = newReleasesOnly ? 'primary_release_date.desc' : sortBy;
+    const params: Record<string, string | number> = { ...baseParams, sort_by: effectiveSort };
     if (movieGenresParam) params.with_genres = movieGenresParam;
     if (year) params.primary_release_year = year;
     if (newReleasesOnly && !year) {
       params['primary_release_date.lte'] = today;
-      params['primary_release_date.gte'] = daysAgo(150);
+      params['primary_release_date.gte'] = daysAgo(365);
+      params['vote_count.gte'] = hasProviders ? 2 : 8;
     }
     const data = await tmdbFetch<{ results: any[] }>('/discover/movie', params);
     const items = (data?.results || []).map((m) => normalizeMediaItem({ ...m, media_type: 'movie' }));
@@ -684,13 +732,15 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
   }
 
   if (mediaType === 'tv') {
-    const params: Record<string, string | number> = { ...baseParams, sort_by: getTvSortBy(sortBy) };
+    const effectiveSort = newReleasesOnly ? 'first_air_date.desc' : getTvSortBy(sortBy);
+    const params: Record<string, string | number> = { ...baseParams, sort_by: effectiveSort };
     if (tvGenresParam) params.with_genres = tvGenresParam;
     if (year) params.first_air_date_year = year;
     if (newReleasesOnly && !year) {
-      params['air_date.lte'] = today;
-      params['air_date.gte'] = daysAgo(100);
       params['first_air_date.lte'] = today;
+      params['first_air_date.gte'] = daysAgo(365);
+      params.without_genres = '10763,10767,10766';
+      params['vote_count.gte'] = hasProviders ? 2 : 5;
     }
     const data = await tmdbFetch<{ results: any[] }>('/discover/tv', params);
     const items = (data?.results || []).map((t) => normalizeMediaItem({ ...t, media_type: 'tv' }));
@@ -698,21 +748,29 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
   }
 
   // If 'all': fetch movie and tv in parallel
-  const movieParams: Record<string, string | number> = { ...baseParams, sort_by: sortBy };
+  const movieParams: Record<string, string | number> = {
+    ...baseParams,
+    sort_by: newReleasesOnly ? 'primary_release_date.desc' : sortBy,
+  };
   if (movieGenresParam) movieParams.with_genres = movieGenresParam;
   if (year) movieParams.primary_release_year = year;
   if (newReleasesOnly && !year) {
     movieParams['primary_release_date.lte'] = today;
-    movieParams['primary_release_date.gte'] = daysAgo(150);
+    movieParams['primary_release_date.gte'] = daysAgo(365);
+    movieParams['vote_count.gte'] = hasProviders ? 2 : 8;
   }
 
-  const tvParams: Record<string, string | number> = { ...baseParams, sort_by: getTvSortBy(sortBy) };
+  const tvParams: Record<string, string | number> = {
+    ...baseParams,
+    sort_by: newReleasesOnly ? 'first_air_date.desc' : getTvSortBy(sortBy),
+  };
   if (tvGenresParam) tvParams.with_genres = tvGenresParam;
   if (year) tvParams.first_air_date_year = year;
   if (newReleasesOnly && !year) {
-    tvParams['air_date.lte'] = today;
-    tvParams['air_date.gte'] = daysAgo(100);
     tvParams['first_air_date.lte'] = today;
+    tvParams['first_air_date.gte'] = daysAgo(365);
+    tvParams.without_genres = '10763,10767,10766';
+    tvParams['vote_count.gte'] = hasProviders ? 2 : 5;
   }
 
   const [movieRes, tvRes] = await Promise.all([
@@ -723,7 +781,14 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
   const movies = (movieRes?.results || []).map((m) => normalizeMediaItem({ ...m, media_type: 'movie' }));
   const tvs = (tvRes?.results || []).map((t) => normalizeMediaItem({ ...t, media_type: 'tv' }));
 
-  const merged = [...movies, ...tvs].sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+  const merged = newReleasesOnly
+    ? [...movies, ...tvs].sort((a, b) => {
+        const dateA = a.release_date || a.first_air_date || '';
+        const dateB = b.release_date || b.first_air_date || '';
+        return dateB.localeCompare(dateA);
+      })
+    : [...movies, ...tvs].sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+
   return finalizeResults(merged.slice(0, 24));
 }
 

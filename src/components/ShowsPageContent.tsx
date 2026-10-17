@@ -89,31 +89,28 @@ export default function ShowsPageContent({
         defaultMediaType="tv"
       />
 
-      {/* 2. Kommande serier & kategorirader (visas i översiktsläge när ingen specifik tjänst filtrerar bort översikten) */}
-      {selectedProviderIds.length === 0 && (
-        <>
-          <UpcomingShowsSection
-            upcomingSeasons={upcomingSeasons}
-            upcomingNewShows={upcomingNewShows}
+      {/* 2. Kommande serier & nya säsonger */}
+      <UpcomingShowsSection
+        upcomingSeasons={upcomingSeasons}
+        upcomingNewShows={upcomingNewShows}
+      />
+
+      {/* 3. Kurerade kategorirader */}
+      <div className="space-y-2">
+        {curatedRows.map((row) => (
+          <HorizontalMediaRow
+            key={`show-row-${row.id}`}
+            title={row.title}
+            description={row.description}
+            badge={row.badge}
+            iconType={row.iconType}
+            iconColor={row.iconColor}
+            items={row.items}
           />
+        ))}
+      </div>
 
-          <div className="space-y-2">
-            {curatedRows.map((row) => (
-              <HorizontalMediaRow
-                key={`show-row-${row.id}`}
-                title={row.title}
-                description={row.description}
-                badge={row.badge}
-                iconType={row.iconType}
-                iconColor={row.iconColor}
-                items={row.items}
-              />
-            ))}
-          </div>
-        </>
-      )}
-
-      {/* 3. Main Series Catalog synced with top streaming selector */}
+      {/* 4. Main Series Catalog synced with top streaming selector */}
       <div className="pt-4 border-t border-[#2B3443]">
         <ExploreFeed
           initialTrending={popularShows}
