@@ -174,7 +174,9 @@ export function formatUpcomingDateLabel(
 }
 
 export async function getUpcomingMovies(): Promise<MediaItem[]> {
-  const today = new Date().toISOString().split('T')[0];
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
+  const todayEndMs = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
 
   const data = await tmdbFetch<{ results: any[] }>('/movie/upcoming', {
     page: 1,
@@ -201,12 +203,12 @@ export async function getUpcomingMovies(): Promise<MediaItem[]> {
   }
 
   if (results.length > 0) {
-    const todayMs = new Date(today).getTime();
     const list = results
       .map((item) => normalizeMediaItem({ ...item, media_type: 'movie' }))
+      // Only movies that have strictly NOT premiered yet
       .filter((item) => {
         if (!item.release_date) return false;
-        return new Date(item.release_date).getTime() >= todayMs;
+        return new Date(item.release_date).getTime() > todayEndMs;
       })
       .sort((a, b) => {
         const dateA = new Date(a.release_date!).getTime();
@@ -224,25 +226,31 @@ export async function getUpcomingMovies(): Promise<MediaItem[]> {
     }
   }
 
-  return MOCK_UPCOMING_MOVIES;
+  return MOCK_UPCOMING_MOVIES.filter((item) => {
+    if (!item.upcoming_date) return false;
+    return new Date(item.upcoming_date).getTime() > todayEndMs;
+  });
 }
 
 export async function getUpcomingNewShows(): Promise<MediaItem[]> {
-  const today = new Date().toISOString().split('T')[0];
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
+  const todayEndMs = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
 
   const data = await tmdbFetch<{ results: any[] }>('/discover/tv', {
     'first_air_date.gte': today,
+    without_genres: '10763,10767,10764,10766',
     sort_by: 'popularity.desc',
     page: 1,
   });
 
   if (data?.results && data.results.length > 0) {
-    const todayMs = new Date(today).getTime();
     const list = data.results
       .map((item) => normalizeMediaItem({ ...item, media_type: 'tv' }))
+      // Only brand new shows whose premiere date has strictly NOT occurred yet
       .filter((item) => {
         if (!item.first_air_date) return false;
-        return new Date(item.first_air_date).getTime() >= todayMs;
+        return new Date(item.first_air_date).getTime() > todayEndMs;
       })
       .sort((a, b) => {
         const dateA = new Date(a.first_air_date!).getTime();
@@ -260,47 +268,67 @@ export async function getUpcomingNewShows(): Promise<MediaItem[]> {
     }
   }
 
-  return MOCK_UPCOMING_NEW_SHOWS;
+  return MOCK_UPCOMING_NEW_SHOWS.filter((item) => {
+    if (!item.upcoming_date) return false;
+    return new Date(item.upcoming_date).getTime() > todayEndMs;
+  });
 }
 
 export async function getUpcomingSeasons(): Promise<MediaItem[]> {
   const now = new Date();
   const today = now.toISOString().split('T')[0];
   const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const todayEndMs = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
 
-  // Discover returning shows that have an air_date in the future
+  // Discover returning shows, excluding daily soaps, news, talk shows, reality
   const data = await tmdbFetch<{ results: any[] }>('/discover/tv', {
     'air_date.gte': today,
     'first_air_date.lte': yesterday,
+    without_genres: '10763,10767,10764,10766',
     sort_by: 'popularity.desc',
     page: 1,
   });
 
   if (data?.results && data.results.length > 0) {
-    const candidates = data.results.slice(0, 15);
+    const candidates = data.results.slice(0, 25);
     const enrichedList: MediaItem[] = [];
 
     // Fetch details to find exact upcoming season
     const detailPromises = candidates.map((item) => getMediaDetails('tv', item.id));
     const details = await Promise.all(detailPromises);
 
-    const todayMs = now.getTime();
-
     for (const d of details) {
       if (!d) continue;
 
-      // Find future season
+      // In TMDB, d.last_episode_to_air indicates the most recent episode that already aired
+      const lastAiredSeasonNum = d.last_episode_to_air?.season_number || 0;
+
+      // A season is ONLY upcoming if its season premiere has NOT aired yet:
+      // 1. Season number must be strictly greater than last aired season (s.season_number > lastAiredSeasonNum)
+      // 2. Season air_date must be strictly in the future (> todayEndMs)
       const futureSeason = d.seasons?.find((s) => {
         if (!s.air_date || s.season_number <= 0) return false;
-        return new Date(s.air_date).getTime() >= todayMs;
+        if (s.season_number <= lastAiredSeasonNum) return false; // Already has aired episodes!
+        const seasonAirTime = new Date(s.air_date).getTime();
+        return seasonAirTime > todayEndMs;
       });
 
-      // Next episode
-      const nextEp = d.next_episode_to_air;
-      const nextEpIsFuture = nextEp?.air_date && new Date(nextEp.air_date).getTime() >= todayMs;
+      let seasonNum: number | null = null;
+      let airDate: string | null = null;
 
-      const seasonNum = futureSeason?.season_number || (nextEpIsFuture ? nextEp.season_number : null);
-      const airDate = futureSeason?.air_date || (nextEpIsFuture ? nextEp.air_date : null);
+      if (futureSeason) {
+        seasonNum = futureSeason.season_number;
+        airDate = futureSeason.air_date;
+      } else if (
+        d.next_episode_to_air &&
+        d.next_episode_to_air.episode_number === 1 && // Must be episode 1 (season premiere) of a future season
+        d.next_episode_to_air.season_number > lastAiredSeasonNum &&
+        d.next_episode_to_air.air_date &&
+        new Date(d.next_episode_to_air.air_date).getTime() > todayEndMs
+      ) {
+        seasonNum = d.next_episode_to_air.season_number;
+        airDate = d.next_episode_to_air.air_date;
+      }
 
       if (seasonNum && airDate) {
         enrichedList.push({
@@ -322,7 +350,10 @@ export async function getUpcomingSeasons(): Promise<MediaItem[]> {
     }
   }
 
-  return MOCK_UPCOMING_SEASONS;
+  return MOCK_UPCOMING_SEASONS.filter((item) => {
+    if (!item.upcoming_date) return false;
+    return new Date(item.upcoming_date).getTime() > todayEndMs;
+  });
 }
 
 export async function discoverMedia(filters: import('./types').DiscoverFilters): Promise<MediaItem[]> {

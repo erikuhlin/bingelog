@@ -73,7 +73,7 @@ export default function UpcomingShowsSection({
             </h2>
           </div>
           <p className="text-xs text-[#8D97A8] mt-0.5">
-            Håll koll på efterlängtade nya säsonger och helt nya seriepremiärer
+            Serier och säsonger som ännu inte haft premiär
           </p>
         </div>
 
