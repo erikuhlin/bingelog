@@ -31,6 +31,26 @@ export default function EpisodeTracker({
   const [seasonEpisodesCache, setSeasonEpisodesCache] = useState<Record<number, Episode[]>>({});
   const [loadingSeason, setLoadingSeason] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isInLibrary, setIsInLibrary] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const checkLibrary = async () => {
+      const item = await getUserMediaItem(showId, 'tv');
+      if (isMounted) {
+        setIsInLibrary(!!item);
+      }
+    };
+
+    checkLibrary();
+
+    const handleStorageChange = () => checkLibrary();
+    window.addEventListener('bingelog_storage_changed', handleStorageChange);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('bingelog_storage_changed', handleStorageChange);
+    };
+  }, [showId, user]);
 
   const validSeasons = seasons.filter((s) => s.season_number > 0);
 
@@ -268,6 +288,10 @@ export default function EpisodeTracker({
   const isCurrentSeasonComplete =
     currentEpisodes.length > 0 &&
     currentEpisodes.every((ep) => watchedSet.has(`${currentSeason?.season_number}-${ep.episode_number}`));
+
+  if (!isInLibrary) {
+    return null;
+  }
 
   return (
     <div className="bg-[#171C25] rounded-3xl border border-[#2B3443] p-4 sm:p-6 md:p-8 shadow-xl">

@@ -83,6 +83,32 @@ export const SWEDISH_STREAMING_PROVIDERS = [
   { id: 350, name: 'Apple TV', logo_path: '/9icYBfYFcwgCbky5VdGUIKJ4C5i.png', bg: 'bg-zinc-700' },
 ];
 
+export const NETWORK_TO_SWEDISH_PROVIDER: Record<string, { id: number; name: string; logo_path: string }> = {
+  Netflix: { id: 8, name: 'Netflix', logo_path: '/rK1KljqmbvO9HQa1PBFLILWah72.png' },
+  HBO: { id: 1899, name: 'Max', logo_path: '/skypuy7SXuugIQeYg0IglmzoKaS.png' },
+  Max: { id: 1899, name: 'Max', logo_path: '/skypuy7SXuugIQeYg0IglmzoKaS.png' },
+  'HBO Max': { id: 1899, name: 'Max', logo_path: '/skypuy7SXuugIQeYg0IglmzoKaS.png' },
+  'Disney+': { id: 337, name: 'Disney+', logo_path: '/5eZ872CghnHFLB1j8grszbrx0dx.png' },
+  Hulu: { id: 337, name: 'Disney+', logo_path: '/5eZ872CghnHFLB1j8grszbrx0dx.png' },
+  FX: { id: 337, name: 'Disney+', logo_path: '/5eZ872CghnHFLB1j8grszbrx0dx.png' },
+  'FX on Hulu': { id: 337, name: 'Disney+', logo_path: '/5eZ872CghnHFLB1j8grszbrx0dx.png' },
+  Amazon: { id: 119, name: 'Prime Video', logo_path: '/gMZdpavHmxFNnLpMHwVxfqeux2g.png' },
+  'Prime Video': { id: 119, name: 'Prime Video', logo_path: '/gMZdpavHmxFNnLpMHwVxfqeux2g.png' },
+  'Apple TV+': { id: 350, name: 'Apple TV', logo_path: '/9icYBfYFcwgCbky5VdGUIKJ4C5i.png' },
+  'Apple TV': { id: 350, name: 'Apple TV', logo_path: '/9icYBfYFcwgCbky5VdGUIKJ4C5i.png' },
+  Viaplay: { id: 76, name: 'Viaplay', logo_path: '/c1J9PGGowXwW5AxAaZaGipeFu7U.png' },
+  TV4: { id: 1944, name: 'TV4 Play', logo_path: '/8sxwkXfXhlIHkAlkZ64kTU9BNyT.png' },
+  'TV4 Play': { id: 1944, name: 'TV4 Play', logo_path: '/8sxwkXfXhlIHkAlkZ64kTU9BNyT.png' },
+  SVT: { id: 493, name: 'SVT Play', logo_path: '/vMU9xqjyIsOplkdSCRveond8fxV.png' },
+  SVT1: { id: 493, name: 'SVT Play', logo_path: '/vMU9xqjyIsOplkdSCRveond8fxV.png' },
+  SVT2: { id: 493, name: 'SVT Play', logo_path: '/vMU9xqjyIsOplkdSCRveond8fxV.png' },
+  'SVT Play': { id: 493, name: 'SVT Play', logo_path: '/vMU9xqjyIsOplkdSCRveond8fxV.png' },
+  SkyShowtime: { id: 1773, name: 'SkyShowtime', logo_path: '/ube1pVpP3FklRkeyQjlDkkC3tL2.png' },
+  Peacock: { id: 1773, name: 'SkyShowtime', logo_path: '/ube1pVpP3FklRkeyQjlDkkC3tL2.png' },
+  'Paramount+': { id: 1773, name: 'SkyShowtime', logo_path: '/ube1pVpP3FklRkeyQjlDkkC3tL2.png' },
+  Showtime: { id: 1773, name: 'SkyShowtime', logo_path: '/ube1pVpP3FklRkeyQjlDkkC3tL2.png' },
+};
+
 export async function getItemWatchProviders(mediaType: MediaType, id: number): Promise<any[]> {
   const data = await tmdbFetch<any>(`/${mediaType}/${id}/watch/providers`);
   return data?.results?.SE?.flatrate || [];
@@ -143,11 +169,14 @@ export async function getPopularShows(): Promise<MediaItem[]> {
 export function formatUpcomingDateLabel(
   dateStr?: string | null,
   type?: 'movie' | 'tv' | 'season',
-  seasonNumber?: number
+  seasonNumber?: number,
+  service?: string
 ): string {
   if (!dateStr) {
-    if (seasonNumber) return `Säsong ${seasonNumber} • Kommer snart`;
-    return 'Kommer snart';
+    if (seasonNumber) {
+      return service ? `Säsong ${seasonNumber} • ${service}` : `Säsong ${seasonNumber} • Kommer snart`;
+    }
+    return service ? `${service} • Kommer snart` : 'Kommer snart';
   }
 
   let formattedDate = dateStr;
@@ -167,7 +196,14 @@ export function formatUpcomingDateLabel(
   }
 
   if (seasonNumber) {
+    if (service) {
+      return `Säsong ${seasonNumber} • ${service} • ${formattedDate}`;
+    }
     return `Säsong ${seasonNumber} • ${formattedDate}`;
+  }
+
+  if (service) {
+    return `${service} • ${formattedDate}`;
   }
 
   return `Premiär ${formattedDate}`;
@@ -220,11 +256,15 @@ export async function getUpcomingMovies(limit = 16): Promise<MediaItem[]> {
         const dateB = new Date(b.release_date!).getTime();
         return dateA - dateB;
       })
-      .map((item) => ({
-        ...item,
-        upcoming_date: item.release_date,
-        upcoming_label: formatUpcomingDateLabel(item.release_date, 'movie'),
-      }));
+      .map((item) => {
+        const service = item.watch_providers?.[0]?.provider_name || 'Biopremiär';
+        return {
+          ...item,
+          release_service: service,
+          upcoming_date: item.release_date,
+          upcoming_label: formatUpcomingDateLabel(item.release_date, 'movie', undefined, service),
+        };
+      });
 
     if (list.length > 0) {
       return list.slice(0, limit);
@@ -259,23 +299,36 @@ export async function getUpcomingNewShows(limit = 16): Promise<MediaItem[]> {
   const results = [...(dataP1?.results || []), ...(dataP2?.results || [])];
 
   if (results.length > 0) {
-    const list = results
-      .map((item) => normalizeMediaItem({ ...item, media_type: 'tv' }))
-      // Only brand new shows whose premiere date has strictly NOT occurred yet
-      .filter((item) => {
-        if (!item.first_air_date) return false;
-        return new Date(item.first_air_date).getTime() > todayEndMs;
-      })
-      .sort((a, b) => {
-        const dateA = new Date(a.first_air_date!).getTime();
-        const dateB = new Date(b.first_air_date!).getTime();
-        return dateA - dateB;
-      })
-      .map((item) => ({
-        ...item,
-        upcoming_date: item.first_air_date,
-        upcoming_label: formatUpcomingDateLabel(item.first_air_date, 'tv'),
-      }));
+    const filtered = results.filter((item) => {
+      if (!item.first_air_date) return false;
+      return new Date(item.first_air_date).getTime() > todayEndMs;
+    });
+
+    const candidates = filtered.slice(0, limit);
+    const detailPromises = candidates.map((c) => getMediaDetails('tv', c.id));
+    const details = await Promise.all(detailPromises);
+
+    const list: MediaItem[] = candidates.map((item, idx) => {
+      const d = details[idx];
+      const norm = normalizeMediaItem({ ...item, media_type: 'tv' });
+      const service = d?.release_service || d?.watch_providers?.[0]?.provider_name;
+      const date = d?.first_air_date || item.first_air_date;
+      return {
+        ...norm,
+        overview: d?.overview || norm.overview,
+        watch_providers: d?.watch_providers && d.watch_providers.length > 0 ? d.watch_providers : norm.watch_providers,
+        networks: d?.networks,
+        release_service: service,
+        upcoming_date: date,
+        upcoming_label: formatUpcomingDateLabel(date, 'tv', undefined, service),
+      };
+    });
+
+    list.sort((a, b) => {
+      const dateA = new Date(a.first_air_date!).getTime();
+      const dateB = new Date(b.first_air_date!).getTime();
+      return dateA - dateB;
+    });
 
     if (list.length > 0) {
       return list.slice(0, limit);
@@ -356,11 +409,13 @@ export async function getUpcomingSeasons(limit = 16): Promise<MediaItem[]> {
       }
 
       if (seasonNum && airDate) {
+        const service = d.release_service || d.watch_providers?.[0]?.provider_name;
         enrichedList.push({
           ...d,
           upcoming_season: seasonNum,
           upcoming_date: airDate,
-          upcoming_label: formatUpcomingDateLabel(airDate, 'season', seasonNum),
+          release_service: service,
+          upcoming_label: formatUpcomingDateLabel(airDate, 'season', seasonNum, service),
         });
       }
     }
@@ -814,12 +869,57 @@ export async function getMediaDetails(mediaType: MediaType, id: number): Promise
       ?.slice(0, 8)
       ?.map(normalizeMediaItem) || [];
 
+    const networks = data.networks?.map((n: any) => ({
+      id: n.id,
+      name: n.name,
+      logo_path: n.logo_path || null,
+    })) || [];
+
+    let resolvedProviders = swedishProviders?.flatrate?.map((p: any) => ({
+      provider_id: p.provider_id,
+      provider_name: p.provider_name,
+      logo_path: p.logo_path,
+    })) || [];
+
+    let releaseService: string | undefined = undefined;
+
+    if (resolvedProviders.length === 0 && networks.length > 0) {
+      for (const net of networks) {
+        const matched = NETWORK_TO_SWEDISH_PROVIDER[net.name];
+        if (matched) {
+          resolvedProviders.push({
+            provider_id: matched.id,
+            provider_name: matched.name,
+            logo_path: matched.logo_path,
+          });
+          releaseService = matched.name;
+          break;
+        } else if (net.logo_path) {
+          resolvedProviders.push({
+            provider_id: net.id,
+            provider_name: net.name,
+            logo_path: net.logo_path,
+          });
+          releaseService = net.name;
+          break;
+        }
+      }
+    }
+
+    if (resolvedProviders.length > 0 && !releaseService) {
+      releaseService = resolvedProviders[0].provider_name;
+    } else if (!releaseService && mediaType === 'movie') {
+      releaseService = 'Biopremiär';
+    }
+
     return {
       id: data.id,
       title: data.title || data.name,
       original_title: data.original_title || data.original_name,
       overview: overview || 'Ingen handling tillgänglig på svenska eller engelska.',
       is_english_overview: isEnglishOverview,
+      release_service: releaseService,
+      networks: networks.length > 0 ? networks : undefined,
       poster_path: data.poster_path,
       backdrop_path: data.backdrop_path,
       media_type: mediaType,
@@ -847,11 +947,7 @@ export async function getMediaDetails(mediaType: MediaType, id: number): Promise
         })) || []
       } : undefined,
       videos: trailers.length > 0 ? trailers : undefined,
-      watch_providers: swedishProviders?.flatrate?.map((p: any) => ({
-        provider_id: p.provider_id,
-        provider_name: p.provider_name,
-        logo_path: p.logo_path,
-      })) || [],
+      watch_providers: resolvedProviders,
       streaming_info: swedishProviders ? {
         link: swedishProviders.link,
         flatrate: swedishProviders.flatrate?.map((p: any) => ({

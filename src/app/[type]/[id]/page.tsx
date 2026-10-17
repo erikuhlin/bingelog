@@ -132,6 +132,15 @@ export default async function MediaDetailPage({ params }: PageProps) {
     ? new Date(nextEpisode.air_date).getTime() >= nowMs - (1000 * 60 * 60 * 24)
     : false;
 
+  const isUpcomingSeries = media.media_type === 'tv' && (
+    (media.first_air_date ? new Date(media.first_air_date).getTime() > nowMs : false) ||
+    Boolean(upcomingSeason)
+  );
+  const isUpcomingMovie = media.media_type === 'movie' && (
+    media.release_date ? new Date(media.release_date).getTime() > nowMs : false
+  );
+  const isUpcoming = isUpcomingSeries || isUpcomingMovie;
+
   return (
     <div className="space-y-6 sm:space-y-8 md:space-y-10 pb-16 md:pb-8">
       {/* Back button */}
@@ -630,7 +639,13 @@ export default async function MediaDetailPage({ params }: PageProps) {
       )}
 
       {/* Swedish Watch Providers (Stream, Hyr, Köp) */}
-      <WatchProvidersSection providers={media.streaming_info} />
+      <WatchProvidersSection
+        providers={media.streaming_info}
+        releaseService={media.release_service}
+        networks={media.networks}
+        isUpcoming={isUpcomingSeries || isUpcomingMovie}
+        mediaType={media.media_type}
+      />
 
       {/* Episode Tracker if TV Show */}
       {media.media_type === 'tv' && media.seasons && media.seasons.length > 0 && (

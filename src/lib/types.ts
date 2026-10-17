@@ -24,6 +24,8 @@ export interface MediaItem {
   upcoming_label?: string;
   upcoming_season?: number;
   is_english_overview?: boolean;
+  release_service?: string;
+  networks?: { id: number; name: string; logo_path: string | null }[];
 }
 
 export interface PersonSearchResult {

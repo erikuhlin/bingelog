@@ -12,6 +12,10 @@ interface WatchProvidersSectionProps {
     rent?: WatchProvider[];
     buy?: WatchProvider[];
   };
+  releaseService?: string;
+  networks?: { id: number; name: string; logo_path: string | null }[];
+  isUpcoming?: boolean;
+  mediaType?: 'movie' | 'tv';
 }
 
 function ProviderItem({ p }: { p: WatchProvider }) {
@@ -39,11 +43,19 @@ function ProviderItem({ p }: { p: WatchProvider }) {
   );
 }
 
-export default function WatchProvidersSection({ providers }: WatchProvidersSectionProps) {
+export default function WatchProvidersSection({
+  providers,
+  releaseService,
+  networks,
+  isUpcoming,
+  mediaType,
+}: WatchProvidersSectionProps) {
   const stream = providers?.flatrate || [];
   const rent = providers?.rent || [];
   const buy = providers?.buy || [];
   const hasAny = stream.length > 0 || rent.length > 0 || buy.length > 0;
+
+  const displayService = releaseService || networks?.[0]?.name;
 
   return (
     <div className="p-4 md:p-5 rounded-2xl bg-[#171C25] border border-[#2B3443] shadow-lg space-y-4">
@@ -51,7 +63,7 @@ export default function WatchProvidersSection({ providers }: WatchProvidersSecti
         <div className="flex items-center gap-2">
           <Tv className="w-4 h-4 text-[#E9A23B]" />
           <h3 className="text-xs md:text-sm font-bold uppercase tracking-wider text-[#ECE9E3]">
-            Var kan man se den i Sverige?
+            {isUpcoming ? 'Var kommer den att visas?' : 'Var kan man se den i Sverige?'}
           </h3>
         </div>
         {providers?.link && (
@@ -68,12 +80,45 @@ export default function WatchProvidersSection({ providers }: WatchProvidersSecti
       </div>
 
       {!hasAny ? (
-        <div className="flex items-center gap-2.5 py-2 text-xs text-[#8D97A8]">
-          <Info className="w-4 h-4 text-[#8D97A8] flex-shrink-0" />
-          <span>
-            Finns för närvarande inte tillgänglig på de stora svenska streamingtjänsterna (eller saknar officiell streamingdata).
-          </span>
-        </div>
+        displayService && displayService !== 'Biopremiär' ? (
+          <div className="flex items-center gap-3 p-3.5 rounded-xl bg-[#E9A23B]/10 border border-[#E9A23B]/30">
+            <div className="p-2 rounded-lg bg-[#E9A23B]/20 text-[#E9A23B] flex-shrink-0">
+              <Tv className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs sm:text-sm font-bold text-[#ECE9E3]">
+                {isUpcoming ? 'Kommer att släppas på' : 'Sänds på'}{' '}
+                <span className="text-[#E9A23B]">{displayService}</span>
+              </p>
+              <p className="text-[11px] text-[#8D97A8] mt-0.5">
+                {isUpcoming
+                  ? 'Titeln har ännu inte haft premiär och visas på ovanstående streamingtjänst/kanal vid släpp.'
+                  : 'Officiell sändande plattform.'}
+              </p>
+            </div>
+          </div>
+        ) : isUpcoming && mediaType === 'movie' ? (
+          <div className="flex items-center gap-3 p-3.5 rounded-xl bg-[#1E2531] border border-[#2B3443]">
+            <div className="p-2 rounded-lg bg-[#0F1218] text-[#E9A23B] flex-shrink-0">
+              <Tv className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs sm:text-sm font-bold text-[#ECE9E3]">
+                Planerad biopremiär
+              </p>
+              <p className="text-[11px] text-[#8D97A8] mt-0.5">
+                Filmen har planerad biopremiär innan den blir tillgänglig för streaming i Sverige.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2.5 py-2 text-xs text-[#8D97A8]">
+            <Info className="w-4 h-4 text-[#8D97A8] flex-shrink-0" />
+            <span>
+              Finns för närvarande inte tillgänglig på de stora svenska streamingtjänsterna (eller saknar officiell streamingdata).
+            </span>
+          </div>
+        )
       ) : (
         <>
           {/* Stream (Abonnemang) */}

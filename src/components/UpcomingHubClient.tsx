@@ -393,15 +393,20 @@ export default function UpcomingHubClient({
                 className="relative group"
               >
                 <MediaCard item={item} />
-                {/* Countdown chip badge underneath */}
-                {item.upcoming_date && (
-                  <div className="mt-1 flex items-center justify-between text-[11px] text-[#8D97A8]">
-                    <span className="flex items-center gap-1 text-[#E9A23B] font-medium">
-                      <Clock className="w-3 h-3" />
-                      {getCountdownLabel(item.upcoming_date)}
+                {/* Countdown chip and release service badge underneath */}
+                <div className="mt-1 flex items-center justify-between text-[11px] text-[#8D97A8] gap-1">
+                  {item.upcoming_date && (
+                    <span className="flex items-center gap-1 text-[#E9A23B] font-medium truncate">
+                      <Clock className="w-3 h-3 flex-shrink-0" />
+                      <span className="truncate">{getCountdownLabel(item.upcoming_date)}</span>
                     </span>
-                  </div>
-                )}
+                  )}
+                  {item.release_service && (
+                    <span className="text-[10px] font-semibold text-[#ECE9E3] bg-[#1E2531] border border-[#2B3443] px-1.5 py-0.2 rounded truncate max-w-[100px]" title={item.release_service}>
+                      {item.release_service}
+                    </span>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -435,6 +440,12 @@ export default function UpcomingHubClient({
                       {item.upcoming_label && (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#E9A23B]/15 border border-[#E9A23B]/30 text-[#E9A23B]">
                           {item.upcoming_label}
+                        </span>
+                      )}
+                      {item.release_service && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#1E2531] border border-[#2B3443] text-[#ECE9E3] flex items-center gap-1">
+                          <Tv className="w-3 h-3 text-[#E9A23B]" />
+                          <span>{item.release_service}</span>
                         </span>
                       )}
                       {countdown && (
