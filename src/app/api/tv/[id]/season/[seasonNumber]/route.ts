@@ -47,11 +47,54 @@ export async function GET(
         return NextResponse.json({ episodes: [] });
       }
       const data = await fallbackRes.json();
+      data.is_english_overview = true;
+      if (data.episodes) {
+        data.episodes = data.episodes.map((ep: any) => ({ ...ep, is_english_overview: true }));
+      }
       seasonMemoryCache[cacheKey] = { data, timestamp: now };
       return NextResponse.json(data);
     }
 
     const data = await res.json();
+    const missingSeasonOverview = !data.overview?.trim();
+    const missingEpisodesOverview = data.episodes?.some((e: any) => !e.overview?.trim());
+
+    if (missingSeasonOverview || missingEpisodesOverview) {
+      try {
+        const fallbackRes = await fetch(
+          `https://api.themoviedb.org/3/tv/${showId}/season/${sNum}?api_key=${apiKey}&language=en-US`,
+          { next: { revalidate: 3600 * 6 } }
+        );
+        if (fallbackRes.ok) {
+          const enData = await fallbackRes.json();
+          if (missingSeasonOverview && enData.overview?.trim()) {
+            data.overview = enData.overview.trim();
+            data.is_english_overview = true;
+          }
+          if (data.episodes && enData.episodes) {
+            const enEpMap = new Map<number, any>(
+              enData.episodes.map((ep: any) => [ep.episode_number, ep])
+            );
+            data.episodes = data.episodes.map((ep: any) => {
+              if (!ep.overview?.trim()) {
+                const enEp = enEpMap.get(ep.episode_number);
+                if (enEp?.overview?.trim()) {
+                  return {
+                    ...ep,
+                    overview: enEp.overview.trim(),
+                    is_english_overview: true,
+                  };
+                }
+              }
+              return ep;
+            });
+          }
+        }
+      } catch (err) {
+        console.warn(`Error fetching English fallback for show ${showId} s${sNum}:`, err);
+      }
+    }
+
     seasonMemoryCache[cacheKey] = { data, timestamp: now };
     return NextResponse.json(data);
   } catch (err) {

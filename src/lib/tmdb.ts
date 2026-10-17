@@ -173,17 +173,22 @@ export function formatUpcomingDateLabel(
   return `Premiär ${formattedDate}`;
 }
 
-export async function getUpcomingMovies(): Promise<MediaItem[]> {
+export async function getUpcomingMovies(limit = 16): Promise<MediaItem[]> {
   const now = new Date();
   const today = now.toISOString().split('T')[0];
   const todayEndMs = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
 
-  const data = await tmdbFetch<{ results: any[] }>('/movie/upcoming', {
+  const fetchP1 = tmdbFetch<{ results: any[] }>('/movie/upcoming', {
     page: 1,
     region: 'SE',
   });
+  const fetchP2 = limit > 16 ? tmdbFetch<{ results: any[] }>('/movie/upcoming', {
+    page: 2,
+    region: 'SE',
+  }) : Promise.resolve(null);
 
-  let results = data?.results || [];
+  const [dataP1, dataP2] = await Promise.all([fetchP1, fetchP2]);
+  let results = [...(dataP1?.results || []), ...(dataP2?.results || [])];
 
   if (results.length < 6) {
     const discoverData = await tmdbFetch<{ results: any[] }>('/discover/movie', {
@@ -222,30 +227,39 @@ export async function getUpcomingMovies(): Promise<MediaItem[]> {
       }));
 
     if (list.length > 0) {
-      return list.slice(0, 16);
+      return list.slice(0, limit);
     }
   }
 
   return MOCK_UPCOMING_MOVIES.filter((item) => {
     if (!item.upcoming_date) return false;
     return new Date(item.upcoming_date).getTime() > todayEndMs;
-  });
+  }).slice(0, limit);
 }
 
-export async function getUpcomingNewShows(): Promise<MediaItem[]> {
+export async function getUpcomingNewShows(limit = 16): Promise<MediaItem[]> {
   const now = new Date();
   const today = now.toISOString().split('T')[0];
   const todayEndMs = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
 
-  const data = await tmdbFetch<{ results: any[] }>('/discover/tv', {
+  const fetchP1 = tmdbFetch<{ results: any[] }>('/discover/tv', {
     'first_air_date.gte': today,
     without_genres: '10763,10767,10764,10766',
     sort_by: 'popularity.desc',
     page: 1,
   });
+  const fetchP2 = limit > 16 ? tmdbFetch<{ results: any[] }>('/discover/tv', {
+    'first_air_date.gte': today,
+    without_genres: '10763,10767,10764,10766',
+    sort_by: 'popularity.desc',
+    page: 2,
+  }) : Promise.resolve(null);
 
-  if (data?.results && data.results.length > 0) {
-    const list = data.results
+  const [dataP1, dataP2] = await Promise.all([fetchP1, fetchP2]);
+  const results = [...(dataP1?.results || []), ...(dataP2?.results || [])];
+
+  if (results.length > 0) {
+    const list = results
       .map((item) => normalizeMediaItem({ ...item, media_type: 'tv' }))
       // Only brand new shows whose premiere date has strictly NOT occurred yet
       .filter((item) => {
@@ -264,33 +278,44 @@ export async function getUpcomingNewShows(): Promise<MediaItem[]> {
       }));
 
     if (list.length > 0) {
-      return list.slice(0, 16);
+      return list.slice(0, limit);
     }
   }
 
   return MOCK_UPCOMING_NEW_SHOWS.filter((item) => {
     if (!item.upcoming_date) return false;
     return new Date(item.upcoming_date).getTime() > todayEndMs;
-  });
+  }).slice(0, limit);
 }
 
-export async function getUpcomingSeasons(): Promise<MediaItem[]> {
+export async function getUpcomingSeasons(limit = 16): Promise<MediaItem[]> {
   const now = new Date();
   const today = now.toISOString().split('T')[0];
   const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   const todayEndMs = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
 
   // Discover returning shows, excluding daily soaps, news, talk shows, reality
-  const data = await tmdbFetch<{ results: any[] }>('/discover/tv', {
+  const fetchP1 = tmdbFetch<{ results: any[] }>('/discover/tv', {
     'air_date.gte': today,
     'first_air_date.lte': yesterday,
     without_genres: '10763,10767,10764,10766',
     sort_by: 'popularity.desc',
     page: 1,
   });
+  const fetchP2 = limit > 16 ? tmdbFetch<{ results: any[] }>('/discover/tv', {
+    'air_date.gte': today,
+    'first_air_date.lte': yesterday,
+    without_genres: '10763,10767,10764,10766',
+    sort_by: 'popularity.desc',
+    page: 2,
+  }) : Promise.resolve(null);
 
-  if (data?.results && data.results.length > 0) {
-    const candidates = data.results.slice(0, 25);
+  const [dataP1, dataP2] = await Promise.all([fetchP1, fetchP2]);
+  const results = [...(dataP1?.results || []), ...(dataP2?.results || [])];
+
+  if (results.length > 0) {
+    const candidateLimit = limit > 16 ? 40 : 25;
+    const candidates = results.slice(0, candidateLimit);
     const enrichedList: MediaItem[] = [];
 
     // Fetch details to find exact upcoming season
@@ -346,14 +371,14 @@ export async function getUpcomingSeasons(): Promise<MediaItem[]> {
         const dateB = b.upcoming_date ? new Date(b.upcoming_date).getTime() : Infinity;
         return dateA - dateB;
       });
-      return enrichedList.slice(0, 16);
+      return enrichedList.slice(0, limit);
     }
   }
 
   return MOCK_UPCOMING_SEASONS.filter((item) => {
     if (!item.upcoming_date) return false;
     return new Date(item.upcoming_date).getTime() > todayEndMs;
-  });
+  }).slice(0, limit);
 }
 
 export async function discoverMedia(filters: import('./types').DiscoverFilters): Promise<MediaItem[]> {
@@ -709,10 +734,45 @@ export async function getPersonCombinedCredits(personId: number): Promise<MediaI
 export async function getMediaDetails(mediaType: MediaType, id: number): Promise<MediaDetail | null> {
   const endpoint = `/${mediaType}/${id}`;
   const data = await tmdbFetch<any>(endpoint, {
-    append_to_response: 'credits,videos,watch/providers,recommendations',
+    append_to_response: 'credits,videos,watch/providers,recommendations,translations',
   });
 
   if (data) {
+    let overview = data.overview?.trim() || '';
+    let isEnglishOverview = false;
+    let tagline = data.tagline?.trim() || '';
+
+    // Check if overview exists in requested language (sv-SE).
+    // If not, find English overview from translations or fallback fetch
+    const englishTranslation = data.translations?.translations?.find(
+      (t: any) => t.iso_639_1 === 'en'
+    );
+
+    if (!overview && englishTranslation?.data?.overview?.trim()) {
+      overview = englishTranslation.data.overview.trim();
+      isEnglishOverview = true;
+    }
+
+    if (!tagline && englishTranslation?.data?.tagline?.trim()) {
+      tagline = englishTranslation.data.tagline.trim();
+    }
+
+    // If still no overview, fallback fetch directly with language: 'en-US'
+    if (!overview) {
+      try {
+        const enData = await tmdbFetch<any>(endpoint, { language: 'en-US' });
+        if (enData?.overview?.trim()) {
+          overview = enData.overview.trim();
+          isEnglishOverview = true;
+        }
+        if (!tagline && enData?.tagline?.trim()) {
+          tagline = enData.tagline.trim();
+        }
+      } catch {
+        // ignore fallback failure
+      }
+    }
+
     const swedishProviders = data['watch/providers']?.results?.SE;
     const trailers = data.videos?.results?.filter(
       (v: any) => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser')
@@ -758,7 +818,8 @@ export async function getMediaDetails(mediaType: MediaType, id: number): Promise
       id: data.id,
       title: data.title || data.name,
       original_title: data.original_title || data.original_name,
-      overview: data.overview || 'Ingen beskrivning tillgänglig på svenska.',
+      overview: overview || 'Ingen handling tillgänglig på svenska eller engelska.',
+      is_english_overview: isEnglishOverview,
       poster_path: data.poster_path,
       backdrop_path: data.backdrop_path,
       media_type: mediaType,
@@ -768,7 +829,7 @@ export async function getMediaDetails(mediaType: MediaType, id: number): Promise
       vote_count: data.vote_count || 0,
       genres: data.genres || [],
       origin_country: data.origin_country || [],
-      tagline: data.tagline,
+      tagline: tagline || undefined,
       status: data.status,
       runtime: data.runtime,
       number_of_seasons: data.number_of_seasons,
@@ -856,15 +917,51 @@ export async function getMediaDetails(mediaType: MediaType, id: number): Promise
 export async function getSeasonDetails(showId: number, seasonNumber: number): Promise<Season | null> {
   const data = await tmdbFetch<any>(`/tv/${showId}/season/${seasonNumber}`);
   if (data) {
+    let overview = data.overview?.trim() || '';
+    let isEnglishOverview = false;
+    let episodes = data.episodes || [];
+
+    // Fallback missing overviews to English
+    if (!overview || episodes.some((ep: any) => !ep.overview?.trim())) {
+      try {
+        const enData = await tmdbFetch<any>(`/tv/${showId}/season/${seasonNumber}`, { language: 'en-US' });
+        if (enData) {
+          if (!overview && enData.overview?.trim()) {
+            overview = enData.overview.trim();
+            isEnglishOverview = true;
+          }
+          if (enData.episodes) {
+            const enEpMap = new Map(enData.episodes.map((ep: any) => [ep.episode_number, ep]));
+            episodes = episodes.map((ep: any) => {
+              if (!ep.overview?.trim()) {
+                const enEp: any = enEpMap.get(ep.episode_number);
+                if (enEp?.overview?.trim()) {
+                  return {
+                    ...ep,
+                    overview: enEp.overview.trim(),
+                    is_english_overview: true,
+                  };
+                }
+              }
+              return ep;
+            });
+          }
+        }
+      } catch {
+        // ignore fallback failure
+      }
+    }
+
     return {
       id: data.id,
       season_number: data.season_number,
       name: data.name,
-      overview: data.overview,
+      overview,
       poster_path: data.poster_path,
       air_date: data.air_date,
-      episode_count: data.episodes?.length || 0,
-      episodes: data.episodes?.map((ep: any) => ({
+      episode_count: episodes.length,
+      is_english_overview: isEnglishOverview,
+      episodes: episodes.map((ep: any) => ({
         id: ep.id,
         episode_number: ep.episode_number,
         season_number: ep.season_number,
@@ -874,6 +971,7 @@ export async function getSeasonDetails(showId: number, seasonNumber: number): Pr
         still_path: ep.still_path,
         vote_average: ep.vote_average,
         runtime: ep.runtime,
+        is_english_overview: ep.is_english_overview,
       })),
     };
   }

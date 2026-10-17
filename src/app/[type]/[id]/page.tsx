@@ -9,6 +9,7 @@ import WatchProvidersSection from '@/components/WatchProvidersSection';
 import MediaActionsBar from '@/components/MediaActionsBar';
 import MediaCard from '@/components/MediaCard';
 import DetailBackButton from '@/components/DetailBackButton';
+import OverviewSection from '@/components/OverviewSection';
 
 const LANGUAGE_NAMES: Record<string, string> = {
   en: 'Engelska',
@@ -360,14 +361,12 @@ export default async function MediaDetailPage({ params }: PageProps) {
               )}
 
               {/* Handling (Overview) - Fills the central desktop canvas */}
-              <div className="pt-2">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[#8D97A8] mb-1.5">
-                  Handling
-                </h3>
-                <p className="text-[#ECE9E3]/90 text-sm lg:text-base leading-relaxed max-w-3xl">
-                  {media.overview || 'Ingen handling tillgänglig på svenska.'}
-                </p>
-              </div>
+              <OverviewSection
+                overview={media.overview}
+                isEnglish={media.is_english_overview}
+                className="pt-2"
+                textSize="text-sm lg:text-base"
+              />
 
               {/* Quick Facts Strip */}
               <div className="pt-3 border-t border-[#2B3443]/70 grid grid-cols-2 lg:grid-cols-4 gap-2.5 max-w-2xl">
@@ -532,14 +531,13 @@ export default async function MediaDetailPage({ params }: PageProps) {
             </div>
 
             {/* Handling on Mobile */}
-            <div className="pt-2 border-t border-[#2B3443]/70">
-              <h3 className="text-[11px] font-bold uppercase tracking-wider text-[#8D97A8] mb-1">
-                Handling
-              </h3>
-              <p className="text-[#ECE9E3] text-xs sm:text-sm leading-relaxed">
-                {media.overview || 'Ingen handling tillgänglig på svenska.'}
-              </p>
-            </div>
+            <OverviewSection
+              overview={media.overview}
+              isEnglish={media.is_english_overview}
+              className="pt-2 border-t border-[#2B3443]/70"
+              textSize="text-xs sm:text-sm"
+              compactHeading
+            />
 
             {/* Quick Facts Chips on Mobile */}
             <div className="grid grid-cols-2 gap-2 pt-1">

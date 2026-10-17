@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Film, Tv, Bookmark, Search, Sparkles, UserPlus } from 'lucide-react';
+import { Film, Tv, Bookmark, Search, Sparkles, UserPlus, Calendar } from 'lucide-react';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import UserMenu from './UserMenu';
@@ -33,6 +33,7 @@ export default function Navbar() {
     { href: '/', label: 'Utforska', icon: Sparkles },
     { href: '/movies', label: 'Filmer', icon: Film },
     { href: '/shows', label: 'Serier', icon: Tv },
+    { href: '/upcoming', label: 'Kommande', icon: Calendar },
     { href: '/library', label: 'Mitt bibliotek', icon: Bookmark },
   ];
 
@@ -45,6 +46,9 @@ export default function Navbar() {
     }
     if (href === '/shows') {
       return pathname === '/shows' || pathname.startsWith('/tv/');
+    }
+    if (href === '/upcoming') {
+      return pathname === '/upcoming' || pathname.startsWith('/upcoming/');
     }
     if (href === '/library') {
       return pathname === '/library' || pathname.startsWith('/library/');

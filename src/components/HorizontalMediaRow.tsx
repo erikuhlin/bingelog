@@ -9,6 +9,7 @@ import MediaCard from './MediaCard';
 interface HorizontalMediaRowProps {
   title: string;
   description?: string;
+  badge?: string;
   iconType?: 'film' | 'tv' | 'sparkles' | 'calendar' | 'clock';
   iconColor?: string;
   items: MediaItem[];
@@ -21,6 +22,7 @@ interface HorizontalMediaRowProps {
 export default function HorizontalMediaRow({
   title,
   description,
+  badge,
   iconType,
   iconColor = 'text-[#E9A23B]',
   items,
@@ -60,11 +62,16 @@ export default function HorizontalMediaRow({
       {/* Header */}
       <div className="flex items-center justify-between mb-3 sm:mb-4 gap-2 min-w-0">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
             {IconComponent && <IconComponent className={`w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 ${iconColor}`} />}
             <h2 className="text-base sm:text-xl md:text-2xl font-bold text-[#ECE9E3] tracking-tight truncate">
               {title}
             </h2>
+            {badge && (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#E9A23B]/15 border border-[#E9A23B]/30 text-[#E9A23B]">
+                {badge}
+              </span>
+            )}
           </div>
           {description && (
             <p className="text-xs text-[#8D97A8] mt-0.5 truncate">{description}</p>

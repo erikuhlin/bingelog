@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useRef, useMemo } from 'react';
-import { Calendar, ChevronLeft, ChevronRight, Sparkles, Tv, Layers } from 'lucide-react';
+import Link from 'next/link';
+import { Calendar, ChevronLeft, ChevronRight, Sparkles, Tv, Layers, ArrowRight } from 'lucide-react';
 import { MediaItem } from '@/lib/types';
 import MediaCard from './MediaCard';
 
@@ -168,6 +169,15 @@ export default function UpcomingShowsSection({
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
+
+          {/* Visa alla kommande link */}
+          <Link
+            href={`/upcoming?tab=${activeTab === 'seasons' ? 'seasons' : activeTab === 'new_shows' ? 'new_shows' : 'shows'}`}
+            className="text-xs font-semibold text-[#E9A23B] hover:text-[#F2B04E] flex items-center gap-1 transition-colors whitespace-nowrap flex-shrink-0"
+          >
+            <span>Visa alla</span>
+            <ArrowRight className="w-3.5 h-3.5 flex-shrink-0" />
+          </Link>
         </div>
       </div>
 

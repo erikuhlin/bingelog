@@ -23,6 +23,7 @@ export interface MediaItem {
   upcoming_date?: string | null;
   upcoming_label?: string;
   upcoming_season?: number;
+  is_english_overview?: boolean;
 }
 
 export interface PersonSearchResult {
@@ -92,6 +93,7 @@ export interface Episode {
   still_path: string | null;
   vote_average: number;
   runtime?: number;
+  is_english_overview?: boolean;
 }
 
 export interface Season {
@@ -103,6 +105,7 @@ export interface Season {
   air_date: string | null;
   episode_count: number;
   episodes?: Episode[];
+  is_english_overview?: boolean;
 }
 
 export interface WatchProvider {
