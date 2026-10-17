@@ -3,6 +3,7 @@ import { getTrendingMedia, getPopularMovies, getPopularShows } from '@/lib/tmdb'
 import HeroCarousel from '@/components/HeroCarousel';
 import HorizontalMediaRow from '@/components/HorizontalMediaRow';
 import ContinueWatchingSection from '@/components/ContinueWatchingSection';
+import ForYouSection from '@/components/ForYouSection';
 import ExploreFeed from '@/components/ExploreFeed';
 import { MediaItem } from '@/lib/types';
 
@@ -32,7 +33,10 @@ export default async function HomePage() {
       {/* 2. "Tittar på" - Active Series with progress bar for user */}
       <ContinueWatchingSection />
 
-      {/* 3. Dedicated Horizontal Carousel for "Trendar i veckan" (#6–#20) */}
+      {/* 3. "För dig" - Personalized Recommendations (Only for logged in users) */}
+      <ForYouSection />
+
+      {/* 4. Dedicated Horizontal Carousel for "Trendar i veckan" (#6–#20) */}
       {trendingList.length > 0 && (
         <HorizontalMediaRow
           title="Trendar i veckan"

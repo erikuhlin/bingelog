@@ -19,8 +19,8 @@ export default function UpcomingShowsSection({
 }: UpcomingShowsSectionProps) {
   const rowRef = useRef<HTMLDivElement>(null);
 
-  // Default to seasons if available, else new shows
-  const defaultTab: UpcomingTab = upcomingSeasons.length > 0 ? 'seasons' : 'new_shows';
+  // Default to all
+  const defaultTab: UpcomingTab = 'all';
   const [activeTab, setActiveTab] = useState<UpcomingTab>(defaultTab);
 
   // Combine both for "Alla"

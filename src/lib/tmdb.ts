@@ -37,7 +37,7 @@ function getApiKey(): string | null {
   return process.env.TMDB_API_KEY || process.env.NEXT_PUBLIC_TMDB_API_KEY || null;
 }
 
-async function tmdbFetch<T>(endpoint: string, params: Record<string, string | number> = {}): Promise<T | null> {
+export async function tmdbFetch<T>(endpoint: string, params: Record<string, string | number> = {}): Promise<T | null> {
   const apiKey = getApiKey();
   if (!apiKey) {
     return null;
@@ -994,7 +994,7 @@ export async function getGenres(): Promise<{ id: number; name: string }[]> {
   return MOCK_GENRES;
 }
 
-function normalizeMediaItem(item: any): MediaItem {
+export function normalizeMediaItem(item: any): MediaItem {
   return {
     id: item.id,
     title: item.title || item.name,

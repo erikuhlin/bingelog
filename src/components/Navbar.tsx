@@ -7,6 +7,7 @@ import { Film, Tv, Bookmark, Search, Sparkles, UserPlus, Calendar } from 'lucide
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import UserMenu from './UserMenu';
+import NotificationBell from './NotificationBell';
 import AuthModal from './AuthModal';
 import BrandLogo from './BrandLogo';
 import SearchOverlay from './SearchOverlay';
@@ -136,7 +137,10 @@ export default function Navbar() {
             {!authLoading && (
               <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                 {user ? (
-                  <UserMenu />
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <NotificationBell />
+                    <UserMenu />
+                  </div>
                 ) : (
                   <div className="flex items-center gap-1.5">
                     <button
