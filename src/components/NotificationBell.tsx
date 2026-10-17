@@ -103,12 +103,31 @@ export default function NotificationBell() {
 
   if (!user) return null;
 
-  const unreadCount = notifications.filter((n) => !readIds.has(n.id)).length;
+  const activeNotifications = notifications.filter((n) => !readIds.has(n.id));
+  const unreadCount = activeNotifications.length;
 
   const handleNotificationClick = (item: ReleaseNotification) => {
     markAsRead(item.id);
     setIsOpen(false);
     router.push(`/${item.media_type}/${item.tmdb_id}`);
+  };
+
+  const formatDisplayDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    try {
+      const parts = dateStr.split('-');
+      if (parts.length === 3) {
+        const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        return d.toLocaleDateString('sv-SE', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+        });
+      }
+      return dateStr;
+    } catch {
+      return dateStr;
+    }
   };
 
   return (
@@ -138,7 +157,7 @@ export default function NotificationBell() {
               <h3 className="text-sm font-bold text-[#ECE9E3]">Premiärnotiser</h3>
               {unreadCount > 0 && (
                 <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-[#E9A23B]/20 text-[#E9A23B]">
-                  {unreadCount} nya
+                  {unreadCount} {unreadCount === 1 ? 'ny' : 'nya'}
                 </span>
               )}
             </div>
@@ -156,48 +175,73 @@ export default function NotificationBell() {
 
           {/* Notification List */}
           <div className="max-h-80 overflow-y-auto divide-y divide-[#2B3443]/50">
-            {notifications.length > 0 ? (
-              notifications.map((item) => {
-                const isUnread = !readIds.has(item.id);
+            {activeNotifications.length > 0 ? (
+              activeNotifications.map((item) => {
+                const isUpcoming = new Date(item.release_date).getTime() > Date.now();
+                const isNewSeason = item.season_number && item.season_number > 1;
+
                 return (
-                  <button
+                  <div
                     key={item.id}
-                    type="button"
                     onClick={() => handleNotificationClick(item)}
-                    className={`w-full text-left p-3 sm:p-3.5 flex items-start gap-3 transition-colors hover:bg-[#1E2531]/80 cursor-pointer ${
-                      isUnread ? 'bg-[#E9A23B]/5' : ''
-                    }`}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        handleNotificationClick(item);
+                      }
+                    }}
+                    className="w-full text-left p-3 sm:p-3.5 flex items-start gap-3 transition-colors hover:bg-[#1E2531]/80 cursor-pointer bg-[#E9A23B]/5 group"
                   >
                     {/* Poster thumbnail */}
                     <div className="w-10 sm:w-12 aspect-[2/3] rounded-lg overflow-hidden bg-[#0F1218] border border-[#2B3443] flex-shrink-0">
                       <img
                         src={getImageUrl(item.poster_path, 'w300')}
                         alt={item.title}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     </div>
 
                     {/* Content */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 mb-0.5">
-                        <span className="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase tracking-wider bg-[#E9A23B]/20 text-[#E9A23B]">
-                          Premiär!
+                        <span
+                          className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase tracking-wider ${
+                            isUpcoming
+                              ? 'bg-blue-500/20 text-blue-400'
+                              : isNewSeason
+                              ? 'bg-purple-500/20 text-purple-300'
+                              : 'bg-[#E9A23B]/20 text-[#E9A23B]'
+                          }`}
+                        >
+                          {isUpcoming ? 'Kommande' : isNewSeason ? 'Ny säsong' : 'Premiär!'}
                         </span>
                         <span className="text-[10px] text-[#8D97A8]">
-                          {item.release_date}
+                          {formatDisplayDate(item.release_date)}
                         </span>
-                        {isUnread && (
-                          <span className="w-2 h-2 rounded-full bg-[#E9A23B] ml-auto flex-shrink-0" />
-                        )}
                       </div>
                       <p className="text-xs font-bold text-[#ECE9E3] truncate">
                         {item.title}
                       </p>
-                      <p className="text-[11px] text-[#8D97A8] mt-0.5 line-clamp-2">
+                      <p className="text-[11px] text-[#8D97A8] mt-0.5 line-clamp-2 leading-relaxed">
                         {item.message}
                       </p>
                     </div>
-                  </button>
+
+                    {/* Dismiss / Mark as read button */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        markAsRead(item.id);
+                      }}
+                      className="p-1 -mr-1 rounded-lg text-[#8D97A8] hover:text-[#ECE9E3] hover:bg-[#2B3443] transition-colors flex-shrink-0 cursor-pointer"
+                      title="Markera som läst"
+                      aria-label="Markera som läst"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 );
               })
             ) : (
@@ -206,8 +250,8 @@ export default function NotificationBell() {
                 <p className="text-xs font-semibold text-[#ECE9E3]">
                   Inga nya premiärnotiser
                 </p>
-                <p className="text-[11px] text-[#8D97A8] mt-1">
-                  När kommande filmer eller serier som du lagt till i ditt bibliotek släpps dyker de upp här!
+                <p className="text-[11px] text-[#8D97A8] mt-1 max-w-[240px] mx-auto leading-relaxed">
+                  När filmer eller serier i ditt bibliotek släpps eller får nya säsonger dyker de upp här!
                 </p>
               </div>
             )}
