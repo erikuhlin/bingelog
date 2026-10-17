@@ -10,6 +10,7 @@ import MediaActionsBar from '@/components/MediaActionsBar';
 import MediaCard from '@/components/MediaCard';
 import DetailBackButton from '@/components/DetailBackButton';
 import OverviewSection from '@/components/OverviewSection';
+import DetailTrailerPlayer from '@/components/DetailTrailerPlayer';
 
 const LANGUAGE_NAMES: Record<string, string> = {
   en: 'Engelska',
@@ -235,6 +236,24 @@ export default async function MediaDetailPage({ params }: PageProps) {
                   </span>
                 )}
 
+                {media.imdb_rating && media.imdb_rating > 0 && (
+                  <a
+                    href={media.imdb_id ? `https://www.imdb.com/title/${media.imdb_id}` : undefined}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Se betyg på IMDb"
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#171C25] border border-[#F5C518]/30 hover:border-[#F5C518] text-xs font-bold transition-all group cursor-pointer shadow-sm"
+                  >
+                    <span className="px-1.5 py-0.5 rounded bg-[#F5C518] text-black font-black text-[10px] tracking-tight leading-none">
+                      IMDb
+                    </span>
+                    <span className="text-[#ECE9E3] font-bold group-hover:text-[#F5C518] transition-colors">
+                      {media.imdb_rating.toFixed(1)}
+                    </span>
+                    <span className="text-[#8D97A8] font-normal text-[11px]">/10</span>
+                  </a>
+                )}
+
                 {media.status && STATUS_NAMES[media.status] && (
                   <span className="px-2.5 py-1 rounded-full bg-[#1E2531] border border-[#2B3443] text-xs font-medium text-[#8D97A8]">
                     {STATUS_NAMES[media.status]}
@@ -359,12 +378,14 @@ export default async function MediaDetailPage({ params }: PageProps) {
               {media.genres && media.genres.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
                   {media.genres.map((genre) => (
-                    <span
+                    <Link
                       key={genre.id}
-                      className="px-2.5 py-1 rounded-xl bg-[#1E2531] border border-[#2B3443] text-xs text-[#8D97A8] font-medium hover:text-[#ECE9E3] transition-colors"
+                      href={`/search?genre=${genre.id}&type=${media.media_type}`}
+                      className="px-2.5 py-1 rounded-xl bg-[#1E2531] border border-[#2B3443] text-xs text-[#8D97A8] font-medium hover:text-[#ECE9E3] hover:border-[#E9A23B]/60 hover:bg-[#1E2531]/80 transition-all cursor-pointer"
+                      title={`Utforska titlar inom ${genre.name.toLowerCase()}`}
                     >
                       {genre.name}
-                    </span>
+                    </Link>
                   ))}
                 </div>
               )}
@@ -400,6 +421,14 @@ export default async function MediaDetailPage({ params }: PageProps) {
                     <span className="text-[10px] uppercase font-semibold text-[#8D97A8] block">Premiär</span>
                     <span className="text-xs font-bold text-[#ECE9E3]">
                       {formatSwedishDate(media.release_date || media.first_air_date)}
+                    </span>
+                  </div>
+                )}
+                {media.imdb_rating && (
+                  <div className="p-2.5 rounded-xl bg-[#0F1218]/50 border border-[#2B3443]/60">
+                    <span className="text-[10px] uppercase font-semibold text-[#8D97A8] block">IMDb</span>
+                    <span className="text-xs font-bold text-[#F5C518]">
+                      {media.imdb_rating.toFixed(1)} / 10
                     </span>
                   </div>
                 )}
@@ -450,6 +479,22 @@ export default async function MediaDetailPage({ params }: PageProps) {
                       <Star className="w-3 h-3 fill-[#E9A23B]" />
                       <span>{media.vote_average.toFixed(1)}</span>
                     </span>
+                  )}
+                  {media.imdb_rating && media.imdb_rating > 0 && (
+                    <a
+                      href={media.imdb_id ? `https://www.imdb.com/title/${media.imdb_id}` : undefined}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Se betyg på IMDb"
+                      className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#171C25] border border-[#F5C518]/40 text-[10px] font-bold transition-all"
+                    >
+                      <span className="px-1 py-0.2 rounded bg-[#F5C518] text-black font-black text-[9px] tracking-tight leading-none">
+                        IMDb
+                      </span>
+                      <span className="text-[#ECE9E3] font-bold">
+                        {media.imdb_rating.toFixed(1)}
+                      </span>
+                    </a>
                   )}
                 </div>
 
@@ -514,13 +559,15 @@ export default async function MediaDetailPage({ params }: PageProps) {
                 {/* Genres */}
                 {media.genres && media.genres.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
-                    {media.genres.slice(0, 3).map((genre) => (
-                      <span
+                    {media.genres.slice(0, 4).map((genre) => (
+                      <Link
                         key={genre.id}
-                        className="px-2 py-0.5 rounded-md bg-[#1E2531] border border-[#2B3443] text-[10px] text-[#8D97A8] font-medium"
+                        href={`/search?genre=${genre.id}&type=${media.media_type}`}
+                        className="px-2 py-0.5 rounded-md bg-[#1E2531] border border-[#2B3443] text-[10px] text-[#8D97A8] font-medium hover:text-[#ECE9E3] hover:border-[#E9A23B]/60 transition-colors"
+                        title={`Utforska titlar inom ${genre.name.toLowerCase()}`}
                       >
                         {genre.name}
-                      </span>
+                      </Link>
                     ))}
                   </div>
                 )}
@@ -564,6 +611,12 @@ export default async function MediaDetailPage({ params }: PageProps) {
                   <span className="text-xs font-bold text-[#ECE9E3]">
                     {LANGUAGE_NAMES[media.original_language] || media.original_language.toUpperCase()}
                   </span>
+                </div>
+              )}
+              {media.imdb_rating && (
+                <div className="p-2 rounded-xl bg-[#0F1218]/60 border border-[#2B3443]/60">
+                  <span className="text-[9px] uppercase font-semibold text-[#8D97A8] block">IMDb</span>
+                  <span className="text-xs font-bold text-[#F5C518]">{media.imdb_rating.toFixed(1)} / 10</span>
                 </div>
               )}
               {media.runtime ? (
@@ -658,6 +711,14 @@ export default async function MediaDetailPage({ params }: PageProps) {
             seasons={media.seasons}
           />
         </section>
+      )}
+
+      {/* Official Trailer Section */}
+      {media.videos && media.videos.length > 0 && (
+        <DetailTrailerPlayer
+          videos={media.videos}
+          title={media.title}
+        />
       )}
 
       {/* Regi & Manus Section */}

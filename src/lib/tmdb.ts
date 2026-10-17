@@ -786,10 +786,50 @@ export async function getPersonCombinedCredits(personId: number): Promise<MediaI
   return grouped.all;
 }
 
+export async function fetchImdbRating(imdbId: string, mediaType: MediaType = 'movie'): Promise<number | null> {
+  if (!imdbId) return null;
+
+  // 1. If OMDB API key is configured
+  const omdbKey = process.env.OMDB_API_KEY;
+  if (omdbKey) {
+    try {
+      const res = await fetch(`https://www.omdbapi.com/?i=${imdbId}&apikey=${omdbKey}`, {
+        next: { revalidate: 86400 },
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const val = parseFloat(json.imdbRating);
+        if (!isNaN(val) && val > 0) return val;
+      }
+    } catch {
+      // fallback to Cinemeta
+    }
+  }
+
+  // 2. Cinemeta (free public API powered by Stremio, mirrors IMDb scores)
+  try {
+    const typeSegment = mediaType === 'tv' ? 'series' : 'movie';
+    const res = await fetch(`https://v3-cinemeta.strem.io/meta/${typeSegment}/${imdbId}.json`, {
+      next: { revalidate: 86400 },
+    });
+    if (res.ok) {
+      const json = await res.json();
+      const ratingRaw = json.meta?.imdbRating;
+      const val = typeof ratingRaw === 'number' ? ratingRaw : parseFloat(ratingRaw);
+      if (!isNaN(val) && val > 0) return val;
+    }
+  } catch {
+    // ignore
+  }
+
+  return null;
+}
+
 export async function getMediaDetails(mediaType: MediaType, id: number): Promise<MediaDetail | null> {
   const endpoint = `/${mediaType}/${id}`;
   const data = await tmdbFetch<any>(endpoint, {
-    append_to_response: 'credits,videos,watch/providers,recommendations,translations',
+    append_to_response: 'credits,videos,watch/providers,recommendations,translations,external_ids',
+    include_video_language: 'sv,en,null',
   });
 
   if (data) {
@@ -829,9 +869,78 @@ export async function getMediaDetails(mediaType: MediaType, id: number): Promise
     }
 
     const swedishProviders = data['watch/providers']?.results?.SE;
-    const trailers = data.videos?.results?.filter(
-      (v: any) => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser')
+
+    // Filter and sort trailers
+    let trailers = data.videos?.results?.filter(
+      (v: any) => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser' || v.type === 'Clip')
     ) || [];
+
+    if (trailers.length === 0) {
+      try {
+        const enVideos = await tmdbFetch<any>(`/${mediaType}/${id}/videos`, { language: 'en-US' });
+        const fallbackTrailers = enVideos?.results?.filter(
+          (v: any) => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser' || v.type === 'Clip')
+        ) || [];
+        if (fallbackTrailers.length > 0) {
+          trailers = fallbackTrailers;
+        }
+      } catch {
+        // ignore fallback failure
+      }
+    }
+
+    const imdbId: string | null = data.external_ids?.imdb_id || data.imdb_id || null;
+    let imdbRating: number | null = null;
+
+    if (imdbId) {
+      imdbRating = await fetchImdbRating(imdbId, mediaType);
+
+      // Fallback trailer from Cinemeta if TMDb had 0 trailers
+      if (trailers.length === 0) {
+        try {
+          const typeSegment = mediaType === 'tv' ? 'series' : 'movie';
+          const cinRes = await fetch(`https://v3-cinemeta.strem.io/meta/${typeSegment}/${imdbId}.json`, {
+            next: { revalidate: 86400 },
+          });
+          if (cinRes.ok) {
+            const cinJson = await cinRes.json();
+            const cinTrailers = cinJson.meta?.trailers;
+            if (Array.isArray(cinTrailers) && cinTrailers.length > 0) {
+              cinTrailers.forEach((ct: any) => {
+                if (ct.source) {
+                  trailers.push({
+                    id: ct.source,
+                    key: ct.source,
+                    name: `${data.title || data.name} Trailer`,
+                    site: 'YouTube',
+                    type: 'Trailer',
+                  });
+                }
+              });
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
+
+    // Sort trailers: Swedish first, Trailer before Teaser/Clip, official first
+    trailers.sort((a: any, b: any) => {
+      const aIsSv = a.iso_639_1 === 'sv' ? 1 : 0;
+      const bIsSv = b.iso_639_1 === 'sv' ? 1 : 0;
+      if (aIsSv !== bIsSv) return bIsSv - aIsSv;
+
+      const aIsTrailer = a.type === 'Trailer' ? 1 : 0;
+      const bIsTrailer = b.type === 'Trailer' ? 1 : 0;
+      if (aIsTrailer !== bIsTrailer) return bIsTrailer - aIsTrailer;
+
+      const aOfficial = a.official ? 1 : 0;
+      const bOfficial = b.official ? 1 : 0;
+      if (aOfficial !== bOfficial) return bOfficial - aOfficial;
+
+      return 0;
+    });
 
     const directorsMap = new Map<number, { id: number; name: string; profile_path: string | null }>();
     data.credits?.crew
@@ -920,6 +1029,8 @@ export async function getMediaDetails(mediaType: MediaType, id: number): Promise
       is_english_overview: isEnglishOverview,
       release_service: releaseService,
       networks: networks.length > 0 ? networks : undefined,
+      imdb_id: imdbId,
+      imdb_rating: imdbRating,
       poster_path: data.poster_path,
       backdrop_path: data.backdrop_path,
       media_type: mediaType,

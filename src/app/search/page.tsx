@@ -23,6 +23,7 @@ import {
   getImageUrl,
 } from '@/lib/tmdb';
 import { MediaItem, PersonDetails, PersonSearchResult, MediaType } from '@/lib/types';
+import { MOCK_GENRES } from '@/lib/mock-data';
 import MediaCard from '@/components/MediaCard';
 import AdvancedFilterBar from '@/components/AdvancedFilterBar';
 
@@ -60,6 +61,19 @@ function SearchPageContent() {
   useEffect(() => {
     setInputQuery(queryParam);
   }, [queryParam]);
+
+  // Sync genreId when genreParam changes in URL
+  useEffect(() => {
+    setGenreId(genreParam);
+    if (genreParam) {
+      setIsFilterOpen(true);
+    }
+  }, [genreParam]);
+
+  // Sync mediaType when typeParam changes in URL
+  useEffect(() => {
+    setMediaType(typeParam);
+  }, [typeParam]);
 
   // Load initial person(s) if personParam is provided in URL
   useEffect(() => {
@@ -472,6 +486,20 @@ function SearchPageContent() {
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Återställ</span>
               </button>
+            )}
+
+            {genreId && (
+              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#E9A23B]/15 border border-[#E9A23B]/30 text-xs font-bold text-[#E9A23B]">
+                <span>Genre: {MOCK_GENRES.find((g) => g.id === genreId)?.name || 'Vald'}</span>
+                <button
+                  type="button"
+                  onClick={() => handleGenreChange(null)}
+                  className="hover:text-[#ECE9E3] p-0.5 cursor-pointer"
+                  title="Ta bort genrefilter"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
             )}
           </div>
 

@@ -26,6 +26,8 @@ export interface MediaItem {
   is_english_overview?: boolean;
   release_service?: string;
   networks?: { id: number; name: string; logo_path: string | null }[];
+  imdb_id?: string | null;
+  imdb_rating?: number | null;
 }
 
 export interface PersonSearchResult {
