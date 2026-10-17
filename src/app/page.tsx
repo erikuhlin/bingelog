@@ -1,16 +1,20 @@
 import React from 'react';
-import { getTrendingMedia, getPopularMovies, getPopularShows } from '@/lib/tmdb';
-import HeroCarousel from '@/components/HeroCarousel';
-import HorizontalMediaRow from '@/components/HorizontalMediaRow';
-import ContinueWatchingSection from '@/components/ContinueWatchingSection';
-import ForYouSection from '@/components/ForYouSection';
-import ExploreFeed from '@/components/ExploreFeed';
+import {
+  getTrendingMedia,
+  getPopularMovies,
+  getPopularShows,
+  getNewReleasesOnStreaming,
+} from '@/lib/tmdb';
+import HomePageContent from '@/components/HomePageContent';
 import { MediaItem } from '@/lib/types';
 
 export default async function HomePage() {
-  const trending = await getTrendingMedia();
-  const popularMovies = await getPopularMovies();
-  const popularShows = await getPopularShows();
+  const [trending, popularMovies, popularShows, initialNewReleases] = await Promise.all([
+    getTrendingMedia(),
+    getPopularMovies(),
+    getPopularShows(),
+    getNewReleasesOnStreaming('all'),
+  ]);
 
   // Top 5 trending items for hero carousel
   const carouselItems = trending.slice(0, 5);
@@ -26,31 +30,11 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="w-full max-w-full overflow-hidden">
-      {/* 1. Hero Carousel with top trending titles (#1–#5) */}
-      {carouselItems.length > 0 && <HeroCarousel items={carouselItems} />}
-
-      {/* 2. "Tittar på" - Active Series with progress bar for user */}
-      <ContinueWatchingSection />
-
-      {/* 3. "För dig" - Personalized Recommendations (Only for logged in users) */}
-      <ForYouSection />
-
-      {/* 4. Dedicated Horizontal Carousel for "Trendar i veckan" (#6–#20) */}
-      {trendingList.length > 0 && (
-        <HorizontalMediaRow
-          title="Trendar i veckan"
-          iconType="sparkles"
-          iconColor="text-[#E9A23B]"
-          items={trendingList}
-        />
-      )}
-
-      {/* 4. Streaming Hub & Catalog Discovery (Quick tabs: Alla/Filmer/Serier + Streaming-tjänster) */}
-      <ExploreFeed
-        initialTrending={popularCombined.length > 0 ? popularCombined : trending}
-        title="Populärt på streaming"
-      />
-    </div>
+    <HomePageContent
+      carouselItems={carouselItems}
+      trendingList={trendingList}
+      initialNewReleases={initialNewReleases.length > 0 ? initialNewReleases : trending}
+      popularCombined={popularCombined.length > 0 ? popularCombined : trending}
+    />
   );
 }

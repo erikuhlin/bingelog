@@ -98,8 +98,8 @@ export default function MediaCard({ item, subtitle }: MediaCardProps) {
           ) : null}
         </div>
 
-        {/* Streaming provider badges on bottom-left of cover */}
-        {item.watch_providers && item.watch_providers.length > 0 && (
+        {/* Streaming provider badges or theatrical badge on bottom-left of cover */}
+        {item.watch_providers && item.watch_providers.length > 0 ? (
           <div className="absolute bottom-2 left-2 flex items-center -space-x-1.5 z-10 pointer-events-none">
             {item.watch_providers.slice(0, 3).map((provider) => (
               <ProviderMiniBadge
@@ -114,7 +114,13 @@ export default function MediaCard({ item, subtitle }: MediaCardProps) {
               </span>
             )}
           </div>
-        )}
+        ) : item.release_service ? (
+          <div className="absolute bottom-2 left-2 z-10 pointer-events-none">
+            <span className="px-2 py-0.5 rounded-md bg-[#0F1218]/90 backdrop-blur-md text-[10px] font-bold text-[#E9A23B] border border-[#E9A23B]/40 shadow-md">
+              {item.release_service}
+            </span>
+          </div>
+        ) : null}
       </div>
 
       {/* Info content & Status button */}

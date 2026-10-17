@@ -109,18 +109,37 @@ export const NETWORK_TO_SWEDISH_PROVIDER: Record<string, { id: number; name: str
   Showtime: { id: 1773, name: 'SkyShowtime', logo_path: '/ube1pVpP3FklRkeyQjlDkkC3tL2.png' },
 };
 
-export async function getItemWatchProviders(mediaType: MediaType, id: number): Promise<any[]> {
+export async function getItemWatchProviders(
+  mediaType: MediaType,
+  id: number,
+  includeRentBuy = false
+): Promise<any[]> {
   const data = await tmdbFetch<any>(`/${mediaType}/${id}/watch/providers`);
-  return data?.results?.SE?.flatrate || [];
+  const se = data?.results?.SE;
+  if (!se) return [];
+  if (includeRentBuy) {
+    const combined = [...(se.flatrate || []), ...(se.rent || []), ...(se.buy || [])];
+    const unique = new Map<number, any>();
+    for (const p of combined) {
+      if (p?.provider_id && !unique.has(p.provider_id)) {
+        unique.set(p.provider_id, p);
+      }
+    }
+    return Array.from(unique.values());
+  }
+  return se.flatrate || [];
 }
 
-export async function enrichItemsWithProviders(items: MediaItem[]): Promise<MediaItem[]> {
+export async function enrichItemsWithProviders(
+  items: MediaItem[],
+  includeRentBuy = false
+): Promise<MediaItem[]> {
   // Fetch providers for items in parallel
   const enriched = await Promise.all(
     items.map(async (item) => {
       if (item.watch_providers && item.watch_providers.length > 0) return item;
       try {
-        const providers = await getItemWatchProviders(item.media_type, item.id);
+        const providers = await getItemWatchProviders(item.media_type, item.id, includeRentBuy);
         return {
           ...item,
           watch_providers: providers.map((p: any) => ({
@@ -164,6 +183,37 @@ export async function getPopularShows(): Promise<MediaItem[]> {
     return enrichItemsWithProviders(list);
   }
   return MOCK_TRENDING.filter((item) => item.media_type === 'tv');
+}
+
+export async function getNewReleasesOnStreaming(
+  mediaType: 'all' | MediaType = 'all',
+  providerIds?: number[]
+): Promise<MediaItem[]> {
+  return discoverMedia({
+    mediaType,
+    providerIds,
+    newReleasesOnly: true,
+    sortBy: 'popularity.desc',
+    page: 1,
+  });
+}
+
+export async function getTheatricalMovies(): Promise<MediaItem[]> {
+  return discoverMedia({
+    mediaType: 'movie',
+    monetizationType: 'theatrical',
+    sortBy: 'popularity.desc',
+    page: 1,
+  });
+}
+
+export async function getRentBuyMovies(): Promise<MediaItem[]> {
+  return discoverMedia({
+    mediaType: 'movie',
+    monetizationType: 'rent_buy',
+    sortBy: 'popularity.desc',
+    page: 1,
+  });
 }
 
 export function formatUpcomingDateLabel(
@@ -508,13 +558,20 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
     sortBy = 'popularity.desc',
     page = 1,
     originalLanguage,
+    monetizationType = 'all',
+    newReleasesOnly = false,
   } = filters;
 
   const hasProviders = providerIds && providerIds.length > 0;
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
+  const daysAgo = (days: number) =>
+    new Date(now.getTime() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
   const baseParams: Record<string, string | number> = {
     page,
-    'vote_count.gte': sortBy === 'vote_average.desc' ? 100 : 15,
+    'vote_count.gte':
+      sortBy === 'vote_average.desc' ? 100 : hasProviders || newReleasesOnly ? 3 : 15,
   };
 
   if (minRating) {
@@ -523,10 +580,28 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
   if (originalLanguage) {
     baseParams.with_original_language = originalLanguage;
   }
-  if (hasProviders) {
+
+  const allSwedishProviderIds = SWEDISH_STREAMING_PROVIDERS.map((p) => p.id).join('|');
+
+  if (monetizationType === 'theatrical') {
+    baseParams.region = 'SE';
+    baseParams.with_release_type = '2|3';
+    if (!year) {
+      baseParams['primary_release_date.lte'] = today;
+      baseParams['primary_release_date.gte'] = daysAgo(75);
+    }
+    baseParams['vote_count.gte'] = 3;
+  } else if (monetizationType === 'rent_buy') {
     baseParams.watch_region = 'SE';
-    // TMDB uses | (OR) to join multiple provider IDs
-    baseParams.with_watch_providers = providerIds!.join('|');
+    baseParams.with_watch_monetization_types = 'rent|buy';
+    if (!year && sortBy === 'popularity.desc') {
+      baseParams['primary_release_date.lte'] = today;
+      baseParams['primary_release_date.gte'] = daysAgo(240);
+    }
+    baseParams['vote_count.gte'] = 5;
+  } else if (monetizationType === 'flatrate' || hasProviders || newReleasesOnly) {
+    baseParams.watch_region = 'SE';
+    baseParams.with_watch_providers = hasProviders ? providerIds!.join('|') : allSwedishProviderIds;
     baseParams.with_watch_monetization_types = 'flatrate';
   }
 
@@ -561,46 +636,84 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
     return sort;
   };
 
-  const attachSelectedProviders = (items: MediaItem[]) => {
-    if (!hasProviders) return items;
-    const selectedProviders = SWEDISH_STREAMING_PROVIDERS.filter((p) => providerIds!.includes(p.id));
-    if (selectedProviders.length === 0) return items;
-    return items.map((item) => ({
-      ...item,
-      watch_providers: selectedProviders.map((p) => ({
-        provider_id: p.id,
-        provider_name: p.name,
-        logo_path: p.logo_path,
-      })),
-    }));
+  const finalizeResults = async (items: MediaItem[]): Promise<MediaItem[]> => {
+    // If exactly 1 provider is selected, attach it directly for instant display
+    if (hasProviders && providerIds!.length === 1) {
+      const selected = SWEDISH_STREAMING_PROVIDERS.find((p) => p.id === providerIds![0]);
+      if (selected) {
+        return items.map((item) => ({
+          ...item,
+          watch_providers: [
+            {
+              provider_id: selected.id,
+              provider_name: selected.name,
+              logo_path: selected.logo_path,
+            },
+          ],
+        }));
+      }
+    }
+
+    if (monetizationType === 'theatrical') {
+      const enriched = await enrichItemsWithProviders(items, false);
+      return enriched.map((item) => ({
+        ...item,
+        release_service: item.release_service || 'På bio',
+      }));
+    }
+
+    if (monetizationType === 'rent_buy') {
+      return enrichItemsWithProviders(items, true);
+    }
+
+    // Enrich with actual SE flatrate providers
+    return enrichItemsWithProviders(items, false);
   };
 
   if (mediaType === 'movie') {
-    const params = { ...baseParams, sort_by: sortBy };
+    const params: Record<string, string | number> = { ...baseParams, sort_by: sortBy };
     if (movieGenresParam) params.with_genres = movieGenresParam;
     if (year) params.primary_release_year = year;
+    if (newReleasesOnly && !year) {
+      params['primary_release_date.lte'] = today;
+      params['primary_release_date.gte'] = daysAgo(150);
+    }
     const data = await tmdbFetch<{ results: any[] }>('/discover/movie', params);
     const items = (data?.results || []).map((m) => normalizeMediaItem({ ...m, media_type: 'movie' }));
-    return attachSelectedProviders(items);
+    return finalizeResults(items);
   }
 
   if (mediaType === 'tv') {
-    const params = { ...baseParams, sort_by: getTvSortBy(sortBy) };
+    const params: Record<string, string | number> = { ...baseParams, sort_by: getTvSortBy(sortBy) };
     if (tvGenresParam) params.with_genres = tvGenresParam;
     if (year) params.first_air_date_year = year;
+    if (newReleasesOnly && !year) {
+      params['air_date.lte'] = today;
+      params['air_date.gte'] = daysAgo(100);
+      params['first_air_date.lte'] = today;
+    }
     const data = await tmdbFetch<{ results: any[] }>('/discover/tv', params);
     const items = (data?.results || []).map((t) => normalizeMediaItem({ ...t, media_type: 'tv' }));
-    return attachSelectedProviders(items);
+    return finalizeResults(items);
   }
 
   // If 'all': fetch movie and tv in parallel
-  const movieParams = { ...baseParams, sort_by: sortBy };
+  const movieParams: Record<string, string | number> = { ...baseParams, sort_by: sortBy };
   if (movieGenresParam) movieParams.with_genres = movieGenresParam;
   if (year) movieParams.primary_release_year = year;
+  if (newReleasesOnly && !year) {
+    movieParams['primary_release_date.lte'] = today;
+    movieParams['primary_release_date.gte'] = daysAgo(150);
+  }
 
-  const tvParams = { ...baseParams, sort_by: getTvSortBy(sortBy) };
+  const tvParams: Record<string, string | number> = { ...baseParams, sort_by: getTvSortBy(sortBy) };
   if (tvGenresParam) tvParams.with_genres = tvGenresParam;
   if (year) tvParams.first_air_date_year = year;
+  if (newReleasesOnly && !year) {
+    tvParams['air_date.lte'] = today;
+    tvParams['air_date.gte'] = daysAgo(100);
+    tvParams['first_air_date.lte'] = today;
+  }
 
   const [movieRes, tvRes] = await Promise.all([
     tmdbFetch<{ results: any[] }>('/discover/movie', movieParams),
@@ -611,7 +724,7 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
   const tvs = (tvRes?.results || []).map((t) => normalizeMediaItem({ ...t, media_type: 'tv' }));
 
   const merged = [...movies, ...tvs].sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
-  return attachSelectedProviders(merged.slice(0, 24));
+  return finalizeResults(merged.slice(0, 24));
 }
 
 export async function searchMedia(query: string, enrich = false): Promise<MediaItem[]> {

@@ -18,6 +18,8 @@ export async function GET(request: Request) {
   const page = searchParams.get('page') ? parseInt(searchParams.get('page')!, 10) : 1;
 
   const originalLanguage = searchParams.get('originalLanguage') || undefined;
+  const monetizationType = (searchParams.get('monetizationType') as any) || 'all';
+  const newReleasesOnly = searchParams.get('newReleasesOnly') === 'true';
 
   const filters: DiscoverFilters = {
     mediaType,
@@ -28,6 +30,8 @@ export async function GET(request: Request) {
     sortBy,
     page,
     originalLanguage,
+    monetizationType,
+    newReleasesOnly,
   };
 
   try {

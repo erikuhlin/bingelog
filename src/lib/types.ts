@@ -76,6 +76,8 @@ export interface LiveSearchResults {
   actors: PersonSearchResult[];
 }
 
+export type MovieMonetizationFilter = 'all' | 'flatrate' | 'theatrical' | 'rent_buy';
+
 export interface DiscoverFilters {
   mediaType?: 'all' | 'movie' | 'tv';
   providerIds?: number[];
@@ -85,6 +87,8 @@ export interface DiscoverFilters {
   sortBy?: string;
   page?: number;
   originalLanguage?: string;
+  monetizationType?: MovieMonetizationFilter;
+  newReleasesOnly?: boolean;
 }
 
 export interface Episode {

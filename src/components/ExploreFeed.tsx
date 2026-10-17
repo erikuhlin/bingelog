@@ -16,7 +16,7 @@ import {
   SlidersHorizontal,
   RotateCcw,
 } from 'lucide-react';
-import { MediaItem, MediaType, PersonSearchResult } from '@/lib/types';
+import { MediaItem, MediaType, MovieMonetizationFilter, PersonSearchResult } from '@/lib/types';
 import { getImageUrl, getMediaGenreNames } from '@/lib/tmdb';
 import MediaCard from './MediaCard';
 import StatusSelector from './StatusSelector';
@@ -28,15 +28,33 @@ interface ExploreFeedProps {
   initialTrending: MediaItem[];
   defaultMediaType?: 'all' | MediaType;
   title?: string;
+  externalProviderIds?: number[];
+  onExternalProviderChange?: (ids: number[]) => void;
+  externalMonetizationType?: MovieMonetizationFilter;
+  onExternalMonetizationChange?: (type: MovieMonetizationFilter) => void;
+  hideProviderTabs?: boolean;
 }
 
 export default function ExploreFeed({
   initialTrending,
   defaultMediaType = 'all',
   title,
+  externalProviderIds,
+  onExternalProviderChange,
+  externalMonetizationType,
+  onExternalMonetizationChange,
+  hideProviderTabs = false,
 }: ExploreFeedProps) {
   const router = useRouter();
-  const [selectedProviderIds, setSelectedProviderIds] = useState<number[]>([]);
+  const [internalProviderIds, setInternalProviderIds] = useState<number[]>([]);
+  const [internalMonetizationType, setInternalMonetizationType] = useState<MovieMonetizationFilter>('all');
+
+  const selectedProviderIds = externalProviderIds !== undefined ? externalProviderIds : internalProviderIds;
+  const setSelectedProviderIds = onExternalProviderChange || setInternalProviderIds;
+
+  const monetizationType = externalMonetizationType !== undefined ? externalMonetizationType : internalMonetizationType;
+  const setMonetizationType = onExternalMonetizationChange || setInternalMonetizationType;
+
   const [mediaType, setMediaType] = useState<'all' | MediaType>(defaultMediaType);
   const [genreId, setGenreId] = useState<number | null>(null);
   const [minRating, setMinRating] = useState<number | null>(null);
@@ -66,7 +84,12 @@ export default function ExploreFeed({
           setItems(saved.items);
           setPage(saved.page || 1);
           setHasMore(saved.hasMore ?? true);
-          if (saved.selectedProviderIds !== undefined) setSelectedProviderIds(Array.isArray(saved.selectedProviderIds) ? saved.selectedProviderIds : []);
+          if (saved.selectedProviderIds !== undefined) {
+            setSelectedProviderIds(Array.isArray(saved.selectedProviderIds) ? saved.selectedProviderIds : []);
+          }
+          if (saved.monetizationType !== undefined) {
+            setMonetizationType(saved.monetizationType);
+          }
           if (saved.mediaType !== undefined) setMediaType(saved.mediaType);
           if (saved.genreId !== undefined) setGenreId(saved.genreId);
           if (saved.minRating !== undefined) setMinRating(saved.minRating);
@@ -118,6 +141,7 @@ export default function ExploreFeed({
 
   const isFiltered =
     selectedProviderIds.length > 0 ||
+    monetizationType !== 'all' ||
     mediaType !== defaultMediaType ||
     genreId !== null ||
     minRating !== null ||
@@ -134,6 +158,7 @@ export default function ExploreFeed({
         page,
         hasMore,
         selectedProviderIds,
+        monetizationType,
         mediaType,
         genreId,
         minRating,
@@ -152,6 +177,7 @@ export default function ExploreFeed({
     page,
     hasMore,
     selectedProviderIds,
+    monetizationType,
     mediaType,
     genreId,
     minRating,
@@ -164,6 +190,7 @@ export default function ExploreFeed({
 
   const activeFilterCount =
     (selectedProviderIds.length > 0 ? 1 : 0) +
+    (monetizationType !== 'all' ? 1 : 0) +
     (mediaType !== defaultMediaType ? 1 : 0) +
     (genreId ? 1 : 0) +
     (minRating ? 1 : 0) +
@@ -177,6 +204,7 @@ export default function ExploreFeed({
       sessionStorage.removeItem(`bingelog_scroll_${window.location.pathname}`);
     }
     setSelectedProviderIds([]);
+    setMonetizationType('all');
     setMediaType(defaultMediaType);
     setGenreId(null);
     setMinRating(null);
@@ -210,6 +238,7 @@ export default function ExploreFeed({
         const params = new URLSearchParams();
         if (mediaType !== 'all') params.set('mediaType', mediaType);
         if (selectedProviderIds.length > 0) params.set('providerIds', selectedProviderIds.join(','));
+        if (monetizationType !== 'all') params.set('monetizationType', monetizationType);
         if (genreId) params.set('genreId', String(genreId));
         if (minRating) params.set('minRating', String(minRating));
         if (year) params.set('year', String(year));
@@ -240,7 +269,18 @@ export default function ExploreFeed({
     return () => {
       isMounted = false;
     };
-  }, [selectedProviderIds, mediaType, genreId, minRating, year, originalLanguage, sortBy, isFiltered, initialTrending]);
+  }, [
+    selectedProviderIds,
+    monetizationType,
+    mediaType,
+    genreId,
+    minRating,
+    year,
+    originalLanguage,
+    sortBy,
+    isFiltered,
+    initialTrending,
+  ]);
 
   // Load more pages
   const handleLoadMore = async () => {
@@ -252,6 +292,7 @@ export default function ExploreFeed({
       const params = new URLSearchParams();
       if (mediaType !== 'all') params.set('mediaType', mediaType);
       if (selectedProviderIds.length > 0) params.set('providerIds', selectedProviderIds.join(','));
+      if (monetizationType !== 'all') params.set('monetizationType', monetizationType);
       if (genreId) params.set('genreId', String(genreId));
       if (minRating) params.set('minRating', String(minRating));
       if (year) params.set('year', String(year));
@@ -301,11 +342,21 @@ export default function ExploreFeed({
         ? 'Populära serier'
         : 'Populärt';
 
+    if (monetizationType === 'theatrical') {
+      return 'Bioaktuella filmer i Sverige';
+    }
+    if (monetizationType === 'rent_buy') {
+      return 'Filmer att hyra & köpa digitalt';
+    }
+
     if (selectedProviderNames.length === 1) {
       return `${typePrefix} på ${selectedProviderNames[0]}`;
     }
     if (selectedProviderNames.length > 1) {
       return `${typePrefix} på ${selectedProviderNames.join(' & ')}`;
+    }
+    if (monetizationType === 'flatrate') {
+      return 'Populära filmer på streaming';
     }
     if (isFiltered) {
       if (
@@ -325,70 +376,72 @@ export default function ExploreFeed({
 
   return (
     <section className="mb-14 space-y-6 w-full max-w-full overflow-hidden">
-      {/* Streaming Provider Quick Tabs & Media Type Switcher */}
-      <div className="space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-[#8D97A8] uppercase tracking-wider">
-              Filtrera efter streamingtjänst
-            </span>
-            {selectedProviderNames.length > 0 && (
-              <span className="text-xs font-semibold text-[#E9A23B] hidden sm:inline">
-                • {selectedProviderNames.length === 1
-                  ? selectedProviderNames[0]
-                  : `${selectedProviderNames.slice(0, -1).join(', ')} och ${selectedProviderNames.at(-1)}`}
+      {/* Streaming Provider Quick Tabs & Media Type Switcher (only shown if not controlled at top of page) */}
+      {!hideProviderTabs && (
+        <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-[#8D97A8] uppercase tracking-wider">
+                Filtrera efter streamingtjänst
               </span>
+              {selectedProviderNames.length > 0 && (
+                <span className="text-xs font-semibold text-[#E9A23B] hidden sm:inline">
+                  • {selectedProviderNames.length === 1
+                    ? selectedProviderNames[0]
+                    : `${selectedProviderNames.slice(0, -1).join(', ')} och ${selectedProviderNames.at(-1)}`}
+                </span>
+              )}
+            </div>
+
+            {/* Quick Media Type Pills (Alla / Filmer / Serier) */}
+            {defaultMediaType === 'all' && (
+              <div className="flex items-center gap-1 p-1 rounded-2xl bg-[#171C25] border border-[#2B3443] w-fit self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setMediaType('all')}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    mediaType === 'all'
+                      ? 'bg-[#E9A23B] text-[#0F1218] shadow-md shadow-[#E9A23B]/20'
+                      : 'text-[#8D97A8] hover:text-[#ECE9E3]'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Alla</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMediaType('movie')}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    mediaType === 'movie'
+                      ? 'bg-[#E9A23B] text-[#0F1218] shadow-md shadow-[#E9A23B]/20'
+                      : 'text-[#8D97A8] hover:text-[#ECE9E3]'
+                  }`}
+                >
+                  <Film className="w-3.5 h-3.5" />
+                  <span>Filmer</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMediaType('tv')}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    mediaType === 'tv'
+                      ? 'bg-[#E9A23B] text-[#0F1218] shadow-md shadow-[#E9A23B]/20'
+                      : 'text-[#8D97A8] hover:text-[#ECE9E3]'
+                  }`}
+                >
+                  <Tv className="w-3.5 h-3.5" />
+                  <span>Serier</span>
+                </button>
+              </div>
             )}
           </div>
 
-          {/* Quick Media Type Pills (Alla / Filmer / Serier) */}
-          {defaultMediaType === 'all' && (
-            <div className="flex items-center gap-1 p-1 rounded-2xl bg-[#171C25] border border-[#2B3443] w-fit self-start sm:self-auto">
-              <button
-                type="button"
-                onClick={() => setMediaType('all')}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  mediaType === 'all'
-                    ? 'bg-[#E9A23B] text-[#0F1218] shadow-md shadow-[#E9A23B]/20'
-                    : 'text-[#8D97A8] hover:text-[#ECE9E3]'
-                }`}
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Alla</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setMediaType('movie')}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  mediaType === 'movie'
-                    ? 'bg-[#E9A23B] text-[#0F1218] shadow-md shadow-[#E9A23B]/20'
-                    : 'text-[#8D97A8] hover:text-[#ECE9E3]'
-                }`}
-              >
-                <Film className="w-3.5 h-3.5" />
-                <span>Filmer</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setMediaType('tv')}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  mediaType === 'tv'
-                    ? 'bg-[#E9A23B] text-[#0F1218] shadow-md shadow-[#E9A23B]/20'
-                    : 'text-[#8D97A8] hover:text-[#ECE9E3]'
-                }`}
-              >
-                <Tv className="w-3.5 h-3.5" />
-                <span>Serier</span>
-              </button>
-            </div>
-          )}
+          <ProviderFilterTabs
+            selectedProviderIds={selectedProviderIds}
+            onSelectProvider={setSelectedProviderIds}
+          />
         </div>
-
-        <ProviderFilterTabs
-          selectedProviderIds={selectedProviderIds}
-          onSelectProvider={setSelectedProviderIds}
-        />
-      </div>
+      )}
 
       {/* Title & Results count & Action controls (Filter toggle + View Mode switcher on same row) */}
       <div className="space-y-4 pt-1">
@@ -482,6 +535,8 @@ export default function ExploreFeed({
             onOriginalLanguageChange={setOriginalLanguage}
             sortBy={sortBy}
             onSortChange={setSortBy}
+            providerIds={selectedProviderIds}
+            onProviderIdsChange={setSelectedProviderIds}
             onReset={handleReset}
             activeFilterCount={activeFilterCount}
             onPersonsChange={(persons) => {
