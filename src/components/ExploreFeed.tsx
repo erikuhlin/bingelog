@@ -50,10 +50,22 @@ export default function ExploreFeed({
   const [internalMonetizationType, setInternalMonetizationType] = useState<MovieMonetizationFilter>('all');
 
   const selectedProviderIds = externalProviderIds !== undefined ? externalProviderIds : internalProviderIds;
-  const setSelectedProviderIds = onExternalProviderChange || setInternalProviderIds;
+  const setSelectedProviderIds = (ids: number[]) => {
+    if (onExternalProviderChange) {
+      onExternalProviderChange(ids);
+    } else {
+      setInternalProviderIds(ids);
+    }
+  };
 
   const monetizationType = externalMonetizationType !== undefined ? externalMonetizationType : internalMonetizationType;
-  const setMonetizationType = onExternalMonetizationChange || setInternalMonetizationType;
+  const setMonetizationType = (type: MovieMonetizationFilter) => {
+    if (onExternalMonetizationChange) {
+      onExternalMonetizationChange(type);
+    } else {
+      setInternalMonetizationType(type);
+    }
+  };
 
   const [mediaType, setMediaType] = useState<'all' | MediaType>(defaultMediaType);
   const [genreId, setGenreId] = useState<number | null>(null);
@@ -580,7 +592,7 @@ export default function ExploreFeed({
             sortBy={sortBy}
             onSortChange={setSortBy}
             providerIds={selectedProviderIds}
-            onProviderIdsChange={setSelectedProviderIds}
+            onProviderChange={setSelectedProviderIds}
             onReset={handleReset}
             activeFilterCount={activeFilterCount}
             onPersonsChange={(persons) => {
