@@ -109,6 +109,37 @@ export const NETWORK_TO_SWEDISH_PROVIDER: Record<string, { id: number; name: str
   Showtime: { id: 1773, name: 'SkyShowtime', logo_path: '/ube1pVpP3FklRkeyQjlDkkC3tL2.png' },
 };
 
+export const RENT_BUY_CAPABLE_PROVIDER_IDS = [350, 119, 76]; // Apple TV, Prime Video, Viaplay
+
+export function filterUpcomingByProviders(items: MediaItem[], providerIds: number[]): MediaItem[] {
+  if (!providerIds || providerIds.length === 0) return items;
+
+  const selectedNames = providerIds
+    .map((id) => SWEDISH_STREAMING_PROVIDERS.find((p) => p.id === id)?.name?.toLowerCase())
+    .filter(Boolean) as string[];
+
+  return items.filter((item) => {
+    if (item.watch_providers?.some((p) => providerIds.includes(p.provider_id))) {
+      return true;
+    }
+    if (item.release_service) {
+      const lowerService = item.release_service.toLowerCase();
+      if (selectedNames.some((name) => lowerService.includes(name))) {
+        return true;
+      }
+    }
+    if (item.networks && item.networks.length > 0) {
+      for (const net of item.networks) {
+        const mapped = NETWORK_TO_SWEDISH_PROVIDER[net.name];
+        if (mapped && providerIds.includes(mapped.id)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  });
+}
+
 const watchProvidersCache = new Map<string, any[]>();
 
 export async function getItemWatchProviders(
@@ -130,7 +161,7 @@ export async function getItemWatchProviders(
 
   const streamProviders = [...(se.flatrate || []), ...(se.free || []), ...(se.ads || [])];
   const sourceList = includeRentBuy
-    ? [...streamProviders, ...(se.rent || []), ...(se.buy || [])]
+    ? [...(se.rent || []), ...(se.buy || []), ...streamProviders]
     : streamProviders;
 
   const unique = new Map<number, any>();
@@ -146,11 +177,15 @@ export async function getItemWatchProviders(
 
 export async function enrichItemsWithProviders(
   items: MediaItem[],
-  includeRentBuy = false
+  includeRentBuy = false,
+  maxItems = 24
 ): Promise<MediaItem[]> {
+  const toEnrich = items.slice(0, maxItems);
+  const rest = items.slice(maxItems);
+
   // Fetch providers for items in parallel
   const enriched = await Promise.all(
-    items.map(async (item) => {
+    toEnrich.map(async (item) => {
       if (item.watch_providers && item.watch_providers.length > 0) return item;
       try {
         const providers = await getItemWatchProviders(item.media_type, item.id, includeRentBuy);
@@ -167,7 +202,7 @@ export async function enrichItemsWithProviders(
       }
     })
   );
-  return enriched;
+  return [...enriched, ...rest];
 }
 
 export async function getTrendingMedia(): Promise<MediaItem[]> {
@@ -221,9 +256,10 @@ export async function getTheatricalMovies(): Promise<MediaItem[]> {
   });
 }
 
-export async function getRentBuyMovies(): Promise<MediaItem[]> {
+export async function getRentBuyMovies(providerIds?: number[]): Promise<MediaItem[]> {
   return discoverMedia({
     mediaType: 'movie',
+    providerIds,
     monetizationType: 'rent_buy',
     sortBy: 'popularity.desc',
     page: 1,
@@ -606,13 +642,20 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
     }
     baseParams['vote_count.gte'] = 3;
   } else if (monetizationType === 'rent_buy') {
+    if (hasProviders) {
+      const rentBuyIds = providerIds!.filter((id) => RENT_BUY_CAPABLE_PROVIDER_IDS.includes(id));
+      if (rentBuyIds.length === 0) {
+        return [];
+      }
+      baseParams.with_watch_providers = rentBuyIds.join('|');
+    }
     baseParams.watch_region = 'SE';
     baseParams.with_watch_monetization_types = 'rent|buy';
     if (!year && sortBy === 'popularity.desc') {
       baseParams['primary_release_date.lte'] = today;
       baseParams['primary_release_date.gte'] = daysAgo(300);
     }
-    baseParams['vote_count.gte'] = 5;
+    baseParams['vote_count.gte'] = hasProviders ? 2 : 5;
   } else if (monetizationType === 'flatrate' || hasProviders || newReleasesOnly) {
     baseParams.watch_region = 'SE';
     baseParams.with_watch_providers = hasProviders ? providerIds!.join('|') : allSwedishProviderIds;
@@ -679,6 +722,24 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
         }));
     }
 
+    if (monetizationType === 'theatrical') {
+      const enriched = await enrichItemsWithProviders(list, false, 12);
+      return enriched.map((item) => ({
+        ...item,
+        release_service: item.release_service || 'På bio',
+        upcoming_label: item.upcoming_label || 'Visas på bio nu',
+      }));
+    }
+
+    if (monetizationType === 'rent_buy') {
+      const enriched = await enrichItemsWithProviders(list, true, 16);
+      return enriched.map((item) => ({
+        ...item,
+        release_service: item.release_service || 'Hyr & Köp',
+        upcoming_label: item.upcoming_label || 'Finns att hyra & köpa',
+      }));
+    }
+
     // If exactly 1 provider is selected, attach it directly for instant display without extra API calls
     if (hasProviders && providerIds!.length === 1) {
       const selected = SWEDISH_STREAMING_PROVIDERS.find((p) => p.id === providerIds![0]);
@@ -696,24 +757,11 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
       }
     }
 
-    if (monetizationType === 'theatrical') {
-      const enriched = await enrichItemsWithProviders(list, false);
-      return enriched.map((item) => ({
-        ...item,
-        release_service: item.release_service || 'På bio',
-        upcoming_label: item.upcoming_label || 'Visas på bio nu',
-      }));
-    }
-
-    if (monetizationType === 'rent_buy') {
-      return enrichItemsWithProviders(list, true);
-    }
-
     if (newReleasesOnly || monetizationType === 'flatrate' || hasProviders) {
-      return enrichItemsWithProviders(list, false);
+      return enrichItemsWithProviders(list, false, 14);
     }
 
-    return list;
+    return enrichItemsWithProviders(list, false, 8);
   };
 
   if (mediaType === 'movie') {

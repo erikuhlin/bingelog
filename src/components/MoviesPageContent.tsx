@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Film,
   Tv,
@@ -8,18 +8,15 @@ import {
   ShoppingBag,
   Sparkles,
   RotateCcw,
-  ChevronLeft,
-  ChevronRight,
   Loader2,
 } from 'lucide-react';
 import { MediaItem, MovieMonetizationFilter } from '@/lib/types';
 import { CuratedCategoryRow } from '@/lib/seasonal';
-import { SWEDISH_STREAMING_PROVIDERS } from '@/lib/tmdb';
+import { SWEDISH_STREAMING_PROVIDERS, filterUpcomingByProviders } from '@/lib/tmdb';
 import ProviderFilterTabs from './ProviderFilterTabs';
 import StreamingNewsRow from './StreamingNewsRow';
 import HorizontalMediaRow from './HorizontalMediaRow';
 import ExploreFeed from './ExploreFeed';
-import MediaCard from './MediaCard';
 
 interface MoviesPageContentProps {
   popularMovies: MediaItem[];
@@ -39,75 +36,107 @@ export default function MoviesPageContent({
   curatedRows,
 }: MoviesPageContentProps) {
   const [selectedProviderIds, setSelectedProviderIds] = useState<number[]>([]);
-  const [activeSectionTab, setActiveSectionTab] = useState<'theatrical' | 'flatrate' | 'rent_buy'>('theatrical');
   const [catalogMonetization, setCatalogMonetization] = useState<MovieMonetizationFilter>('all');
 
-  const [streamingTabItems, setStreamingTabItems] = useState<MediaItem[]>(popularMovies);
-  const [loadingStreamingTab, setLoadingStreamingTab] = useState(false);
-  const modeRowRef = useRef<HTMLDivElement>(null);
+  const [filteredPopular, setFilteredPopular] = useState<MediaItem[]>(popularMovies);
+  const [filteredRentBuy, setFilteredRentBuy] = useState<MediaItem[]>(rentBuyMovies);
+  const [filteredCuratedRows, setFilteredCuratedRows] = useState<CuratedCategoryRow[]>(curatedRows);
+  const [loadingSections, setLoadingSections] = useState(false);
 
-  const selectedProviderNames = selectedProviderIds
-    .map((id) => SWEDISH_STREAMING_PROVIDERS.find((p) => p.id === id)?.name)
-    .filter(Boolean) as string[];
+  // Restore saved provider filter from sessionStorage on mount
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem('bingelog_selected_providers');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setSelectedProviderIds(parsed);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
-  // When user selects streaming providers at the top, update the "Streama" tab items
+  const handleSelectProviders = (ids: number[]) => {
+    setSelectedProviderIds(ids);
+    try {
+      if (ids.length > 0) {
+        sessionStorage.setItem('bingelog_selected_providers', JSON.stringify(ids));
+      } else {
+        sessionStorage.removeItem('bingelog_selected_providers');
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const selectedProviderNames = useMemo(
+    () =>
+      selectedProviderIds
+        .map((id) => SWEDISH_STREAMING_PROVIDERS.find((p) => p.id === id)?.name)
+        .filter(Boolean) as string[],
+    [selectedProviderIds]
+  );
+
+  const providerLabel =
+    selectedProviderNames.length === 1
+      ? selectedProviderNames[0]
+      : selectedProviderNames.length === 2
+      ? `${selectedProviderNames[0]} & ${selectedProviderNames[1]}`
+      : selectedProviderNames.length > 2
+      ? `${selectedProviderNames.slice(0, 2).join(', ')} +${selectedProviderNames.length - 2}`
+      : '';
+
+  // When user selects streaming providers at the top, update ALL movie sections on the page
   useEffect(() => {
     if (selectedProviderIds.length === 0) {
-      setStreamingTabItems(popularMovies);
+      setFilteredPopular(popularMovies);
+      setFilteredRentBuy(rentBuyMovies);
+      setFilteredCuratedRows(curatedRows);
+      setLoadingSections(false);
       return;
     }
 
     let isMounted = true;
-    const fetchForProviders = async () => {
-      setLoadingStreamingTab(true);
+    const fetchMovieSections = async () => {
+      setLoadingSections(true);
       try {
         const params = new URLSearchParams();
-        params.set('mediaType', 'movie');
-        params.set('monetizationType', 'flatrate');
+        params.set('pageType', 'movies');
         params.set('providerIds', selectedProviderIds.join(','));
-        params.set('sortBy', 'popularity.desc');
-        params.set('page', '1');
 
-        const res = await fetch(`/api/discover?${params.toString()}`);
+        const res = await fetch(`/api/page-sections?${params.toString()}`);
         if (res.ok) {
           const data = await res.json();
           if (isMounted) {
-            setStreamingTabItems(data.results || []);
+            setFilteredPopular(data.popularMovies || []);
+            setFilteredRentBuy(data.rentBuyMovies || []);
+            setFilteredCuratedRows(data.curatedRows || []);
           }
         }
       } catch (err) {
-        console.error('Failed to fetch streaming movies for section:', err);
+        console.error('Failed to fetch filtered movie sections:', err);
       } finally {
         if (isMounted) {
-          setLoadingStreamingTab(false);
+          setLoadingSections(false);
         }
       }
     };
 
-    fetchForProviders();
+    fetchMovieSections();
     return () => {
       isMounted = false;
     };
-  }, [selectedProviderIds, popularMovies]);
+  }, [selectedProviderIds, popularMovies, rentBuyMovies, curatedRows]);
 
-  const scrollModeRowLeft = () => {
-    if (modeRowRef.current) {
-      modeRowRef.current.scrollBy({ left: -340, behavior: 'smooth' });
-    }
-  };
+  const isFilteredByProvider = selectedProviderIds.length > 0;
 
-  const scrollModeRowRight = () => {
-    if (modeRowRef.current) {
-      modeRowRef.current.scrollBy({ left: 340, behavior: 'smooth' });
-    }
-  };
-
-  const currentModeItems =
-    activeSectionTab === 'theatrical'
-      ? theatricalMovies
-      : activeSectionTab === 'rent_buy'
-      ? rentBuyMovies
-      : streamingTabItems;
+  // Upcoming movies filtered by selected providers
+  const activeUpcomingMovies = useMemo(
+    () => filterUpcomingByProviders(upcomingMovies, selectedProviderIds),
+    [upcomingMovies, selectedProviderIds]
+  );
 
   return (
     <div className="space-y-8 sm:space-y-10 w-full max-w-full overflow-hidden">
@@ -118,25 +147,26 @@ export default function MoviesPageContent({
           <span>Utforska Filmer</span>
         </h1>
         <p className="text-xs sm:text-sm text-[#8D97A8] mt-1.5 max-w-2xl leading-relaxed">
-          Se färska nyheter på dina streamingtjänster, bioaktuella premiärer, hyr- & köpfilmer och utforska hela filmkatalogen.
+          Välj dina streamingtjänster för att filtrera samtliga filmsektioner och genrer, eller visa allt inklusive bioaktuella filmer och hyr/köp.
         </p>
       </div>
 
-      {/* 1. Top Streaming Service Selector */}
-      <div className="p-3.5 sm:p-5 rounded-3xl bg-[#171C25]/80 border border-[#2B3443] space-y-3">
+      {/* 1. Top Streaming Service Filter (Controls the ENTIRE movies page) */}
+      <div className="p-3.5 sm:p-5 rounded-3xl bg-[#171C25]/85 border border-[#2B3443] space-y-3 shadow-lg">
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 flex-wrap">
             <Tv className="w-4 h-4 text-[#E9A23B] flex-shrink-0" />
-            <span className="text-xs sm:text-sm font-bold text-[#ECE9E3] tracking-tight truncate">
-              Välj streamingtjänst
+            <span className="text-xs sm:text-sm font-bold text-[#ECE9E3] tracking-tight">
+              Filtrera sidan efter dina streamingtjänster
             </span>
             {selectedProviderNames.length > 0 ? (
-              <span className="text-xs font-semibold text-[#E9A23B] truncate hidden xs:inline">
-                • {selectedProviderNames.join(', ')}
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#E9A23B]/15 border border-[#E9A23B]/40 text-[#E9A23B] flex items-center gap-1.5">
+                {loadingSections && <Loader2 className="w-3 h-3 animate-spin" />}
+                <span>Visar: {selectedProviderNames.join(', ')}</span>
               </span>
             ) : (
               <span className="text-xs text-[#8D97A8] hidden sm:inline">
-                • Visar nyheter och filmer från samtliga tjänster
+                • Visar nyheter, bio, hyr/köp och alla genrer från samtliga tjänster
               </span>
             )}
           </div>
@@ -144,154 +174,95 @@ export default function MoviesPageContent({
           {selectedProviderIds.length > 0 && (
             <button
               type="button"
-              onClick={() => setSelectedProviderIds([])}
-              className="flex items-center gap-1 text-xs font-semibold text-[#8D97A8] hover:text-[#E9A23B] transition-colors flex-shrink-0 cursor-pointer"
+              onClick={() => handleSelectProviders([])}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#1E2531] hover:bg-[#2B3443] text-xs font-semibold text-[#ECE9E3] hover:text-[#E9A23B] transition-colors flex-shrink-0 cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>Visa alla</span>
+              <span>Visa alla tjänster</span>
             </button>
           )}
         </div>
 
         <ProviderFilterTabs
           selectedProviderIds={selectedProviderIds}
-          onSelectProvider={setSelectedProviderIds}
+          onSelectProvider={handleSelectProviders}
         />
       </div>
 
-      {/* 2. Top Horizontal Row: "Nya filmer på streaming" (reacts to selected streaming services) */}
+      {/* 2. Top Horizontal Row: "Nya filmer på streaming" */}
       <StreamingNewsRow
         initialItems={initialNewReleases}
         selectedProviderIds={selectedProviderIds}
         defaultMediaType="movie"
       />
 
-      {/* 3. Smart Section: Bioaktuella / Streama / Hyr & Köp */}
-      <section className="mb-8 sm:mb-12 relative w-full max-w-full overflow-hidden p-4 sm:p-6 rounded-3xl bg-[#171C25]/50 border border-[#2B3443]/80">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3.5 mb-4">
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              {activeSectionTab === 'theatrical' ? (
-                <Ticket className="w-5 h-5 text-[#E9A23B] flex-shrink-0" />
-              ) : activeSectionTab === 'rent_buy' ? (
-                <ShoppingBag className="w-5 h-5 text-sky-400 flex-shrink-0" />
-              ) : (
-                <Tv className="w-5 h-5 text-emerald-400 flex-shrink-0" />
-              )}
-              <h2 className="text-base sm:text-xl md:text-2xl font-bold text-[#ECE9E3] tracking-tight">
-                {activeSectionTab === 'theatrical'
-                  ? 'Bioaktuella filmer just nu'
-                  : activeSectionTab === 'rent_buy'
-                  ? 'Nytt att hyra & köpa digitalt'
-                  : selectedProviderNames.length > 0
-                  ? `Populärt att streama på ${selectedProviderNames.join(' & ')}`
-                  : 'Populärt att streama'}
-              </h2>
-            </div>
-            <p className="text-xs text-[#8D97A8] mt-0.5">
-              {activeSectionTab === 'theatrical'
-                ? 'Filmer som visas på biografer i Sverige just nu'
-                : activeSectionTab === 'rent_buy'
-                ? 'Nya biofilmer som nu finns att hyra eller köpa på Apple TV, SF Anytime, Viaplay m.fl.'
-                : 'Populära filmer som ingår i ditt streamingabonnemang'}
-            </p>
-          </div>
-
-          <div className="flex items-center justify-between md:justify-end gap-2.5 flex-shrink-0">
-            {/* Switcher Tabs: Bioaktuella | Streama | Hyr & Köp */}
-            <div className="flex items-center gap-1 p-1 rounded-2xl bg-[#0F1218] border border-[#2B3443]">
-              <button
-                type="button"
-                onClick={() => setActiveSectionTab('theatrical')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  activeSectionTab === 'theatrical'
-                    ? 'bg-[#E9A23B] text-[#0F1218] shadow-md'
-                    : 'text-[#8D97A8] hover:text-[#ECE9E3]'
-                }`}
-              >
-                <Ticket className="w-3.5 h-3.5" />
-                <span>Bioaktuella</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveSectionTab('flatrate')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  activeSectionTab === 'flatrate'
-                    ? 'bg-[#E9A23B] text-[#0F1218] shadow-md'
-                    : 'text-[#8D97A8] hover:text-[#ECE9E3]'
-                }`}
-              >
-                <Tv className="w-3.5 h-3.5" />
-                <span>Streama</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveSectionTab('rent_buy')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  activeSectionTab === 'rent_buy'
-                    ? 'bg-[#E9A23B] text-[#0F1218] shadow-md'
-                    : 'text-[#8D97A8] hover:text-[#ECE9E3]'
-                }`}
-              >
-                <ShoppingBag className="w-3.5 h-3.5" />
-                <span>Hyr & Köp</span>
-              </button>
-            </div>
-
-            {/* Scroll Buttons */}
-            <div className="hidden md:flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={scrollModeRowLeft}
-                aria-label="Scrolla vänster"
-                className="w-7 h-7 rounded-xl bg-[#0F1218] hover:bg-[#1E2531] text-[#8D97A8] hover:text-[#ECE9E3] border border-[#2B3443] flex items-center justify-center transition-colors cursor-pointer"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={scrollModeRowRight}
-                aria-label="Scrolla höger"
-                className="w-7 h-7 rounded-xl bg-[#0F1218] hover:bg-[#1E2531] text-[#8D97A8] hover:text-[#ECE9E3] border border-[#2B3443] flex items-center justify-center transition-colors cursor-pointer"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {loadingStreamingTab && activeSectionTab === 'flatrate' ? (
-          <div className="h-64 flex flex-col items-center justify-center gap-2 text-[#8D97A8]">
-            <Loader2 className="w-6 h-6 animate-spin text-[#E9A23B]" />
-            <span className="text-xs">Hämtar filmer...</span>
-          </div>
-        ) : (
-          <div
-            ref={modeRowRef}
-            className="w-full max-w-full flex overflow-x-auto gap-3 sm:gap-4 pb-2 scrollbar-none snap-x snap-mandatory overscroll-x-contain"
-          >
-            {currentModeItems.map((item) => (
-              <div
-                key={`mode-${activeSectionTab}-${item.id}`}
-                className="w-36 xs:w-40 sm:w-44 md:w-48 flex-shrink-0 snap-start"
-              >
-                <MediaCard item={item} />
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* 4. Kommande filmer */}
-      {upcomingMovies.length > 0 && (
+      {/* 3. Horizontal Row: "Populära filmer" (reacts to selected streaming services) */}
+      {filteredPopular.length > 0 && (
         <HorizontalMediaRow
-          title="Kommande filmer"
-          description="Biopremiärer och filmer som släpps snart"
+          title={
+            isFilteredByProvider
+              ? `Populära filmer på ${providerLabel}`
+              : 'Populära filmer just nu'
+          }
+          description={
+            isFilteredByProvider
+              ? `De mest streamade och populära filmerna just nu på ${selectedProviderNames.join(', ')}`
+              : 'Filmerna som flest tittar på just nu i Sverige'
+          }
+          iconType="sparkles"
+          iconColor="text-[#E9A23B]"
+          items={filteredPopular}
+        />
+      )}
+
+      {/* 4. Horizontal Row: "Bioaktuella filmer" - Visas som default, försvinner när man filtrerar på streamingtjänster */}
+      {!isFilteredByProvider && theatricalMovies.length > 0 && (
+        <HorizontalMediaRow
+          title="Bioaktuella filmer just nu"
+          description="Filmer som visas på biografer i Sverige just nu"
+          badge="På bio"
+          iconType="film"
+          iconColor="text-[#E9A23B]"
+          items={theatricalMovies}
+        />
+      )}
+
+      {/* 5. Horizontal Row: "Nytt att hyra & köpa" - Visas som default eller om vald tjänst har hyr/köp */}
+      {filteredRentBuy.length > 0 && (
+        <HorizontalMediaRow
+          title={
+            isFilteredByProvider
+              ? `Hyr & köp på ${providerLabel}`
+              : 'Nytt att hyra & köpa digitalt'
+          }
+          description={
+            isFilteredByProvider
+              ? `Nya filmer tillgängliga att hyra eller köpa på ${selectedProviderNames.join(', ')}`
+              : 'Nya biofilmer som nu finns att hyra eller köpa på Apple TV, Prime Video, Viaplay, SF Anytime m.fl.'
+          }
+          badge="Hyr & Köp"
+          iconType="film"
+          iconColor="text-sky-400"
+          items={filteredRentBuy}
+        />
+      )}
+
+      {/* 6. Kommande filmer (filtreras efter valda tjänster) */}
+      {activeUpcomingMovies.length > 0 && (
+        <HorizontalMediaRow
+          title={
+            isFilteredByProvider
+              ? `Kommande filmer på ${providerLabel}`
+              : 'Kommande filmer'
+          }
+          description={
+            isFilteredByProvider
+              ? `Kommande filmer på ${selectedProviderNames.join(', ')}`
+              : 'Biopremiärer och filmer som släpps snart'
+          }
           iconType="calendar"
           iconColor="text-[#E9A23B]"
-          items={upcomingMovies}
+          items={activeUpcomingMovies}
           moreLink={{
             href: '/upcoming?tab=movies',
             label: 'Visa alla kommande',
@@ -299,12 +270,12 @@ export default function MoviesPageContent({
         />
       )}
 
-      {/* 5. Netflix-liknande kategorier (inklusive säsongsanpassad sektion) */}
-      <div className="space-y-2">
-        {curatedRows.map((row) => (
+      {/* 7. Samtliga genre- & kategorisektioner (anpassas dynamiskt till valda streamingtjänster!) */}
+      <div className={`space-y-2 transition-opacity duration-200 ${loadingSections ? 'opacity-60' : 'opacity-100'}`}>
+        {filteredCuratedRows.map((row) => (
           <HorizontalMediaRow
             key={`movie-row-${row.id}`}
-            title={row.title}
+            title={isFilteredByProvider ? `${row.title} • ${providerLabel}` : row.title}
             description={row.description}
             badge={row.badge}
             iconType={row.iconType}
@@ -314,7 +285,7 @@ export default function MoviesPageContent({
         ))}
       </div>
 
-      {/* 6. Utforska hela filmkatalogen med filter för Alla / Streama / Bioaktuella / Hyr & Köp + Genrer */}
+      {/* 8. Utforska hela filmkatalogen med filter för Alla / Streama / Bioaktuella / Hyr & Köp + Genrer */}
       <div className="pt-6 border-t border-[#2B3443] space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <span className="text-xs font-bold text-[#8D97A8] uppercase tracking-wider">
@@ -345,18 +316,20 @@ export default function MoviesPageContent({
               <Tv className="w-3.5 h-3.5" />
               <span>Streama</span>
             </button>
-            <button
-              type="button"
-              onClick={() => setCatalogMonetization('theatrical')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                catalogMonetization === 'theatrical'
-                  ? 'bg-[#E9A23B] text-[#0F1218] shadow-sm'
-                  : 'bg-[#171C25] text-[#8D97A8] hover:text-[#ECE9E3] border border-[#2B3443]'
-              }`}
-            >
-              <Ticket className="w-3.5 h-3.5" />
-              <span>Bioaktuella</span>
-            </button>
+            {!isFilteredByProvider && (
+              <button
+                type="button"
+                onClick={() => setCatalogMonetization('theatrical')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                  catalogMonetization === 'theatrical'
+                    ? 'bg-[#E9A23B] text-[#0F1218] shadow-sm'
+                    : 'bg-[#171C25] text-[#8D97A8] hover:text-[#ECE9E3] border border-[#2B3443]'
+                }`}
+              >
+                <Ticket className="w-3.5 h-3.5" />
+                <span>Bioaktuella</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setCatalogMonetization('rent_buy')}
@@ -377,7 +350,7 @@ export default function MoviesPageContent({
           defaultMediaType="movie"
           title="Populära filmer"
           externalProviderIds={selectedProviderIds}
-          onExternalProviderChange={setSelectedProviderIds}
+          onExternalProviderChange={handleSelectProviders}
           externalMonetizationType={catalogMonetization}
           onExternalMonetizationChange={setCatalogMonetization}
           hideProviderTabs={true}

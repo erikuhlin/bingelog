@@ -2,58 +2,77 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Sparkles, BookmarkPlus, ArrowRight } from 'lucide-react';
+import { Sparkles, BookmarkPlus } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { getUserMediaList } from '@/lib/storage';
 import { MediaItem } from '@/lib/types';
+import { SWEDISH_STREAMING_PROVIDERS } from '@/lib/tmdb';
 import HorizontalMediaRow from './HorizontalMediaRow';
 
-export default function ForYouSection() {
+interface ForYouSectionProps {
+  selectedProviderIds?: number[];
+}
+
+export default function ForYouSection({ selectedProviderIds = [] }: ForYouSectionProps) {
   const { user } = useAuth();
   const [recommendations, setRecommendations] = useState<MediaItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const [libraryCount, setLibraryCount] = useState<number | null>(null);
 
-  const fetchRecommendations = async () => {
-    if (!user) {
-      setRecommendations([]);
-      return;
-    }
+  const selectedProviderNames = selectedProviderIds
+    .map((id) => SWEDISH_STREAMING_PROVIDERS.find((p) => p.id === id)?.name)
+    .filter(Boolean) as string[];
 
-    try {
-      const library = await getUserMediaList();
-      setLibraryCount(library.length);
+  useEffect(() => {
+    let isMounted = true;
 
-      if (!library || library.length === 0) {
-        setRecommendations([]);
+    const fetchRecommendations = async () => {
+      if (!user) {
+        if (isMounted) setRecommendations([]);
         return;
       }
 
-      setLoading(true);
-      const res = await fetch('/api/recommendations/for-you', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ libraryItems: library }),
-      });
+      try {
+        const library = await getUserMediaList();
+        if (isMounted) setLibraryCount(library.length);
 
-      if (res.ok) {
-        const data = await res.json();
-        setRecommendations(data.recommendations || []);
+        if (!library || library.length === 0) {
+          if (isMounted) setRecommendations([]);
+          return;
+        }
+
+        if (isMounted) setLoading(true);
+        const res = await fetch('/api/recommendations/for-you', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            libraryItems: library,
+            providerIds: selectedProviderIds,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted) {
+            setRecommendations(data.recommendations || []);
+          }
+        }
+      } catch (err) {
+        console.warn('Could not load for-you recommendations:', err);
+      } finally {
+        if (isMounted) setLoading(false);
       }
-    } catch (err) {
-      console.warn('Could not load for-you recommendations:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  useEffect(() => {
     fetchRecommendations();
 
     const handler = () => fetchRecommendations();
     window.addEventListener('bingelog_storage_changed', handler);
-    return () => window.removeEventListener('bingelog_storage_changed', handler);
-  }, [user]);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('bingelog_storage_changed', handler);
+    };
+  }, [user, selectedProviderIds]);
 
   // Only displayed when user is logged in!
   if (!user) return null;
@@ -93,10 +112,22 @@ export default function ForYouSection() {
 
   if (recommendations.length === 0) return null;
 
+  const rowTitle =
+    selectedProviderNames.length === 1
+      ? `För dig på ${selectedProviderNames[0]}`
+      : selectedProviderNames.length > 1
+      ? `För dig på ${selectedProviderNames.join(' & ')}`
+      : 'För dig';
+
+  const rowDesc =
+    selectedProviderNames.length > 0
+      ? `Personliga rekommendationer på ${selectedProviderNames.join(', ')} baserat på ditt bibliotek`
+      : 'Personliga rekommendationer baserat på filmer och serier i ditt bibliotek';
+
   return (
     <HorizontalMediaRow
-      title="För dig"
-      description="Personliga rekommendationer baserat på filmer och serier i ditt bibliotek"
+      title={rowTitle}
+      description={rowDesc}
       badge="Skräddarsytt"
       iconType="sparkles"
       iconColor="text-[#E9A23B]"

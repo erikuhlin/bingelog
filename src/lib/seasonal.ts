@@ -120,10 +120,162 @@ export function getCurrentSeasonalTheme(): SeasonalTheme {
 }
 
 /**
+ * Fetches Netflix-style curated category rows for the main Utforska (Home) page
+ */
+export async function getCuratedHomeRows(providerIds?: number[]): Promise<CuratedCategoryRow[]> {
+  const seasonal = getCurrentSeasonalTheme();
+  const hasProviders = Boolean(providerIds && providerIds.length > 0);
+
+  const [
+    seasonalItems,
+    actionItems,
+    thrillerItems,
+    comedyItems,
+    dramaItems,
+    sciFiItems,
+    topRatedItems,
+  ] = await Promise.all([
+    discoverMedia({
+      mediaType: 'all',
+      providerIds,
+      genreId: seasonal.movieGenreId,
+      sortBy: seasonal.movieSortBy || 'popularity.desc',
+      page: 1,
+    }),
+    discoverMedia({
+      mediaType: 'all',
+      providerIds,
+      genreId: 28,
+      sortBy: 'popularity.desc',
+      page: 1,
+    }),
+    discoverMedia({
+      mediaType: 'all',
+      providerIds,
+      genreId: 53,
+      sortBy: 'popularity.desc',
+      page: 1,
+    }),
+    discoverMedia({
+      mediaType: 'all',
+      providerIds,
+      genreId: 35,
+      sortBy: 'popularity.desc',
+      page: 1,
+    }),
+    discoverMedia({
+      mediaType: 'all',
+      providerIds,
+      genreId: 18,
+      sortBy: 'popularity.desc',
+      page: 1,
+    }),
+    discoverMedia({
+      mediaType: 'all',
+      providerIds,
+      genreId: 878,
+      sortBy: 'popularity.desc',
+      page: 1,
+    }),
+    discoverMedia({
+      mediaType: 'all',
+      providerIds,
+      minRating: hasProviders ? 7.3 : 7.8,
+      sortBy: 'vote_average.desc',
+      page: 1,
+    }),
+  ]);
+
+  const rows: CuratedCategoryRow[] = [];
+
+  if (seasonalItems.length > 0) {
+    rows.push({
+      id: seasonal.id,
+      title: seasonal.title,
+      description: seasonal.description,
+      badge: seasonal.badge,
+      iconType: seasonal.iconType,
+      iconColor: seasonal.iconColor,
+      items: seasonalItems,
+    });
+  }
+
+  if (actionItems.length > 0) {
+    rows.push({
+      id: 'home-action',
+      title: 'Action & Äventyr',
+      description: 'Hög puls, explosiva scener och storslagna äventyr bland filmer och serier',
+      iconType: 'sparkles',
+      iconColor: 'text-[#E9A23B]',
+      items: actionItems,
+    });
+  }
+
+  if (thrillerItems.length > 0) {
+    rows.push({
+      id: 'home-thriller',
+      title: 'Spännande thrillers & deckare',
+      description: 'Mörka gåtor, kriminalfall och oväntade vändningar',
+      iconType: 'sparkles',
+      iconColor: 'text-purple-400',
+      items: thrillerItems,
+    });
+  }
+
+  if (comedyItems.length > 0) {
+    rows.push({
+      id: 'home-comedy',
+      title: 'Skrattfest & Komedier',
+      description: 'Träffsäker humor och lättsam underhållning',
+      iconType: 'sparkles',
+      iconColor: 'text-emerald-400',
+      items: comedyItems,
+    });
+  }
+
+  if (dramaItems.length > 0) {
+    rows.push({
+      id: 'home-drama',
+      title: 'Fängslande drama & starka berättelser',
+      description: 'Gripande livsöden, relationer och starka karaktärer',
+      iconType: 'sparkles',
+      iconColor: 'text-rose-400',
+      items: dramaItems,
+    });
+  }
+
+  if (sciFiItems.length > 0) {
+    rows.push({
+      id: 'home-scifi',
+      title: 'Sci-Fi & Fantastiska världar',
+      description: 'Framtidsvisioner, rymdäventyr och episka universum',
+      iconType: 'sparkles',
+      iconColor: 'text-cyan-400',
+      items: sciFiItems,
+    });
+  }
+
+  if (topRatedItems.length > 0) {
+    rows.push({
+      id: 'home-top-rated',
+      title: 'Topprankade mästerverk',
+      description: 'Filmerna och serierna med allra högst betyg från tittarna',
+      badge: 'Höga betyg',
+      iconType: 'sparkles',
+      iconColor: 'text-[#E9A23B]',
+      items: topRatedItems,
+    });
+  }
+
+  return rows;
+}
+
+/**
  * Fetches Netflix-style curated category rows for movies
  */
-export async function getCuratedMovieRows(): Promise<CuratedCategoryRow[]> {
+export async function getCuratedMovieRows(providerIds?: number[]): Promise<CuratedCategoryRow[]> {
   const seasonal = getCurrentSeasonalTheme();
+  const hasProviders = Boolean(providerIds && providerIds.length > 0);
 
   const [
     seasonalItems,
@@ -137,6 +289,7 @@ export async function getCuratedMovieRows(): Promise<CuratedCategoryRow[]> {
     // Seasonal theme
     discoverMedia({
       mediaType: 'movie',
+      providerIds,
       genreId: seasonal.movieGenreId,
       sortBy: seasonal.movieSortBy || 'popularity.desc',
       page: 1,
@@ -144,6 +297,7 @@ export async function getCuratedMovieRows(): Promise<CuratedCategoryRow[]> {
     // Action (28)
     discoverMedia({
       mediaType: 'movie',
+      providerIds,
       genreId: 28,
       sortBy: 'popularity.desc',
       page: 1,
@@ -151,6 +305,7 @@ export async function getCuratedMovieRows(): Promise<CuratedCategoryRow[]> {
     // Thriller & Kriminal (53)
     discoverMedia({
       mediaType: 'movie',
+      providerIds,
       genreId: 53,
       sortBy: 'popularity.desc',
       page: 1,
@@ -158,6 +313,7 @@ export async function getCuratedMovieRows(): Promise<CuratedCategoryRow[]> {
     // Romantik & Drama (10749)
     discoverMedia({
       mediaType: 'movie',
+      providerIds,
       genreId: 10749,
       sortBy: 'popularity.desc',
       page: 1,
@@ -165,6 +321,7 @@ export async function getCuratedMovieRows(): Promise<CuratedCategoryRow[]> {
     // Komedi (35)
     discoverMedia({
       mediaType: 'movie',
+      providerIds,
       genreId: 35,
       sortBy: 'popularity.desc',
       page: 1,
@@ -172,6 +329,7 @@ export async function getCuratedMovieRows(): Promise<CuratedCategoryRow[]> {
     // Sci-Fi (878)
     discoverMedia({
       mediaType: 'movie',
+      providerIds,
       genreId: 878,
       sortBy: 'popularity.desc',
       page: 1,
@@ -179,7 +337,8 @@ export async function getCuratedMovieRows(): Promise<CuratedCategoryRow[]> {
     // Topprankat
     discoverMedia({
       mediaType: 'movie',
-      minRating: 7.8,
+      providerIds,
+      minRating: hasProviders ? 7.2 : 7.8,
       sortBy: 'vote_average.desc',
       page: 1,
     }),
@@ -279,8 +438,9 @@ export async function getCuratedMovieRows(): Promise<CuratedCategoryRow[]> {
 /**
  * Fetches Netflix-style curated category rows for series
  */
-export async function getCuratedShowRows(): Promise<CuratedCategoryRow[]> {
+export async function getCuratedShowRows(providerIds?: number[]): Promise<CuratedCategoryRow[]> {
   const seasonal = getCurrentSeasonalTheme();
+  const hasProviders = Boolean(providerIds && providerIds.length > 0);
 
   const [
     seasonalItems,
@@ -294,6 +454,7 @@ export async function getCuratedShowRows(): Promise<CuratedCategoryRow[]> {
     // Seasonal theme for TV
     discoverMedia({
       mediaType: 'tv',
+      providerIds,
       genreId: seasonal.tvGenreId,
       sortBy: seasonal.tvSortBy || 'popularity.desc',
       page: 1,
@@ -301,6 +462,7 @@ export async function getCuratedShowRows(): Promise<CuratedCategoryRow[]> {
     // Kriminal & Mystery (80)
     discoverMedia({
       mediaType: 'tv',
+      providerIds,
       genreId: 80,
       sortBy: 'popularity.desc',
       page: 1,
@@ -308,6 +470,7 @@ export async function getCuratedShowRows(): Promise<CuratedCategoryRow[]> {
     // Drama (18)
     discoverMedia({
       mediaType: 'tv',
+      providerIds,
       genreId: 18,
       sortBy: 'popularity.desc',
       page: 1,
@@ -315,6 +478,7 @@ export async function getCuratedShowRows(): Promise<CuratedCategoryRow[]> {
     // Sci-Fi & Fantasy (10765)
     discoverMedia({
       mediaType: 'tv',
+      providerIds,
       genreId: 10765,
       sortBy: 'popularity.desc',
       page: 1,
@@ -322,6 +486,7 @@ export async function getCuratedShowRows(): Promise<CuratedCategoryRow[]> {
     // Komedi (35)
     discoverMedia({
       mediaType: 'tv',
+      providerIds,
       genreId: 35,
       sortBy: 'popularity.desc',
       page: 1,
@@ -329,14 +494,16 @@ export async function getCuratedShowRows(): Promise<CuratedCategoryRow[]> {
     // Action & Äventyr (10759)
     discoverMedia({
       mediaType: 'tv',
+      providerIds,
       genreId: 10759,
       sortBy: 'popularity.desc',
       page: 1,
     }),
-    // Topprankat (vote_average >= 8.0)
+    // Topprankat
     discoverMedia({
       mediaType: 'tv',
-      minRating: 8.0,
+      providerIds,
+      minRating: hasProviders ? 7.4 : 8.0,
       sortBy: 'vote_average.desc',
       page: 1,
     }),

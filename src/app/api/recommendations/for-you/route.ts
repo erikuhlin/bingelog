@@ -1,25 +1,33 @@
 import { NextResponse } from 'next/server';
-import { tmdbFetch, normalizeMediaItem, discoverMedia } from '@/lib/tmdb';
-import { MediaItem, MediaType, UserMediaRecord } from '@/lib/types';
+import { tmdbFetch, normalizeMediaItem, discoverMedia, enrichItemsWithProviders } from '@/lib/tmdb';
+import { MediaItem, UserMediaRecord } from '@/lib/types';
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const libraryItems: UserMediaRecord[] = body.libraryItems || [];
+    const providerIds: number[] = Array.isArray(body.providerIds)
+      ? body.providerIds.map(Number).filter((n: number) => !isNaN(n) && n > 0)
+      : [];
 
     if (!Array.isArray(libraryItems) || libraryItems.length === 0) {
       return NextResponse.json({ recommendations: [] });
     }
 
     const libraryIds = new Set<number>(libraryItems.map((item) => item.tmdb_id));
+    const hasProviders = providerIds.length > 0;
 
     // Sort items by priority:
     // 1. High rating (7-10)
     // 2. Watching or Completed
     // 3. Watchlist
     const sortedLibrary = [...libraryItems].sort((a, b) => {
-      const scoreA = (a.user_rating || 0) * 2 + (a.status === 'watching' ? 3 : a.status === 'completed' ? 2 : 1);
-      const scoreB = (b.user_rating || 0) * 2 + (b.status === 'watching' ? 3 : b.status === 'completed' ? 2 : 1);
+      const scoreA =
+        (a.user_rating || 0) * 2 +
+        (a.status === 'watching' ? 3 : a.status === 'completed' ? 2 : 1);
+      const scoreB =
+        (b.user_rating || 0) * 2 +
+        (b.status === 'watching' ? 3 : b.status === 'completed' ? 2 : 1);
       return scoreB - scoreA;
     });
 
@@ -50,7 +58,7 @@ export async function POST(request: Request) {
     const frequencyMap = new Map<number, { item: MediaItem; count: number }>();
 
     recResults.flat().forEach((item: MediaItem) => {
-      if (!item || libraryIds.has(item.id)) return; // Exclude items already in library!
+      if (!item || libraryIds.has(item.id)) return;
       if (frequencyMap.has(item.id)) {
         frequencyMap.get(item.id)!.count += 1;
       } else {
@@ -59,27 +67,6 @@ export async function POST(request: Request) {
     });
 
     let candidates = Array.from(frequencyMap.values());
-
-    // If we have fewer than 10 recommendations, backfill with top-rated discover
-    if (candidates.length < 10) {
-      try {
-        const backfill = await discoverMedia({
-          mediaType: 'all',
-          sortBy: 'popularity.desc',
-          page: 1,
-        });
-        backfill.forEach((item) => {
-          if (!libraryIds.has(item.id) && !frequencyMap.has(item.id)) {
-            frequencyMap.set(item.id, { item, count: 0.5 });
-          }
-        });
-        candidates = Array.from(frequencyMap.values());
-      } catch {
-        // ignore
-      }
-    }
-
-    // Sort by frequency (relevance) then by popularity
     candidates.sort((a, b) => {
       if (b.count !== a.count) {
         return b.count - a.count;
@@ -87,9 +74,42 @@ export async function POST(request: Request) {
       return (b.item.popularity || 0) - (a.item.popularity || 0);
     });
 
-    const finalRecommendations = candidates.map((c) => c.item).slice(0, 20);
+    // Enrich top 24 candidates with Swedish watch providers
+    const enrichedItems = await enrichItemsWithProviders(
+      candidates.slice(0, 24).map((c) => c.item),
+      false,
+      24
+    );
 
-    return NextResponse.json({ recommendations: finalRecommendations });
+    let filtered = hasProviders
+      ? enrichedItems.filter((item) =>
+          item.watch_providers?.some((p) => providerIds.includes(p.provider_id))
+        )
+      : enrichedItems;
+
+    // Backfill if fewer than 12 recommendations (especially when specific providers are selected)
+    if (filtered.length < 12) {
+      try {
+        const backfill = await discoverMedia({
+          mediaType: 'all',
+          providerIds: hasProviders ? providerIds : undefined,
+          minRating: 7.0,
+          sortBy: 'popularity.desc',
+          page: 1,
+        });
+        const existingIds = new Set(filtered.map((i) => i.id));
+        for (const item of backfill) {
+          if (!libraryIds.has(item.id) && !existingIds.has(item.id)) {
+            filtered.push(item);
+            existingIds.add(item.id);
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    return NextResponse.json({ recommendations: filtered.slice(0, 20) });
   } catch (err) {
     console.error('Error generating for-you recommendations:', err);
     return NextResponse.json({ recommendations: [] }, { status: 500 });
