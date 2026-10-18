@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Tv, RotateCcw, Loader2 } from 'lucide-react';
+import { Tv, RotateCcw, Loader2, SlidersHorizontal } from 'lucide-react';
 import { MediaItem } from '@/lib/types';
 import { CuratedCategoryRow } from '@/lib/seasonal';
 import { SWEDISH_STREAMING_PROVIDERS, filterUpcomingByProviders } from '@/lib/tmdb';
@@ -10,6 +10,7 @@ import StreamingNewsRow from './StreamingNewsRow';
 import UpcomingShowsSection from './UpcomingShowsSection';
 import HorizontalMediaRow from './HorizontalMediaRow';
 import ExploreFeed from './ExploreFeed';
+import AdvancedFilterBar from './AdvancedFilterBar';
 
 interface ShowsPageContentProps {
   popularShows: MediaItem[];
@@ -27,6 +28,13 @@ export default function ShowsPageContent({
   curatedRows,
 }: ShowsPageContentProps) {
   const [selectedProviderIds, setSelectedProviderIds] = useState<number[]>([]);
+  const [genreId, setGenreId] = useState<number | null>(null);
+  const [minRating, setMinRating] = useState<number | null>(null);
+  const [year, setYear] = useState<number | null>(null);
+  const [originalLanguage, setOriginalLanguage] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<string>('popularity.desc');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+
   const [filteredPopular, setFilteredPopular] = useState<MediaItem[]>(popularShows);
   const [filteredCuratedRows, setFilteredCuratedRows] = useState<CuratedCategoryRow[]>(curatedRows);
   const [loadingSections, setLoadingSections] = useState(false);
@@ -128,6 +136,30 @@ export default function ShowsPageContent({
     [upcomingNewShows, selectedProviderIds]
   );
 
+  const activeFilterCount =
+    (genreId ? 1 : 0) +
+    (minRating ? 1 : 0) +
+    (year ? 1 : 0) +
+    (originalLanguage ? 1 : 0) +
+    (sortBy !== 'popularity.desc' ? 1 : 0);
+
+  const hasAnyFilterActive = activeFilterCount > 0 || selectedProviderIds.length > 0;
+
+  const handleResetAllFilters = () => {
+    setSelectedProviderIds([]);
+    setGenreId(null);
+    setMinRating(null);
+    setYear(null);
+    setOriginalLanguage(null);
+    setSortBy('popularity.desc');
+    setIsFilterOpen(false);
+    try {
+      sessionStorage.removeItem('bingelog_selected_providers');
+    } catch {
+      // ignore
+    }
+  };
+
   return (
     <div className="space-y-8 sm:space-y-10 w-full max-w-full overflow-hidden">
       {/* Page Header */}
@@ -137,13 +169,13 @@ export default function ShowsPageContent({
           <span>Utforska Serier</span>
         </h1>
         <p className="text-xs sm:text-sm text-[#8D97A8] mt-1.5 max-w-2xl leading-relaxed">
-          Välj dina streamingtjänster för att filtrera samtliga seriesektioner, nya säsonger och genrer efter det du abonnerar på.
+          Välj dina streamingtjänster och filtrera bland samtliga seriesektioner, nya säsonger och genrer på ett och samma ställe.
         </p>
       </div>
 
-      {/* 1. Top Streaming Service Filter (Controls the ENTIRE shows page) */}
-      <div className="p-3.5 sm:p-5 rounded-3xl bg-[#171C25]/85 border border-[#2B3443] space-y-3 shadow-lg">
-        <div className="flex items-center justify-between gap-2">
+      {/* 1. Top Unified Filter Card (Controls all series sections and catalog) */}
+      <div className="p-3.5 sm:p-5 rounded-3xl bg-[#171C25]/85 border border-[#2B3443] space-y-3.5 shadow-lg backdrop-blur-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0 flex-wrap">
             <Tv className="w-4 h-4 text-[#E9A23B] flex-shrink-0" />
             <span className="text-xs sm:text-sm font-bold text-[#ECE9E3] tracking-tight">
@@ -161,22 +193,69 @@ export default function ShowsPageContent({
             )}
           </div>
 
-          {selectedProviderIds.length > 0 && (
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => handleSelectProviders([])}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#1E2531] hover:bg-[#2B3443] text-xs font-semibold text-[#ECE9E3] hover:text-[#E9A23B] transition-colors flex-shrink-0 cursor-pointer"
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                isFilterOpen || activeFilterCount > 0
+                  ? 'bg-[#1E2531] text-[#ECE9E3] border-[#E9A23B]/60 shadow-sm'
+                  : 'bg-[#0F1218] text-[#8D97A8] border-[#2B3443] hover:text-[#ECE9E3]'
+              }`}
             >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Visa alla tjänster</span>
+              <SlidersHorizontal className="w-3.5 h-3.5 text-[#E9A23B]" />
+              <span>Fler filter</span>
+              {activeFilterCount > 0 && (
+                <span className="w-4 h-4 rounded-full bg-[#E9A23B] text-[#0F1218] text-[10px] font-black flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
             </button>
-          )}
+
+            {hasAnyFilterActive && (
+              <button
+                type="button"
+                onClick={handleResetAllFilters}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#1E2531] hover:bg-[#2B3443] text-xs font-semibold text-[#8D97A8] hover:text-[#E9A23B] transition-colors flex-shrink-0 cursor-pointer"
+                title="Återställ alla filter"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Återställ</span>
+              </button>
+            )}
+          </div>
         </div>
 
         <ProviderFilterTabs
           selectedProviderIds={selectedProviderIds}
           onSelectProvider={handleSelectProviders}
         />
+
+        {/* Expandable Advanced Filter Bar */}
+        {isFilterOpen && (
+          <AdvancedFilterBar
+            mediaType="tv"
+            onMediaTypeChange={() => {}}
+            genreId={genreId}
+            onGenreChange={setGenreId}
+            minRating={minRating}
+            onMinRatingChange={setMinRating}
+            year={year}
+            onYearChange={setYear}
+            originalLanguage={originalLanguage}
+            onOriginalLanguageChange={setOriginalLanguage}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+            onReset={() => {
+              setGenreId(null);
+              setMinRating(null);
+              setYear(null);
+              setOriginalLanguage(null);
+              setSortBy('popularity.desc');
+            }}
+            activeFilterCount={activeFilterCount}
+          />
+        )}
       </div>
 
       {/* 2. Top Horizontal Row: "Nya serier & säsonger på streaming" */}
@@ -226,15 +305,26 @@ export default function ShowsPageContent({
         ))}
       </div>
 
-      {/* 6. Main Series Catalog synced with top streaming selector */}
+      {/* 6. Main Series Catalog synced with top streaming selector & filters */}
       <div className="pt-4 border-t border-[#2B3443]">
         <ExploreFeed
           initialTrending={popularShows}
           defaultMediaType="tv"
-          title="Utforska serier"
+          title={isFilteredByProvider ? `Serier på ${providerLabel}` : 'Utforska serier'}
           externalProviderIds={selectedProviderIds}
           onExternalProviderChange={handleSelectProviders}
+          externalGenreId={genreId}
+          onExternalGenreChange={setGenreId}
+          externalMinRating={minRating}
+          onExternalMinRatingChange={setMinRating}
+          externalYear={year}
+          onExternalYearChange={setYear}
+          externalSortBy={sortBy}
+          onExternalSortChange={setSortBy}
+          externalOriginalLanguage={originalLanguage}
+          onExternalOriginalLanguageChange={setOriginalLanguage}
           hideProviderTabs={true}
+          hideFilterBar={true}
         />
       </div>
     </div>

@@ -33,6 +33,19 @@ interface ExploreFeedProps {
   externalMonetizationType?: MovieMonetizationFilter;
   onExternalMonetizationChange?: (type: MovieMonetizationFilter) => void;
   hideProviderTabs?: boolean;
+  externalMediaType?: 'all' | MediaType;
+  onExternalMediaTypeChange?: (type: 'all' | MediaType) => void;
+  externalGenreId?: number | null;
+  onExternalGenreChange?: (id: number | null) => void;
+  externalMinRating?: number | null;
+  onExternalMinRatingChange?: (rating: number | null) => void;
+  externalYear?: number | null;
+  onExternalYearChange?: (year: number | null) => void;
+  externalSortBy?: string;
+  onExternalSortChange?: (sort: string) => void;
+  externalOriginalLanguage?: string | null;
+  onExternalOriginalLanguageChange?: (lang: string | null) => void;
+  hideFilterBar?: boolean;
 }
 
 export default function ExploreFeed({
@@ -44,6 +57,19 @@ export default function ExploreFeed({
   externalMonetizationType,
   onExternalMonetizationChange,
   hideProviderTabs = false,
+  externalMediaType,
+  onExternalMediaTypeChange,
+  externalGenreId,
+  onExternalGenreChange,
+  externalMinRating,
+  onExternalMinRatingChange,
+  externalYear,
+  onExternalYearChange,
+  externalSortBy,
+  onExternalSortChange,
+  externalOriginalLanguage,
+  onExternalOriginalLanguageChange,
+  hideFilterBar = false,
 }: ExploreFeedProps) {
   const router = useRouter();
   const [internalProviderIds, setInternalProviderIds] = useState<number[]>([]);
@@ -67,12 +93,48 @@ export default function ExploreFeed({
     }
   };
 
-  const [mediaType, setMediaType] = useState<'all' | MediaType>(defaultMediaType);
-  const [genreId, setGenreId] = useState<number | null>(null);
-  const [minRating, setMinRating] = useState<number | null>(null);
-  const [year, setYear] = useState<number | null>(null);
-  const [originalLanguage, setOriginalLanguage] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<string>('popularity.desc');
+  const [internalMediaType, setInternalMediaType] = useState<'all' | MediaType>(defaultMediaType);
+  const [internalGenreId, setInternalGenreId] = useState<number | null>(null);
+  const [internalMinRating, setInternalMinRating] = useState<number | null>(null);
+  const [internalYear, setInternalYear] = useState<number | null>(null);
+  const [internalOriginalLanguage, setInternalOriginalLanguage] = useState<string | null>(null);
+  const [internalSortBy, setInternalSortBy] = useState<string>('popularity.desc');
+
+  const mediaType = externalMediaType !== undefined ? externalMediaType : internalMediaType;
+  const setMediaType = (type: 'all' | MediaType) => {
+    if (onExternalMediaTypeChange) onExternalMediaTypeChange(type);
+    else setInternalMediaType(type);
+  };
+
+  const genreId = externalGenreId !== undefined ? externalGenreId : internalGenreId;
+  const setGenreId = (id: number | null) => {
+    if (onExternalGenreChange) onExternalGenreChange(id);
+    else setInternalGenreId(id);
+  };
+
+  const minRating = externalMinRating !== undefined ? externalMinRating : internalMinRating;
+  const setMinRating = (rating: number | null) => {
+    if (onExternalMinRatingChange) onExternalMinRatingChange(rating);
+    else setInternalMinRating(rating);
+  };
+
+  const year = externalYear !== undefined ? externalYear : internalYear;
+  const setYear = (y: number | null) => {
+    if (onExternalYearChange) onExternalYearChange(y);
+    else setInternalYear(y);
+  };
+
+  const originalLanguage = externalOriginalLanguage !== undefined ? externalOriginalLanguage : internalOriginalLanguage;
+  const setOriginalLanguage = (lang: string | null) => {
+    if (onExternalOriginalLanguageChange) onExternalOriginalLanguageChange(lang);
+    else setInternalOriginalLanguage(lang);
+  };
+
+  const sortBy = externalSortBy !== undefined ? externalSortBy : internalSortBy;
+  const setSortBy = (sort: string) => {
+    if (onExternalSortChange) onExternalSortChange(sort);
+    else setInternalSortBy(sort);
+  };
 
   const [items, setItems] = useState<MediaItem[]>(initialTrending);
   const [loading, setLoading] = useState(false);
@@ -474,7 +536,7 @@ export default function ExploreFeed({
 
           {/* Action buttons: Media Type Pills (if hideProviderTabs) + Filter toggle & View Mode Switcher */}
           <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2.5 w-full sm:w-auto">
-            {hideProviderTabs && defaultMediaType === 'all' && (
+            {!hideFilterBar && hideProviderTabs && defaultMediaType === 'all' && (
               <div className="flex items-center gap-1 p-1 rounded-xl bg-[#171C25] border border-[#2B3443]">
                 <button
                   type="button"
@@ -509,42 +571,44 @@ export default function ExploreFeed({
                       : 'text-[#8D97A8] hover:text-[#ECE9E3]'
                   }`}
                 >
-                  <Tv className="w-3 h-3" />
+                  <Tv className="w-3.5 h-3.5" />
                   <span>Serier</span>
                 </button>
               </div>
             )}
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setIsFilterOpen(!isFilterOpen)}
-                className={`flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-                  isFilterOpen || activeFilterCount > 0
-                    ? 'bg-[#1E2531] text-[#ECE9E3] border-[#2B3443]'
-                    : 'bg-[#171C25] text-[#8D97A8] border-[#2B3443] hover:text-[#ECE9E3]'
-                }`}
-              >
-                <SlidersHorizontal className="w-3.5 h-3.5 text-[#E9A23B]" />
-                <span>Fler filter & sortering</span>
-                {activeFilterCount > 0 && (
-                  <span className="w-4 h-4 rounded-full bg-[#E9A23B] text-[#0F1218] text-[10px] font-black flex items-center justify-center">
-                    {activeFilterCount}
-                  </span>
-                )}
-              </button>
-
-              {activeFilterCount > 0 && (
+            {!hideFilterBar && (
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={handleReset}
-                  title="Återställ alla filter"
-                  className="flex items-center gap-1.5 text-xs text-[#8D97A8] hover:text-[#E9A23B] transition-colors cursor-pointer"
+                  onClick={() => setIsFilterOpen(!isFilterOpen)}
+                  className={`flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                    isFilterOpen || activeFilterCount > 0
+                      ? 'bg-[#1E2531] text-[#ECE9E3] border-[#2B3443]'
+                      : 'bg-[#171C25] text-[#8D97A8] border-[#2B3443] hover:text-[#ECE9E3]'
+                  }`}
                 >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Återställ</span>
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-[#E9A23B]" />
+                  <span>Fler filter & sortering</span>
+                  {activeFilterCount > 0 && (
+                    <span className="w-4 h-4 rounded-full bg-[#E9A23B] text-[#0F1218] text-[10px] font-black flex items-center justify-center">
+                      {activeFilterCount}
+                    </span>
+                  )}
                 </button>
-              )}
-            </div>
+
+                {activeFilterCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleReset}
+                    title="Återställ alla filter"
+                    className="flex items-center gap-1.5 text-xs text-[#8D97A8] hover:text-[#E9A23B] transition-colors cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Återställ</span>
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* View Mode Switcher (Grid / List) */}
             <div className="flex items-center gap-1 bg-[#171C25] p-1 rounded-xl border border-[#2B3443] flex-shrink-0">
@@ -577,7 +641,7 @@ export default function ExploreFeed({
         </div>
 
         {/* Expandable filters box */}
-        {isFilterOpen && (
+        {!hideFilterBar && isFilterOpen && (
           <AdvancedFilterBar
             mediaType={mediaType}
             onMediaTypeChange={setMediaType}
