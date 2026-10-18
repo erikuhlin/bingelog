@@ -205,11 +205,23 @@ export async function enrichItemsWithProviders(
   return [...enriched, ...rest];
 }
 
+const isExcludedTvShow = (genreIds?: number[]) => {
+  if (!genreIds) return false;
+  // Exclude Talk shows (10767), News (10763), Soaps (10766)
+  return genreIds.includes(10767) || genreIds.includes(10763) || genreIds.includes(10766);
+};
+
 export async function getTrendingMedia(): Promise<MediaItem[]> {
   const data = await tmdbFetch<{ results: any[] }>('/trending/all/week');
   if (data?.results) {
     const list = data.results
       .filter((item) => item.media_type === 'movie' || item.media_type === 'tv')
+      .filter((item) => {
+        if (item.media_type === 'tv') {
+          return !isExcludedTvShow(item.genre_ids);
+        }
+        return true;
+      })
       .map(normalizeMediaItem);
     return enrichItemsWithProviders(list);
   }
@@ -225,12 +237,55 @@ export async function getPopularMovies(): Promise<MediaItem[]> {
   return MOCK_TRENDING.filter((item) => item.media_type === 'movie');
 }
 
-export async function getPopularShows(): Promise<MediaItem[]> {
-  const data = await tmdbFetch<{ results: any[] }>('/tv/popular');
-  if (data?.results) {
-    const list = data.results.map((item) => normalizeMediaItem({ ...item, media_type: 'tv' }));
-    return enrichItemsWithProviders(list);
+export async function getPopularShows(providerIds?: number[]): Promise<MediaItem[]> {
+  if (providerIds && providerIds.length > 0) {
+    return discoverMedia({
+      mediaType: 'tv',
+      providerIds,
+      sortBy: 'popularity.desc',
+      page: 1,
+    });
   }
+
+  // Blend trending series of the week with top popular series, strictly excluding talk shows, daily soaps and news
+  const [trendRes, popRes] = await Promise.all([
+    tmdbFetch<{ results: any[] }>('/trending/tv/week'),
+    tmdbFetch<{ results: any[] }>('/discover/tv', {
+      sort_by: 'popularity.desc',
+      without_genres: '10763,10767,10766',
+      'vote_count.gte': 15,
+      page: 1,
+    }),
+  ]);
+
+  const trendClean = (trendRes?.results || [])
+    .filter((item) => !isExcludedTvShow(item.genre_ids))
+    .map((item) => normalizeMediaItem({ ...item, media_type: 'tv' }));
+
+  const popClean = (popRes?.results || [])
+    .filter((item) => !isExcludedTvShow(item.genre_ids))
+    .map((item) => normalizeMediaItem({ ...item, media_type: 'tv' }));
+
+  // Interleave trending (what's buzzing right now) and popular (all-time top series)
+  const seen = new Set<number>();
+  const merged: MediaItem[] = [];
+  const max = Math.max(trendClean.length, popClean.length);
+
+  for (let i = 0; i < max; i++) {
+    if (i < trendClean.length && !seen.has(trendClean[i].id)) {
+      seen.add(trendClean[i].id);
+      merged.push(trendClean[i]);
+    }
+    if (i < popClean.length && !seen.has(popClean[i].id)) {
+      seen.add(popClean[i].id);
+      merged.push(popClean[i]);
+    }
+  }
+
+  if (merged.length > 0) {
+    return enrichItemsWithProviders(merged.slice(0, 24));
+  }
+
   return MOCK_TRENDING.filter((item) => item.media_type === 'tv');
 }
 
@@ -784,14 +839,19 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
     const params: Record<string, string | number> = { ...baseParams, sort_by: effectiveSort };
     if (tvGenresParam) params.with_genres = tvGenresParam;
     if (year) params.first_air_date_year = year;
+    // Always exclude talkshows, news, and soaps unless user explicitly filtered by one of those genres
+    if (!tvGenresParam || (!tvGenresParam.includes('10763') && !tvGenresParam.includes('10767') && !tvGenresParam.includes('10766'))) {
+      params.without_genres = '10763,10767,10766';
+    }
     if (newReleasesOnly && !year) {
       params['first_air_date.lte'] = today;
       params['first_air_date.gte'] = daysAgo(365);
-      params.without_genres = '10763,10767,10766';
       params['vote_count.gte'] = hasProviders ? 2 : 5;
     }
     const data = await tmdbFetch<{ results: any[] }>('/discover/tv', params);
-    const items = (data?.results || []).map((t) => normalizeMediaItem({ ...t, media_type: 'tv' }));
+    const items = (data?.results || [])
+      .filter((t) => !isExcludedTvShow(t.genre_ids))
+      .map((t) => normalizeMediaItem({ ...t, media_type: 'tv' }));
     return finalizeResults(items);
   }
 
@@ -814,10 +874,13 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
   };
   if (tvGenresParam) tvParams.with_genres = tvGenresParam;
   if (year) tvParams.first_air_date_year = year;
+  // Always exclude talkshows, news, and soaps unless explicitly requested
+  if (!tvGenresParam || (!tvGenresParam.includes('10763') && !tvGenresParam.includes('10767') && !tvGenresParam.includes('10766'))) {
+    tvParams.without_genres = '10763,10767,10766';
+  }
   if (newReleasesOnly && !year) {
     tvParams['first_air_date.lte'] = today;
     tvParams['first_air_date.gte'] = daysAgo(365);
-    tvParams.without_genres = '10763,10767,10766';
     tvParams['vote_count.gte'] = hasProviders ? 2 : 5;
   }
 
@@ -827,7 +890,9 @@ export async function discoverMedia(filters: import('./types').DiscoverFilters):
   ]);
 
   const movies = (movieRes?.results || []).map((m) => normalizeMediaItem({ ...m, media_type: 'movie' }));
-  const tvs = (tvRes?.results || []).map((t) => normalizeMediaItem({ ...t, media_type: 'tv' }));
+  const tvs = (tvRes?.results || [])
+    .filter((t) => !isExcludedTvShow(t.genre_ids))
+    .map((t) => normalizeMediaItem({ ...t, media_type: 'tv' }));
 
   const merged = newReleasesOnly
     ? [...movies, ...tvs].sort((a, b) => {

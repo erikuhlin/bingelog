@@ -186,18 +186,18 @@ export default function ShowsPageContent({
         defaultMediaType="tv"
       />
 
-      {/* 3. Horizontal Row: "Populära serier" (reacts to selected streaming services) */}
+      {/* 3. Horizontal Row: "Populära & trendande serier" (reacts to selected streaming services) */}
       {filteredPopular.length > 0 && (
         <HorizontalMediaRow
           title={
             isFilteredByProvider
-              ? `Populära serier på ${providerLabel}`
-              : 'Populära serier just nu'
+              ? `Populärt & trendar på ${providerLabel}`
+              : 'Populära & trendande serier'
           }
           description={
             isFilteredByProvider
-              ? `De mest streamade och populära serierna just nu på ${selectedProviderNames.join(', ')}`
-              : 'Serierna som flest tittar på just nu i Sverige'
+              ? `De mest streamade och omtalade serierna just nu på ${selectedProviderNames.join(', ')}`
+              : 'Serierna som flest tittar på och pratar om just nu'
           }
           iconType="sparkles"
           iconColor="text-[#E9A23B]"
@@ -231,7 +231,7 @@ export default function ShowsPageContent({
         <ExploreFeed
           initialTrending={popularShows}
           defaultMediaType="tv"
-          title="Populära serier"
+          title="Utforska serier"
           externalProviderIds={selectedProviderIds}
           onExternalProviderChange={handleSelectProviders}
           hideProviderTabs={true}

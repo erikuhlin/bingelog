@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import {
   discoverMedia,
   getRentBuyMovies,
+  getPopularShows,
 } from '@/lib/tmdb';
 import {
   getCuratedHomeRows,
@@ -42,12 +43,7 @@ export async function GET(request: Request) {
 
     if (pageType === 'shows') {
       const [popularShows, curatedRows] = await Promise.all([
-        discoverMedia({
-          mediaType: 'tv',
-          providerIds: providerIds.length > 0 ? providerIds : undefined,
-          sortBy: 'popularity.desc',
-          page: 1,
-        }),
+        getPopularShows(providerIds.length > 0 ? providerIds : undefined),
         getCuratedShowRows(providerIds.length > 0 ? providerIds : undefined),
       ]);
 
