@@ -129,17 +129,10 @@ export default function HomePageContent({
 
   const isFilteredByProvider = selectedProviderIds.length > 0;
 
-  // Hero items: if filtered by provider, show top items with backdrop from selected providers
-  const activeHeroItems = useMemo(() => {
-    if (!isFilteredByProvider) return carouselItems;
-    const withBackdrop = filteredTrending.filter((i) => i.backdrop_path);
-    return withBackdrop.length > 0 ? withBackdrop.slice(0, 5) : carouselItems;
-  }, [isFilteredByProvider, filteredTrending, carouselItems]);
-
   // Trending row items
   const activeTrendingList = useMemo(() => {
     if (!isFilteredByProvider) return trendingList;
-    return filteredTrending.length > 5 ? filteredTrending.slice(5) : filteredTrending;
+    return filteredTrending;
   }, [isFilteredByProvider, filteredTrending, trendingList]);
 
   // Upcoming items filtered by selected providers
@@ -150,7 +143,10 @@ export default function HomePageContent({
 
   return (
     <div className="w-full max-w-full overflow-hidden">
-      {/* 1. Top-level Streaming Service Filter (Controls the ENTIRE page) */}
+      {/* 1. Hero Carousel (#1–#5) */}
+      {carouselItems.length > 0 && <HeroCarousel items={carouselItems} />}
+
+      {/* 2. Streaming Service Filter right below Hero (Controls all sections below) */}
       <div className="mb-6 sm:mb-8 p-3.5 sm:p-5 rounded-3xl bg-[#171C25]/85 border border-[#2B3443] backdrop-blur-sm shadow-lg">
         <div className="flex items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-2 min-w-0 flex-wrap">
@@ -187,9 +183,6 @@ export default function HomePageContent({
           onSelectProvider={handleSelectProviders}
         />
       </div>
-
-      {/* 2. Hero Carousel (#1–#5) */}
-      {activeHeroItems.length > 0 && <HeroCarousel items={activeHeroItems} />}
 
       {/* 3. "Nyheter på streaming" - Horizontal side-scroll */}
       <StreamingNewsRow
