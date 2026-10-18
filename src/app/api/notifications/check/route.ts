@@ -16,6 +16,28 @@ export interface ReleaseNotification {
 const notificationMemoryCache = new Map<string, { notifications: ReleaseNotification[]; timestamp: number }>();
 const CACHE_TTL_MS = 1000 * 60 * 30; // 30 minutes
 
+function formatSwedishDate(dateStr: string): string {
+  if (!dateStr) return '';
+  try {
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const year = parts[0];
+      const monthNum = parseInt(parts[1], 10);
+      const day = parseInt(parts[2], 10);
+      const months = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+      const month = months[monthNum - 1] || parts[1];
+      const currentYear = new Date().getFullYear().toString();
+      if (year === currentYear) {
+        return `${day} ${month}`;
+      }
+      return `${day} ${month} ${year}`;
+    }
+    return dateStr;
+  } catch {
+    return dateStr;
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -37,9 +59,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ notifications: [] });
     }
 
-    // Cache key based on tracked item IDs and statuses
+    // Cache key based on tracked item IDs, statuses, and timestamps
     const sortedIds = trackedItems
-      .map((i) => `${i.media_type}_${i.tmdb_id}_${i.status}_${i.current_season || 0}`)
+      .map((i) => `${i.media_type}_${i.tmdb_id}_${i.status}_${i.current_season || 0}_${i.updated_at || i.created_at || ''}`)
       .sort()
       .join(',');
     const now = Date.now();
@@ -91,7 +113,7 @@ export async function POST(request: Request) {
                   title: movie.title || item.title,
                   poster_path: movie.poster_path || item.poster_path,
                   release_date: movie.release_date,
-                  message: `Filmen "${movie.title || item.title}" har premiär den ${movie.release_date}!`,
+                  message: `Filmen "${movie.title || item.title}" har premiär den ${formatSwedishDate(movie.release_date)}!`,
                 });
               }
             }
@@ -100,21 +122,43 @@ export async function POST(request: Request) {
           const show = await tmdbFetch<any>(`/tv/${item.tmdb_id}`);
           if (!show) return;
 
+          const completedAt = item.updated_at
+            ? new Date(item.updated_at).getTime()
+            : item.created_at
+            ? new Date(item.created_at).getTime()
+            : 0;
+
           // Check seasons for premieres
           if (Array.isArray(show.seasons) && show.seasons.length > 0) {
             for (const s of show.seasons) {
               if (!s.air_date || s.season_number <= 0) continue;
 
-              // If user marked as completed, only notify about new seasons
+              const airMs = new Date(s.air_date).getTime();
+              if (isNaN(airMs)) continue;
+
+              // If user marked as completed:
               if (item.status === 'completed') {
-                const completedSeason = item.current_season || 1;
-                if (s.season_number <= completedSeason) {
+                // Season 1 of a completed show can never be a "new season"
+                if (s.season_number <= 1) continue;
+
+                // If user tracked seasons and s is <= their completed season
+                if (item.current_season && s.season_number <= item.current_season) {
+                  continue;
+                }
+
+                // If this season already aired before the user marked the series completed, it's not a new season
+                if (completedAt > 0 && airMs < completedAt - 12 * 60 * 60 * 1000) {
                   continue;
                 }
               }
 
-              const airMs = new Date(s.air_date).getTime();
-              if (isNaN(airMs)) continue;
+              // If user is currently watching:
+              if (item.status === 'watching') {
+                // Don't notify for seasons earlier than what the user is currently watching
+                if (item.current_season && s.season_number < item.current_season) {
+                  continue;
+                }
+              }
 
               if (airMs <= now && airMs >= sixtyDaysAgoMs) {
                 // Premiered within the last 60 days
@@ -143,8 +187,8 @@ export async function POST(request: Request) {
                   season_number: s.season_number,
                   message:
                     s.season_number > 1
-                      ? `Säsong ${s.season_number} av "${show.name || item.title}" har premiär den ${s.air_date}!`
-                      : `Serien "${show.name || item.title}" har premiär den ${s.air_date}!`,
+                      ? `Säsong ${s.season_number} av "${show.name || item.title}" har premiär den ${formatSwedishDate(s.air_date)}!`
+                      : `Serien "${show.name || item.title}" har premiär den ${formatSwedishDate(s.air_date)}!`,
                 });
               }
             }
@@ -170,7 +214,7 @@ export async function POST(request: Request) {
                   title: show.name || item.title,
                   poster_path: show.poster_path || item.poster_path,
                   release_date: show.first_air_date,
-                  message: `Serien "${show.name || item.title}" har premiär den ${show.first_air_date}!`,
+                  message: `Serien "${show.name || item.title}" har premiär den ${formatSwedishDate(show.first_air_date)}!`,
                 });
               }
             }

@@ -27,9 +27,11 @@ export default function NotificationBell() {
       const stored = localStorage.getItem(storageKey);
       if (stored) {
         setReadIds(new Set(JSON.parse(stored)));
+      } else {
+        setReadIds(new Set());
       }
     } catch {
-      // ignore
+      setReadIds(new Set());
     }
   }, [storageKey]);
 
@@ -46,11 +48,14 @@ export default function NotificationBell() {
   };
 
   const markAllAsRead = () => {
-    const allIds = new Set(notifications.map((n) => n.id));
-    setReadIds(allIds);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(storageKey, JSON.stringify(Array.from(allIds)));
-    }
+    setReadIds((prev) => {
+      const next = new Set(prev);
+      notifications.forEach((n) => next.add(n.id));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(storageKey, JSON.stringify(Array.from(next)));
+      }
+      return next;
+    });
   };
 
   // Check notifications against user library
