@@ -62,10 +62,10 @@ function formatSwedishDate(dateStr?: string | null): string | null {
   if (!dateStr) return null;
   try {
     const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return dateStr;
+    if (isNaN(d.getTime())) return null;
     return d.toLocaleDateString('sv-SE', { year: 'numeric', month: 'short', day: 'numeric' });
   } catch {
-    return dateStr;
+    return null;
   }
 }
 
@@ -264,7 +264,7 @@ export default async function MediaDetailPage({ params }: PageProps) {
                     </span>
                     {upcomingSeason && (
                       <span className="text-[#E9A23B] font-semibold">
-                        · S{upcomingSeason.season_number} {upcomingSeason.air_date ? `(${formatSwedishDate(upcomingSeason.air_date)})` : 'bekräftad'}
+                        · S{upcomingSeason.season_number} {upcomingSeason.air_date && formatSwedishDate(upcomingSeason.air_date) ? `(${formatSwedishDate(upcomingSeason.air_date)})` : 'bekräftad'}
                       </span>
                     )}
                   </span>
@@ -306,7 +306,18 @@ export default async function MediaDetailPage({ params }: PageProps) {
                   <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E9A23B]/15 border border-[#E9A23B]/40 text-xs font-bold text-[#E9A23B] shadow-sm">
                     <Sparkles className="w-3.5 h-3.5 text-[#E9A23B]" />
                     <span>
-                      Säsong {upcomingSeason.season_number} {getRelativeDateLabel(upcomingSeason.air_date) ? `kommer ${getRelativeDateLabel(upcomingSeason.air_date)}` : `släpps ${formatSwedishDate(upcomingSeason.air_date)}`}
+                      {upcomingSeason.air_date ? (
+                        <>
+                          Säsong {upcomingSeason.season_number}{' '}
+                          {getRelativeDateLabel(upcomingSeason.air_date)
+                            ? `kommer ${getRelativeDateLabel(upcomingSeason.air_date)}`
+                            : formatSwedishDate(upcomingSeason.air_date)
+                            ? `släpps ${formatSwedishDate(upcomingSeason.air_date)}`
+                            : 'släpps framöver'}
+                        </>
+                      ) : (
+                        <>Säsong {upcomingSeason.season_number} är bekräftad</>
+                      )}
                     </span>
                   </span>
                 )}
@@ -315,7 +326,14 @@ export default async function MediaDetailPage({ params }: PageProps) {
                   <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E9A23B]/15 border border-[#E9A23B]/40 text-xs font-bold text-[#E9A23B] shadow-sm">
                     <Clock className="w-3.5 h-3.5 text-[#E9A23B]" />
                     <span>
-                      S{nextEpisode.season_number} A{nextEpisode.episode_number} {getRelativeDateLabel(nextEpisode.air_date) ? `släpps ${getRelativeDateLabel(nextEpisode.air_date)}` : `sänds ${formatSwedishDate(nextEpisode.air_date)}`}
+                      S{nextEpisode.season_number} A{nextEpisode.episode_number}{' '}
+                      {nextEpisode.air_date
+                        ? getRelativeDateLabel(nextEpisode.air_date)
+                          ? `släpps ${getRelativeDateLabel(nextEpisode.air_date)}`
+                          : formatSwedishDate(nextEpisode.air_date)
+                          ? `sänds ${formatSwedishDate(nextEpisode.air_date)}`
+                          : 'släpps framöver'
+                        : 'släpps framöver'}
                     </span>
                   </span>
                 )}
@@ -707,19 +725,34 @@ export default async function MediaDetailPage({ params }: PageProps) {
                   <>
                     Säsong {upcomingSeason.season_number}{' '}
                     <span className="text-[#E9A23B]">
-                      {getRelativeDateLabel(upcomingSeason.air_date)
-                        ? `har premiär ${getRelativeDateLabel(upcomingSeason.air_date)}`
-                        : `släpps ${formatSwedishDate(upcomingSeason.air_date)}`}
+                      {upcomingSeason.air_date ? (
+                        getRelativeDateLabel(upcomingSeason.air_date)
+                          ? `har premiär ${getRelativeDateLabel(upcomingSeason.air_date)}`
+                          : formatSwedishDate(upcomingSeason.air_date)
+                          ? `släpps ${formatSwedishDate(upcomingSeason.air_date)}`
+                          : 'är bekräftad och släpps framöver'
+                      ) : (
+                        'är bekräftad och släpps framöver'
+                      )}
                     </span>
-                    {upcomingSeason.episode_count ? ` (${upcomingSeason.episode_count} nya avsnitt)` : ''}
+                    {/* Visa endast antal avsnitt inom parentes om datum och fler än 1 avsnitt är bekräftade */}
+                    {upcomingSeason.air_date && upcomingSeason.episode_count && upcomingSeason.episode_count > 1 ? (
+                      <span className="text-[#8D97A8] font-normal text-xs sm:text-sm"> ({upcomingSeason.episode_count} nya avsnitt)</span>
+                    ) : null}
                   </>
                 ) : (
                   <>
                     Säsong {nextEpisode!.season_number}, Avsnitt {nextEpisode!.episode_number}{' '}
                     <span className="text-[#E9A23B]">
-                      {getRelativeDateLabel(nextEpisode!.air_date)
-                        ? `sänds ${getRelativeDateLabel(nextEpisode!.air_date)}`
-                        : `sänds den ${formatSwedishDate(nextEpisode!.air_date)}`}
+                      {nextEpisode!.air_date ? (
+                        getRelativeDateLabel(nextEpisode!.air_date)
+                          ? `sänds ${getRelativeDateLabel(nextEpisode!.air_date)}`
+                          : formatSwedishDate(nextEpisode!.air_date)
+                          ? `sänds den ${formatSwedishDate(nextEpisode!.air_date)}`
+                          : 'sänds framöver'
+                      ) : (
+                        'sänds framöver'
+                      )}
                     </span>
                   </>
                 )}
@@ -728,7 +761,9 @@ export default async function MediaDetailPage({ params }: PageProps) {
           </div>
           <div className="text-xs text-[#ECE9E3] flex items-center gap-2 self-start sm:self-auto bg-[#0F1218]/80 px-3.5 py-2 rounded-2xl border border-[#2B3443] flex-shrink-0">
             <Calendar className="w-4 h-4 text-[#E9A23B]" />
-            <span className="font-semibold">{formatSwedishDate(upcomingSeason?.air_date || nextEpisode?.air_date)}</span>
+            <span className="font-semibold">
+              {formatSwedishDate(upcomingSeason?.air_date || nextEpisode?.air_date) || 'Datum ej fastställt'}
+            </span>
           </div>
         </section>
       )}
