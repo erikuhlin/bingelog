@@ -152,7 +152,7 @@ export default function MediaCard({ item, subtitle }: MediaCardProps) {
         </div>
 
         {/* Status button */}
-        <div className="pt-1 border-t border-[#2B3443]/60">
+        <div className="pt-1 border-t border-[#2B3443]/60 mt-auto">
           <StatusSelector
             tmdbId={item.id}
             mediaType={item.media_type}

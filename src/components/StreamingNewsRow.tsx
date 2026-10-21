@@ -2,9 +2,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Sparkles,
-  Film,
-  Tv,
   ChevronLeft,
   ChevronRight,
   Loader2,
@@ -26,7 +23,6 @@ export default function StreamingNewsRow({
   defaultMediaType = 'all',
 }: StreamingNewsRowProps) {
   const rowRef = useRef<HTMLDivElement>(null);
-  const [mediaType, setMediaType] = useState<'all' | MediaType>(defaultMediaType);
   const [items, setItems] = useState<MediaItem[]>(initialItems);
   const [loading, setLoading] = useState(false);
 
@@ -35,7 +31,7 @@ export default function StreamingNewsRow({
     .filter(Boolean) as string[];
 
   useEffect(() => {
-    const isDefault = selectedProviderIds.length === 0 && mediaType === defaultMediaType;
+    const isDefault = selectedProviderIds.length === 0 && defaultMediaType === 'all';
     if (isDefault) {
       setItems(initialItems);
       return;
@@ -47,8 +43,8 @@ export default function StreamingNewsRow({
       try {
         const params = new URLSearchParams();
         params.set('newReleasesOnly', 'true');
-        if (mediaType !== 'all') {
-          params.set('mediaType', mediaType);
+        if (defaultMediaType !== 'all') {
+          params.set('mediaType', defaultMediaType);
         }
         if (selectedProviderIds.length > 0) {
           params.set('providerIds', selectedProviderIds.join(','));
@@ -79,7 +75,7 @@ export default function StreamingNewsRow({
     return () => {
       isMounted = false;
     };
-  }, [selectedProviderIds, mediaType, defaultMediaType, initialItems]);
+  }, [selectedProviderIds, defaultMediaType, initialItems]);
 
   const scrollLeft = () => {
     if (rowRef.current) {
@@ -95,9 +91,9 @@ export default function StreamingNewsRow({
 
   const getTitle = () => {
     const prefix =
-      mediaType === 'movie'
+      defaultMediaType === 'movie'
         ? 'Nya filmer'
-        : mediaType === 'tv'
+        : defaultMediaType === 'tv'
         ? 'Nya serier & säsonger'
         : 'Nyheter';
 
@@ -143,51 +139,9 @@ export default function StreamingNewsRow({
           <p className="text-xs text-[#8D97A8] mt-0.5 truncate">{getDescription()}</p>
         </div>
 
-        <div className="flex items-center justify-between sm:justify-end gap-2.5 flex-shrink-0">
-          {/* Quick Media Type Pills when on 'all' page */}
-          {defaultMediaType === 'all' && (
-            <div className="flex items-center gap-1 p-1 rounded-xl bg-[#171C25] border border-[#2B3443]">
-              <button
-                type="button"
-                onClick={() => setMediaType('all')}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                  mediaType === 'all'
-                    ? 'bg-[#E9A23B] text-[#0F1218] shadow-sm'
-                    : 'text-[#8D97A8] hover:text-[#ECE9E3]'
-                }`}
-              >
-                <Sparkles className="w-3 h-3" />
-                <span>Alla</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setMediaType('movie')}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                  mediaType === 'movie'
-                    ? 'bg-[#E9A23B] text-[#0F1218] shadow-sm'
-                    : 'text-[#8D97A8] hover:text-[#ECE9E3]'
-                }`}
-              >
-                <Film className="w-3 h-3" />
-                <span>Filmer</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setMediaType('tv')}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                  mediaType === 'tv'
-                    ? 'bg-[#E9A23B] text-[#0F1218] shadow-sm'
-                    : 'text-[#8D97A8] hover:text-[#ECE9E3]'
-                }`}
-              >
-                <Tv className="w-3 h-3" />
-                <span>Serier</span>
-              </button>
-            </div>
-          )}
-
+        <div className="flex items-center justify-end gap-2 flex-shrink-0">
           {/* Scroll Buttons */}
-          <div className="hidden md:flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={scrollLeft}
