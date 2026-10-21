@@ -65,7 +65,10 @@ function formatRelativeAirDate(dateStr: string | null | undefined): RelativeAirD
     if (diffDays === 1) return { isFuture: true, isToday: false, label: 'Släpps imorgon' };
     if (diffDays === 2) return { isFuture: true, isToday: false, label: 'Släpps i övermorgon' };
     if (diffDays > 2 && diffDays <= 7) return { isFuture: true, isToday: false, label: `Om ${diffDays} dagar` };
-    if (diffDays > 7 && diffDays <= 30) return { isFuture: true, isToday: false, label: `Släpps om ${Math.round(diffDays / 7)} veckor` };
+    if (diffDays > 7 && diffDays <= 30) {
+      const weeks = Math.round(diffDays / 7);
+      return { isFuture: true, isToday: false, label: `Släpps om ${weeks} ${weeks === 1 ? 'vecka' : 'veckor'}` };
+    }
     if (diffDays > 30) {
       const formatted = airDate.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' });
       return { isFuture: true, isToday: false, label: `Släpps ${formatted}` };

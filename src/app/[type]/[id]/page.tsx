@@ -82,7 +82,10 @@ function getRelativeDateLabel(dateStr?: string | null): string | null {
     if (diffDays === 1) return 'imorgon';
     if (diffDays === 2) return 'i övermorgon';
     if (diffDays > 2 && diffDays <= 7) return `om ${diffDays} dagar`;
-    if (diffDays > 7 && diffDays <= 30) return `om ${Math.round(diffDays / 7)} veckor`;
+    if (diffDays > 7 && diffDays <= 30) {
+      const weeks = Math.round(diffDays / 7);
+      return `om ${weeks} ${weeks === 1 ? 'vecka' : 'veckor'}`;
+    }
     return null;
   } catch {
     return null;
