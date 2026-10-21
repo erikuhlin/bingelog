@@ -66,13 +66,16 @@ function getTvShowStatusInfo(
   
   const regularSeasons = meta?.seasons?.filter((s) => s.season_number > 0) || [];
   const airedRegularSeasons = regularSeasons.filter((s) => {
-    if (!s.air_date) return s.season_number === 1;
-    return new Date(s.air_date).getTime() <= nowMs;
+    if (meta?.last_episode && meta.last_episode.season_number >= s.season_number) return true;
+    if (s.air_date) return new Date(s.air_date).getTime() <= nowMs;
+    return s.season_number === 1;
   });
   const totalAiredSeasons = airedRegularSeasons.length > 0 ? airedRegularSeasons.length : (regularSeasons.length || 1);
   const upcomingSeason = regularSeasons.find((s) => {
-    if (!s.air_date) return false;
-    return new Date(s.air_date).getTime() > nowMs;
+    if (s.season_number <= 0) return false;
+    if (meta?.last_episode && meta.last_episode.season_number >= s.season_number) return false;
+    if (s.air_date) return new Date(s.air_date).getTime() > nowMs;
+    return s.season_number > 1;
   });
 
   const isSeasonComplete = totalInSeason > 0 && curEp >= totalInSeason;
@@ -112,7 +115,9 @@ function getTvShowStatusInfo(
       : '';
 
     return {
-      badgeText: totalAiredSeasons > 1 ? 'Alla säsonger sedda' : 'Sedd',
+      badgeText: totalAiredSeasons > 1
+        ? 'Alla säsonger sedda'
+        : (upcomingSeason ? `Sedd · S${upcomingSeason.season_number} kommer` : 'Sedd'),
       badgeColor: 'completed' as const,
       listDescription: totalAiredSeasons > 1 ? `Alla ${totalAiredSeasons} säsonger sedda${upcomingNote}` : `Helt sedd${upcomingNote}`,
       hasNewerSeason: false,

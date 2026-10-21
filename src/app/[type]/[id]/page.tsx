@@ -121,9 +121,18 @@ export default async function MediaDetailPage({ params }: PageProps) {
   // Find upcoming season if any
   const upcomingSeason = media.media_type === 'tv'
     ? media.seasons?.find((s) => {
-        if (!s.air_date) return false;
-        const d = new Date(s.air_date).getTime();
-        return d > nowMs;
+        if (s.season_number <= 0) return false;
+        if (media.last_episode_to_air && media.last_episode_to_air.season_number >= s.season_number) {
+          return false;
+        }
+        if (s.air_date) {
+          return new Date(s.air_date).getTime() > nowMs;
+        }
+        if (s.season_number === 1) {
+          return media.first_air_date ? new Date(media.first_air_date).getTime() > nowMs : false;
+        }
+        // Season > 1 with no air_date is upcoming/unreleased
+        return true;
       })
     : null;
 
@@ -131,12 +140,18 @@ export default async function MediaDetailPage({ params }: PageProps) {
   const airedSeasons = media.media_type === 'tv' && media.seasons
     ? media.seasons.filter((s) => {
         if (s.season_number <= 0) return false;
-        if (!s.air_date) {
-          return s.season_number === 1 && media.first_air_date
-            ? new Date(media.first_air_date).getTime() <= nowMs
-            : false;
+        if (media.last_episode_to_air && media.last_episode_to_air.season_number >= s.season_number) {
+          return true;
         }
-        return new Date(s.air_date).getTime() <= nowMs;
+        if (s.air_date) {
+          return new Date(s.air_date).getTime() <= nowMs;
+        }
+        if (s.season_number === 1) {
+          return media.first_air_date
+            ? new Date(media.first_air_date).getTime() <= nowMs
+            : true;
+        }
+        return false;
       })
     : [];
 
@@ -736,6 +751,9 @@ export default async function MediaDetailPage({ params }: PageProps) {
             posterPath={media.poster_path}
             backdropPath={media.backdrop_path}
             seasons={media.seasons}
+            firstAirDate={media.first_air_date}
+            lastEpisodeToAir={media.last_episode_to_air}
+            nextEpisodeToAir={media.next_episode_to_air}
           />
         </section>
       )}
