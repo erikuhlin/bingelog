@@ -64,7 +64,7 @@ export default function HorizontalMediaRow({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
             {IconComponent && <IconComponent className={`w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 ${iconColor}`} />}
-            <h2 className="text-base sm:text-xl md:text-2xl font-bold text-[#ECE9E3] tracking-tight truncate">
+            <h2 className="text-base sm:text-xl md:text-2xl font-bold text-[#ECE9E3] tracking-tight">
               {title}
             </h2>
             {badge && (
@@ -74,7 +74,7 @@ export default function HorizontalMediaRow({
             )}
           </div>
           {description && (
-            <p className="text-xs text-[#8D97A8] mt-0.5 truncate">{description}</p>
+            <p className="text-xs text-[#8D97A8] mt-0.5 leading-relaxed">{description}</p>
           )}
         </div>
 

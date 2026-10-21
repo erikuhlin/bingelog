@@ -129,18 +129,18 @@ export default function StreamingNewsRow({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <Flame className="w-5 h-5 text-[#E9A23B] flex-shrink-0" />
-            <h2 className="text-base sm:text-xl md:text-2xl font-bold text-[#ECE9E3] tracking-tight truncate">
+            <h2 className="text-base sm:text-xl md:text-2xl font-bold text-[#ECE9E3] tracking-tight">
               {getTitle()}
             </h2>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#E9A23B]/15 border border-[#E9A23B]/30 text-[#E9A23B]">
               {selectedProviderNames.length === 1 ? `Nytt på ${selectedProviderNames[0]}` : 'Nyligen släppt'}
             </span>
           </div>
-          <p className="text-xs text-[#8D97A8] mt-0.5 truncate">{getDescription()}</p>
+          <p className="text-xs text-[#8D97A8] mt-0.5 leading-relaxed">{getDescription()}</p>
         </div>
 
-        <div className="flex items-center justify-end gap-2 flex-shrink-0">
-          {/* Scroll Buttons */}
+        <div className="hidden md:flex items-center justify-end gap-2 flex-shrink-0">
+          {/* Scroll Buttons (Desktop only) */}
           <div className="flex items-center gap-1.5">
             <button
               type="button"

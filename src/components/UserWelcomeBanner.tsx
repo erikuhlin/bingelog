@@ -28,7 +28,7 @@ export default function UserWelcomeBanner() {
               <span>Molnsynkad</span>
             </span>
           </div>
-          <p className="text-xs text-[#8D97A8] mt-0.5 truncate sm:whitespace-normal">
+          <p className="text-xs text-[#8D97A8] mt-0.5 leading-relaxed">
             Dina sedda avsnitt och filmer sparas direkt i ditt Supabase-konto.
           </p>
         </div>
