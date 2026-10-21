@@ -127,6 +127,24 @@ export default async function MediaDetailPage({ params }: PageProps) {
       })
     : null;
 
+  // Aired seasons count (excluding future unreleased seasons)
+  const airedSeasons = media.media_type === 'tv' && media.seasons
+    ? media.seasons.filter((s) => {
+        if (s.season_number <= 0) return false;
+        if (!s.air_date) {
+          return s.season_number === 1 && media.first_air_date
+            ? new Date(media.first_air_date).getTime() <= nowMs
+            : false;
+        }
+        return new Date(s.air_date).getTime() <= nowMs;
+      })
+    : [];
+
+  const airedSeasonCount =
+    media.media_type === 'tv'
+      ? (airedSeasons.length > 0 ? airedSeasons.length : (upcomingSeason ? 0 : media.number_of_seasons || 1))
+      : 0;
+
   // Next episode to air
   const nextEpisode = media.media_type === 'tv' ? media.next_episode_to_air : null;
   const nextEpisodeIsFuture = nextEpisode?.air_date
@@ -222,11 +240,20 @@ export default async function MediaDetailPage({ params }: PageProps) {
                   </span>
                 ) : null}
 
-                {media.number_of_seasons ? (
-                  <span className="px-2.5 py-1 rounded-full bg-[#1E2531] border border-[#2B3443] text-xs text-[#8D97A8]">
-                    {media.number_of_seasons} {media.number_of_seasons === 1 ? 'säsong' : 'säsonger'}
+                {media.media_type === 'tv' && (
+                  <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#1E2531] border border-[#2B3443] text-xs text-[#8D97A8]">
+                    <span>
+                      {airedSeasonCount === 0
+                        ? 'Kommande serie'
+                        : `${airedSeasonCount} ${airedSeasonCount === 1 ? 'säsong' : 'säsonger'}`}
+                    </span>
+                    {upcomingSeason && (
+                      <span className="text-[#E9A23B] font-semibold">
+                        · S{upcomingSeason.season_number} {upcomingSeason.air_date ? `(${formatSwedishDate(upcomingSeason.air_date)})` : 'bekräftad'}
+                      </span>
+                    )}
                   </span>
-                ) : null}
+                )}
 
                 {media.vote_average > 0 && (
                   <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E9A23B]/15 border border-[#E9A23B]/30 text-xs font-bold text-[#E9A23B]">

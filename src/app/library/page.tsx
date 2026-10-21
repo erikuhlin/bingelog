@@ -58,14 +58,25 @@ function getTvShowStatusInfo(
     };
   }
 
+  const nowMs = Date.now();
   const curSeason = progress && progress.latestEpisode > 0 ? progress.latestSeason : (item.current_season || 1);
   const curEp = progress && progress.latestEpisode > 0 ? progress.latestEpisode : (item.current_episode || 0);
   const seasonObj = meta?.seasons?.find((s) => s.season_number === curSeason);
   const totalInSeason = seasonObj?.episode_count || meta?.episode_count || item.total_episodes_in_season || 10;
+  
   const regularSeasons = meta?.seasons?.filter((s) => s.season_number > 0) || [];
-  const totalRegularSeasons = regularSeasons.length;
+  const airedRegularSeasons = regularSeasons.filter((s) => {
+    if (!s.air_date) return s.season_number === 1;
+    return new Date(s.air_date).getTime() <= nowMs;
+  });
+  const totalAiredSeasons = airedRegularSeasons.length > 0 ? airedRegularSeasons.length : (regularSeasons.length || 1);
+  const upcomingSeason = regularSeasons.find((s) => {
+    if (!s.air_date) return false;
+    return new Date(s.air_date).getTime() > nowMs;
+  });
+
   const isSeasonComplete = totalInSeason > 0 && curEp >= totalInSeason;
-  const hasNewerSeason = totalRegularSeasons > 0 && totalRegularSeasons > curSeason;
+  const hasNewerSeasonAired = totalAiredSeasons > 0 && totalAiredSeasons > curSeason;
 
   if (item.status === 'watching') {
     const badgeText = curEp >= totalInSeason ? `Klar med S${curSeason}` : `Nästa: S${curSeason} A${curEp + 1}`;
@@ -85,7 +96,7 @@ function getTvShowStatusInfo(
   }
 
   if (item.status === 'completed') {
-    if (hasNewerSeason) {
+    if (hasNewerSeasonAired) {
       return {
         badgeText: `Ny säsong (S${curSeason + 1})`,
         badgeColor: 'newSeason' as const,
@@ -93,10 +104,17 @@ function getTvShowStatusInfo(
         hasNewerSeason: true,
       };
     }
+
+    const upcomingNote = upcomingSeason
+      ? upcomingSeason.air_date
+        ? ` · S${upcomingSeason.season_number} (${new Date(upcomingSeason.air_date).toLocaleDateString('sv-SE', { year: 'numeric' })})`
+        : ` · S${upcomingSeason.season_number} bekräftad`
+      : '';
+
     return {
-      badgeText: totalRegularSeasons > 1 ? 'Alla säsonger sedda' : 'Sedd',
+      badgeText: totalAiredSeasons > 1 ? 'Alla säsonger sedda' : 'Sedd',
       badgeColor: 'completed' as const,
-      listDescription: totalRegularSeasons > 1 ? `Alla ${totalRegularSeasons} säsonger sedda` : 'Helt sedd',
+      listDescription: totalAiredSeasons > 1 ? `Alla ${totalAiredSeasons} säsonger sedda${upcomingNote}` : `Helt sedd${upcomingNote}`,
       hasNewerSeason: false,
     };
   }
@@ -107,16 +125,16 @@ function getTvShowStatusInfo(
     if (curEp > 0) {
       if (isSeasonComplete) {
         if (curSeason === 1) {
-          text = totalRegularSeasons > 1 ? 'S1 sedd · fler säsonger finns' : 'S1 sedd';
+          text = totalAiredSeasons > 1 ? 'S1 sedd · fler säsonger finns' : 'S1 sedd';
         } else {
-          text = totalRegularSeasons > curSeason ? `S1–S${curSeason} sedda · fler finns` : `S1–S${curSeason} sedda`;
+          text = totalAiredSeasons > curSeason ? `S1–S${curSeason} sedda · fler finns` : `S1–S${curSeason} sedda`;
         }
       } else {
-        text = totalRegularSeasons > curSeason ? `S${curSeason} A${curEp} · fler säsonger finns` : `S${curSeason} A${curEp} sedd`;
+        text = totalAiredSeasons > curSeason ? `S${curSeason} A${curEp} · fler säsonger finns` : `S${curSeason} A${curEp} sedd`;
       }
     } else if (curSeason > 1) {
-      text = totalRegularSeasons > curSeason - 1 ? `S${curSeason - 1} sedd · fler finns` : `S${curSeason - 1} sedd`;
-    } else if (totalRegularSeasons > 1) {
+      text = totalAiredSeasons > curSeason - 1 ? `S${curSeason - 1} sedd · fler finns` : `S${curSeason - 1} sedd`;
+    } else if (totalAiredSeasons > 1) {
       text = 'Sedd delvis · fler säsonger finns';
     }
 

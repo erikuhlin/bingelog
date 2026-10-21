@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Check, CheckCircle2, Play, Sparkles } from 'lucide-react';
+import { Check, CheckCircle2, Play, Sparkles, Clock, Calendar } from 'lucide-react';
 import { Season, Episode } from '@/lib/types';
 import { getWatchedEpisodes, getLocalWatchedEpisodes, toggleEpisodeWatched, markSeasonWatched, getUserMediaItem, saveUserMedia } from '@/lib/storage';
 import { getImageUrl } from '@/lib/tmdb';
@@ -132,34 +132,65 @@ export default function EpisodeTracker({
           vote_average: 0,
         }));
 
-  // Total statistics calculation
+  const todayEnd = new Date();
+  todayEnd.setHours(23, 59, 59, 999);
+  const todayEndMs = todayEnd.getTime();
+
+  // Helper to check if a season is future/unreleased
+  const isSeasonFuture = (s: Season) => {
+    if (!s.air_date) return false;
+    const d = new Date(s.air_date).getTime();
+    return d > todayEndMs;
+  };
+
+  // Find upcoming future season if any
+  const upcomingSeason = validSeasons.find(isSeasonFuture);
+
+  // Aired seasons
+  const airedSeasons = validSeasons.filter((s) => !isSeasonFuture(s));
+
+  // Total statistics calculation (based on aired seasons, fallback to all if brand new series)
+  let totalAiredEpisodes = 0;
+  airedSeasons.forEach((s) => {
+    totalAiredEpisodes += s.episode_count || s.episodes?.length || 0;
+  });
+
   let totalShowEpisodes = 0;
   validSeasons.forEach((s) => {
     totalShowEpisodes += s.episode_count || s.episodes?.length || 0;
   });
 
+  const targetTotalEpisodes = totalAiredEpisodes > 0 ? totalAiredEpisodes : totalShowEpisodes;
   const totalWatchedCount = watchedSet.size;
-  const progressPercentage = totalShowEpisodes > 0 ? Math.round((totalWatchedCount / totalShowEpisodes) * 100) : 0;
-  const remainingCount = Math.max(0, totalShowEpisodes - totalWatchedCount);
+  const progressPercentage = targetTotalEpisodes > 0 ? Math.min(100, Math.round((totalWatchedCount / targetTotalEpisodes) * 100)) : 0;
+  const remainingCount = Math.max(0, targetTotalEpisodes - totalWatchedCount);
+  const isAllAiredWatched = totalAiredEpisodes > 0 && totalWatchedCount >= totalAiredEpisodes;
 
-  // Find next episode to watch
-  let nextEpisode: { season: number; episode: number; name?: string } | null = null;
+  // Find next episode to watch (ONLY among aired seasons & aired episodes!)
+  let nextEpisode: { season: number; episode: number; name?: string; air_date?: string | null } | null = null;
   let lastWatchedEpisode: { season: number; episode: number } | null = null;
 
   for (const s of validSeasons) {
+    const isFutureS = isSeasonFuture(s);
     const eps = seasonEpisodesCache[s.season_number] || s.episodes || [];
     const count = s.episode_count || eps.length || 0;
     for (let i = 1; i <= count; i++) {
       const isWatched = watchedSet.has(`${s.season_number}-${i}`);
       if (isWatched) {
         lastWatchedEpisode = { season: s.season_number, episode: i };
-      } else if (!nextEpisode) {
+      } else if (!nextEpisode && !isFutureS) {
         const epData = eps.find((e) => e.episode_number === i);
-        nextEpisode = {
-          season: s.season_number,
-          episode: i,
-          name: epData?.name,
-        };
+        const epAirDateMs = epData?.air_date ? new Date(epData.air_date).getTime() : 0;
+        const isFutureEp = epAirDateMs > todayEndMs;
+
+        if (!isFutureEp) {
+          nextEpisode = {
+            season: s.season_number,
+            episode: i,
+            name: epData?.name,
+            air_date: epData?.air_date,
+          };
+        }
       }
     }
   }
@@ -203,7 +234,7 @@ export default function EpisodeTracker({
         }
       });
 
-      const isShowCompleted = totalShowEpisodes > 0 && updatedSet.size >= totalShowEpisodes;
+      const isShowCompleted = targetTotalEpisodes > 0 && updatedSet.size >= targetTotalEpisodes;
       const nextStatus = isShowCompleted
         ? 'completed'
         : updatedSet.size > 0
@@ -351,8 +382,8 @@ export default function EpisodeTracker({
         </div>
       )}
 
-      {/* Next Up to Watch Banner */}
-      {nextEpisode && (
+      {/* Next Up to Watch Banner or Caught Up Banner */}
+      {nextEpisode ? (
         <div className="mt-4 sm:mt-5 p-3.5 rounded-2xl bg-[#1E2531] border border-[#2B3443] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-9 h-9 rounded-xl bg-[#E9A23B]/15 text-[#E9A23B] flex items-center justify-center flex-shrink-0">
@@ -375,7 +406,33 @@ export default function EpisodeTracker({
             <span>Markera som sedd</span>
           </button>
         </div>
-      )}
+      ) : isAllAiredWatched ? (
+        <div className="mt-4 sm:mt-5 p-3.5 rounded-2xl bg-[#6FA98A]/10 border border-[#6FA98A]/30 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-md">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-[#6FA98A]/20 text-[#6FA98A] flex items-center justify-center flex-shrink-0">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] font-bold text-[#6FA98A] uppercase tracking-wide block">
+                Du är ikapp med alla sända avsnitt!
+              </span>
+              <p className="text-xs sm:text-sm font-bold text-[#ECE9E3] truncate">
+                {upcomingSeason?.air_date
+                  ? `Säsong ${upcomingSeason.season_number} har premiär ${new Date(upcomingSeason.air_date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                  : upcomingSeason
+                  ? `Säsong ${upcomingSeason.season_number} är bekräftad och släpps framöver`
+                  : 'Samtliga sända säsonger och avsnitt är sedda'}
+              </p>
+            </div>
+          </div>
+          {upcomingSeason?.air_date && (
+            <div className="text-xs font-semibold text-[#6FA98A] bg-[#6FA98A]/15 px-3 py-1.5 rounded-xl border border-[#6FA98A]/30 flex items-center justify-center gap-1.5 flex-shrink-0 self-start sm:self-auto">
+              <Calendar className="w-3.5 h-3.5 text-[#6FA98A]" />
+              <span>Premiär {new Date(upcomingSeason.air_date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+            </div>
+          )}
+        </div>
+      ) : null}
 
       {/* Seasons Tabs & Bulk Action */}
       <div className="mt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -388,9 +445,7 @@ export default function EpisodeTracker({
             const isComplete = season.episode_count
               ? seasonWatchedCount >= season.episode_count
               : false;
-            const isFutureSeason = season.air_date
-              ? new Date(season.air_date).getTime() > Date.now()
-              : false;
+            const isFutureSeason = isSeasonFuture(season);
 
             return (
               <button
@@ -408,8 +463,13 @@ export default function EpisodeTracker({
               >
                 <span>Säsong {season.season_number}</span>
                 {isFutureSeason ? (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-[#E9A23B]/20 text-[#E9A23B] border border-[#E9A23B]/40 font-semibold">
-                    Kommande
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-[#E9A23B]/15 text-[#E9A23B] border border-[#E9A23B]/30 font-semibold flex items-center gap-1">
+                    <Clock className="w-2.5 h-2.5" />
+                    <span>
+                      {season.air_date
+                        ? new Date(season.air_date).toLocaleDateString('sv-SE', { year: 'numeric', month: 'short' })
+                        : 'Kommande'}
+                    </span>
                   </span>
                 ) : isComplete ? (
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#6FA98A] fill-[#6FA98A]/20" />
@@ -424,19 +484,30 @@ export default function EpisodeTracker({
         </div>
 
         {/* Bulk Action for Active Season */}
-        <button
-          type="button"
-          disabled={loading}
-          onClick={handleSeasonToggleAll}
-          className="text-xs font-semibold px-3 py-1.5 rounded-xl border border-[#2B3443] bg-[#1E2531] hover:bg-[#2B3443] text-[#ECE9E3] transition-colors flex items-center justify-center gap-1.5 w-full sm:w-auto cursor-pointer"
-        >
-          <CheckCircle2 className="w-3.5 h-3.5 text-[#E9A23B]" />
-          <span>
-            {isCurrentSeasonComplete
-              ? 'Återställ hela säsongen'
-              : 'Markera säsongen som sedd'}
-          </span>
-        </button>
+        {!isSeasonFuture(currentSeason) ? (
+          <button
+            type="button"
+            disabled={loading}
+            onClick={handleSeasonToggleAll}
+            className="text-xs font-semibold px-3 py-1.5 rounded-xl border border-[#2B3443] bg-[#1E2531] hover:bg-[#2B3443] text-[#ECE9E3] transition-colors flex items-center justify-center gap-1.5 w-full sm:w-auto cursor-pointer"
+          >
+            <CheckCircle2 className="w-3.5 h-3.5 text-[#E9A23B]" />
+            <span>
+              {isCurrentSeasonComplete
+                ? 'Återställ hela säsongen'
+                : 'Markera säsongen som sedd'}
+            </span>
+          </button>
+        ) : (
+          <div className="text-xs font-semibold px-3 py-1.5 rounded-xl border border-[#2B3443] bg-[#0F1218] text-[#8D97A8] flex items-center justify-center gap-1.5 w-full sm:w-auto select-none">
+            <Clock className="w-3.5 h-3.5 text-[#E9A23B]" />
+            <span>
+              {currentSeason.air_date
+                ? `Premiär ${new Date(currentSeason.air_date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                : 'Säsongen har inte haft premiär ännu'}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Episode List */}
@@ -445,9 +516,10 @@ export default function EpisodeTracker({
           const isWatched = watchedSet.has(
             `${episode.season_number}-${episode.episode_number}`
           );
-          const isFutureEpisode = episode.air_date
-            ? new Date(episode.air_date).getTime() > Date.now()
-            : false;
+          const isCurrentSeasonFuture = isSeasonFuture(currentSeason);
+          const isFutureEpisode = isCurrentSeasonFuture || (episode.air_date
+            ? new Date(episode.air_date).getTime() > todayEndMs
+            : false);
 
           return (
             <div
@@ -508,19 +580,30 @@ export default function EpisodeTracker({
                 </div>
               </div>
 
-              {/* Right: Mark as watched button */}
-              <button
-                type="button"
-                onClick={() => handleToggle(episode.season_number, episode.episode_number)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all flex-shrink-0 cursor-pointer ${
-                  isWatched
-                    ? 'bg-[#6FA98A]/15 text-[#6FA98A] border border-[#6FA98A]/30 hover:bg-[#6FA98A]/25'
-                    : 'bg-[#1E2531] hover:bg-[#2B3443] text-[#ECE9E3] border border-[#2B3443] hover:border-[#E9A23B]/40'
-                }`}
-              >
-                <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                <span className="hidden xs:inline">{isWatched ? 'Sedd' : 'Markera sedd'}</span>
-              </button>
+              {/* Right: Mark as watched button or upcoming badge */}
+              {isFutureEpisode ? (
+                <div className="px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 bg-[#0F1218] border border-[#2B3443] text-[#8D97A8] select-none flex-shrink-0">
+                  <Clock className="w-3.5 h-3.5 text-[#E9A23B]" />
+                  <span>
+                    {episode.air_date
+                      ? `Sänds ${new Date(episode.air_date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}`
+                      : 'Kommande'}
+                  </span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleToggle(episode.season_number, episode.episode_number)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all flex-shrink-0 cursor-pointer ${
+                    isWatched
+                      ? 'bg-[#6FA98A]/15 text-[#6FA98A] border border-[#6FA98A]/30 hover:bg-[#6FA98A]/25'
+                      : 'bg-[#1E2531] hover:bg-[#2B3443] text-[#ECE9E3] border border-[#2B3443] hover:border-[#E9A23B]/40'
+                  }`}
+                >
+                  <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span className="hidden xs:inline">{isWatched ? 'Sedd' : 'Markera sedd'}</span>
+                </button>
+              )}
             </div>
           );
         })}
