@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Bookmark,
+  BookmarkCheck,
   Eye,
   CheckCircle2,
   XCircle,
@@ -41,6 +42,99 @@ type FilterStatus = 'all' | WatchStatus;
 type FilterType = 'all' | MediaType;
 type SortOption = 'updated' | 'rating' | 'title' | 'year';
 type ViewMode = 'grid' | 'list';
+
+function getTvShowStatusInfo(
+  item: UserMediaRecord,
+  meta?: SeriesMetaInfo,
+  progress?: { latestSeason: number; latestEpisode: number; watchedCount: number } | null
+) {
+  const isTv = item.media_type === 'tv';
+  if (!isTv) {
+    return {
+      badgeText: item.status === 'completed' ? 'Sedd' : item.status === 'watchlist' ? 'Vill se' : null,
+      badgeColor: (item.status === 'completed' ? 'completed' : 'neutral') as 'completed' | 'neutral' | 'watching' | 'newSeason' | 'partial',
+      listDescription: item.status === 'completed' ? 'Sedd' : '—',
+      hasNewerSeason: false,
+    };
+  }
+
+  const curSeason = progress && progress.latestEpisode > 0 ? progress.latestSeason : (item.current_season || 1);
+  const curEp = progress && progress.latestEpisode > 0 ? progress.latestEpisode : (item.current_episode || 0);
+  const seasonObj = meta?.seasons?.find((s) => s.season_number === curSeason);
+  const totalInSeason = seasonObj?.episode_count || meta?.episode_count || item.total_episodes_in_season || 10;
+  const regularSeasons = meta?.seasons?.filter((s) => s.season_number > 0) || [];
+  const totalRegularSeasons = regularSeasons.length;
+  const isSeasonComplete = totalInSeason > 0 && curEp >= totalInSeason;
+  const hasNewerSeason = totalRegularSeasons > 0 && totalRegularSeasons > curSeason;
+
+  if (item.status === 'watching') {
+    const badgeText = curEp >= totalInSeason ? `Klar med S${curSeason}` : `Nästa: S${curSeason} A${curEp + 1}`;
+    const epsLeft = Math.max(0, totalInSeason - curEp);
+    const listDescription =
+      curEp > 0
+        ? curEp >= totalInSeason
+          ? `Klar med S${curSeason}`
+          : `Nästa: S${curSeason} A${curEp + 1} · ${epsLeft} kvar`
+        : 'Ej påbörjad';
+    return {
+      badgeText,
+      badgeColor: 'watching' as const,
+      listDescription,
+      hasNewerSeason: false,
+    };
+  }
+
+  if (item.status === 'completed') {
+    if (hasNewerSeason) {
+      return {
+        badgeText: `Ny säsong (S${curSeason + 1})`,
+        badgeColor: 'newSeason' as const,
+        listDescription: `Ny säsong finns (S${curSeason + 1})`,
+        hasNewerSeason: true,
+      };
+    }
+    return {
+      badgeText: totalRegularSeasons > 1 ? 'Alla säsonger sedda' : 'Sedd',
+      badgeColor: 'completed' as const,
+      listDescription: totalRegularSeasons > 1 ? `Alla ${totalRegularSeasons} säsonger sedda` : 'Helt sedd',
+      hasNewerSeason: false,
+    };
+  }
+
+  if (item.status === 'dropped') {
+    // "Sedd delvis"
+    let text = 'Sedd delvis';
+    if (curEp > 0) {
+      if (isSeasonComplete) {
+        if (curSeason === 1) {
+          text = totalRegularSeasons > 1 ? 'S1 sedd · fler säsonger finns' : 'S1 sedd';
+        } else {
+          text = totalRegularSeasons > curSeason ? `S1–S${curSeason} sedda · fler finns` : `S1–S${curSeason} sedda`;
+        }
+      } else {
+        text = totalRegularSeasons > curSeason ? `S${curSeason} A${curEp} · fler säsonger finns` : `S${curSeason} A${curEp} sedd`;
+      }
+    } else if (curSeason > 1) {
+      text = totalRegularSeasons > curSeason - 1 ? `S${curSeason - 1} sedd · fler finns` : `S${curSeason - 1} sedd`;
+    } else if (totalRegularSeasons > 1) {
+      text = 'Sedd delvis · fler säsonger finns';
+    }
+
+    return {
+      badgeText: text,
+      badgeColor: 'partial' as const,
+      listDescription: text,
+      hasNewerSeason: false,
+    };
+  }
+
+  return {
+    badgeText: null,
+    badgeColor: 'neutral' as const,
+    listDescription: item.status === 'watchlist' ? 'I vill se-listan' : '—',
+    hasNewerSeason: false,
+  };
+}
 
 function LibraryContent() {
   const router = useRouter();
@@ -442,7 +536,7 @@ function LibraryContent() {
                 { id: 'watching', label: 'Tittar på', count: counts.watching, icon: Eye },
                 { id: 'watchlist', label: 'Vill se', count: counts.watchlist, icon: Bookmark },
                 { id: 'completed', label: 'Har sett', count: counts.completed, icon: CheckCircle2 },
-                { id: 'dropped', label: 'Avbrutna', count: counts.dropped, icon: XCircle },
+                { id: 'dropped', label: 'Sedd delvis', count: counts.dropped, icon: BookmarkCheck },
               ].map((tab) => {
                 const Icon = tab.icon;
                 const isSelected = statusParam === tab.id;
@@ -648,6 +742,7 @@ function LibraryContent() {
                 const seasonObj = meta?.seasons?.find((s) => s.season_number === curSeason);
                 const totalInSeason = seasonObj?.episode_count || meta?.episode_count || item.total_episodes_in_season || 10;
                 const progressPct = isTv && curEp > 0 ? Math.min(100, Math.round((curEp / totalInSeason) * 100)) : 0;
+                const statusInfo = getTvShowStatusInfo(item, meta, progress);
 
                 return (
                   <div
@@ -666,18 +761,24 @@ function LibraryContent() {
                       </Link>
 
                       {/* Status indicator badge (top-right) */}
-                      <div className="absolute top-2 right-2 pointer-events-none">
-                        {item.status === 'watching' && isTv ? (
-                          <span className="px-1.5 py-0.5 rounded-md bg-[#E9A23B] text-[#0F1218] text-[10px] font-black tracking-tight shadow-md">
-                            {curEp >= totalInSeason ? `Klar med S${curSeason}` : `Nästa: S${curSeason} A${curEp + 1}`}
+                      <div className="absolute top-2 right-2 pointer-events-none max-w-[85%]">
+                        {statusInfo.badgeColor === 'watching' ? (
+                          <span className="px-1.5 py-0.5 rounded-md bg-[#E9A23B] text-[#0F1218] text-[10px] font-black tracking-tight shadow-md truncate block">
+                            {statusInfo.badgeText}
                           </span>
-                        ) : item.status === 'completed' ? (
-                          <span className="px-1.5 py-0.5 rounded-md bg-[#6FA98A] text-[#0F1218] text-[10px] font-bold shadow-md">
-                            Sedd
+                        ) : statusInfo.badgeColor === 'newSeason' ? (
+                          <span className="px-1.5 py-0.5 rounded-md bg-[#E9A23B] text-[#0F1218] text-[10px] font-black tracking-tight shadow-md flex items-center gap-1">
+                            <Sparkles className="w-2.5 h-2.5 flex-shrink-0" />
+                            <span className="truncate">{statusInfo.badgeText}</span>
                           </span>
-                        ) : item.status === 'dropped' ? (
-                          <span className="px-1.5 py-0.5 rounded-md bg-[#1E2531] text-[#8D97A8] border border-[#2B3443] text-[10px] font-semibold">
-                            Avbruten
+                        ) : statusInfo.badgeColor === 'completed' ? (
+                          <span className="px-1.5 py-0.5 rounded-md bg-[#6FA98A] text-[#0F1218] text-[10px] font-bold shadow-md truncate block">
+                            {statusInfo.badgeText}
+                          </span>
+                        ) : statusInfo.badgeColor === 'partial' ? (
+                          <span className="px-1.5 py-0.5 rounded-md bg-[#1E2531]/95 text-[#ECE9E3] border border-[#3B485A] text-[10px] font-bold shadow-md flex items-center gap-1">
+                            <BookmarkCheck className="w-2.5 h-2.5 text-[#6FA98A] flex-shrink-0" />
+                            <span className="truncate">{statusInfo.badgeText}</span>
                           </span>
                         ) : null}
                       </div>
@@ -756,6 +857,7 @@ function LibraryContent() {
                 const seasonObj = meta?.seasons?.find((s) => s.season_number === curSeason);
                 const totalInSeason = seasonObj?.episode_count || meta?.episode_count || item.total_episodes_in_season || 10;
                 const epsLeft = Math.max(0, totalInSeason - curEp);
+                const statusInfo = getTvShowStatusInfo(item, meta, progress);
 
                 return (
                   <div
@@ -796,22 +898,31 @@ function LibraryContent() {
                     </div>
 
                     {/* Middle: Position (Hidden on small screens) */}
-                    <div className="hidden md:block w-44 text-xs text-[#ECE9E3] text-left">
-                      {isTv ? (
-                        curEp > 0 ? (
-                          curEp >= totalInSeason ? (
-                            <span className="text-[#6FA98A] font-medium">Klar med S{curSeason}</span>
-                          ) : (
-                            <span>
-                              <strong className="text-[#E9A23B]">Nästa: S{curSeason} A{curEp + 1}</strong>{' '}
-                              <span className="text-[#9EA8B6]">· {epsLeft} kvar</span>
-                            </span>
-                          )
-                        ) : (
-                          <span className="text-[#9EA8B6]">Ej påbörjad</span>
-                        )
+                    <div className="hidden md:block w-48 text-xs text-[#ECE9E3] text-left">
+                      {statusInfo.badgeColor === 'watching' ? (
+                        <span>
+                          <strong className="text-[#E9A23B]">{statusInfo.listDescription.split('·')[0]}</strong>{' '}
+                          {statusInfo.listDescription.includes('·') && (
+                            <span className="text-[#9EA8B6]">· {statusInfo.listDescription.split('·')[1]}</span>
+                          )}
+                        </span>
+                      ) : statusInfo.badgeColor === 'newSeason' ? (
+                        <span className="text-[#E9A23B] font-semibold flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-[#E9A23B] flex-shrink-0" />
+                          <span>{statusInfo.listDescription}</span>
+                        </span>
+                      ) : statusInfo.badgeColor === 'completed' ? (
+                        <span className="text-[#6FA98A] font-medium flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[#6FA98A] flex-shrink-0" />
+                          <span>{statusInfo.listDescription}</span>
+                        </span>
+                      ) : statusInfo.badgeColor === 'partial' ? (
+                        <span className="text-[#ECE9E3] font-medium flex items-center gap-1.5">
+                          <BookmarkCheck className="w-3.5 h-3.5 text-[#6FA98A] flex-shrink-0" />
+                          <span>{statusInfo.listDescription}</span>
+                        </span>
                       ) : (
-                        <span className="text-[#9EA8B6]">—</span>
+                        <span className="text-[#9EA8B6]">{statusInfo.listDescription}</span>
                       )}
                     </div>
 

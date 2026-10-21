@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Bookmark, Eye, CheckCircle2, XCircle, Trash2, Star, X, Check, ChevronDown } from 'lucide-react';
+import { Bookmark, Eye, CheckCircle2, BookmarkCheck, Trash2, Star, X, Check, ChevronDown } from 'lucide-react';
 import { WatchStatus, MediaType } from '@/lib/types';
 import { getUserMediaItem, saveUserMedia, removeUserMedia } from '@/lib/storage';
 import { getImageUrl } from '@/lib/tmdb';
@@ -154,22 +154,27 @@ export default function StatusSelector({
       bg: 'bg-[#E9A23B]/15',
     },
     completed: {
-      label: 'Har sett',
-      desc: 'Avslutad eller sedd titel',
+      label: mediaType === 'tv' ? 'Har sett allt' : 'Har sett',
+      desc: mediaType === 'tv' ? 'Alla säsonger och avsnitt sedda' : 'Avslutad eller sedd titel',
       icon: CheckCircle2,
       color: 'text-[#6FA98A]',
       border: 'border-[#6FA98A]/40',
       bg: 'bg-[#6FA98A]/15',
     },
     dropped: {
-      label: 'Avbruten',
-      desc: 'Slutat titta eller pausad',
-      icon: XCircle,
-      color: 'text-[#8D97A8]',
-      border: 'border-[#2B3443]',
-      bg: 'bg-[#171C25]',
+      label: 'Sedd delvis',
+      desc: 'Sett vissa säsonger eller avsnitt, fler finns',
+      icon: BookmarkCheck,
+      color: 'text-[#9EA8B6]',
+      border: 'border-[#3B485A]',
+      bg: 'bg-[#1E2531]',
     },
   };
+
+  const availableStatuses: WatchStatus[] =
+    mediaType === 'movie'
+      ? ['watchlist', 'watching', 'completed']
+      : ['watchlist', 'watching', 'completed', 'dropped'];
 
   const modalContent = isOpen && mounted && typeof document !== 'undefined' ? (
     createPortal(
@@ -221,7 +226,7 @@ export default function StatusSelector({
 
           {/* Status Selection Options */}
           <div className="space-y-2 py-4">
-            {(['watchlist', 'watching', 'completed', 'dropped'] as WatchStatus[]).map((status) => {
+            {availableStatuses.map((status) => {
               const config = statusConfigs[status];
               const Icon = config.icon;
               const isSelected = currentStatus === status;
