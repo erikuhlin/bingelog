@@ -38,29 +38,42 @@ interface ContinueWatchingRowProps {
   onMarkNextWatched: (item: UserMediaRecord, nextSeason: number, nextEpisode: number) => Promise<void>;
 }
 
-function formatRelativeAirDate(dateStr: string | null | undefined): { isFuture: boolean; label: string } {
-  if (!dateStr) return { isFuture: false, label: '' };
+export interface RelativeAirDate {
+  isFuture: boolean;
+  isToday: boolean;
+  label: string;
+}
+
+function formatRelativeAirDate(dateStr: string | null | undefined): RelativeAirDate {
+  if (!dateStr) return { isFuture: false, isToday: false, label: '' };
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const airDate = new Date(dateStr);
-    airDate.setHours(0, 0, 0, 0);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    const parts = dateStr.split('T')[0].split('-').map(Number);
+    let airDate: Date;
+    if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+      airDate = new Date(parts[0], parts[1] - 1, parts[2]);
+    } else {
+      airDate = new Date(dateStr);
+      airDate.setHours(0, 0, 0, 0);
+    }
 
     const diffDays = Math.round((airDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
-    if (diffDays === 0) return { isFuture: true, label: 'Släpps idag' };
-    if (diffDays === 1) return { isFuture: true, label: 'Släpps imorgon' };
-    if (diffDays === 2) return { isFuture: true, label: 'Släpps i övermorgon' };
-    if (diffDays > 2 && diffDays <= 7) return { isFuture: true, label: `Om ${diffDays} dagar` };
-    if (diffDays > 7 && diffDays <= 30) return { isFuture: true, label: `Släpps om ${Math.round(diffDays / 7)} veckor` };
+    if (diffDays === 0) return { isFuture: false, isToday: true, label: 'Släpps idag' };
+    if (diffDays === 1) return { isFuture: true, isToday: false, label: 'Släpps imorgon' };
+    if (diffDays === 2) return { isFuture: true, isToday: false, label: 'Släpps i övermorgon' };
+    if (diffDays > 2 && diffDays <= 7) return { isFuture: true, isToday: false, label: `Om ${diffDays} dagar` };
+    if (diffDays > 7 && diffDays <= 30) return { isFuture: true, isToday: false, label: `Släpps om ${Math.round(diffDays / 7)} veckor` };
     if (diffDays > 30) {
       const formatted = airDate.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' });
-      return { isFuture: true, label: `Släpps ${formatted}` };
+      return { isFuture: true, isToday: false, label: `Släpps ${formatted}` };
     }
     // Past date
-    return { isFuture: false, label: '' };
+    return { isFuture: false, isToday: false, label: '' };
   } catch {
-    return { isFuture: false, label: dateStr };
+    return { isFuture: false, isToday: false, label: dateStr };
   }
 }
 
@@ -90,6 +103,7 @@ export default function ContinueWatchingRow({
     epsLeft: number;
     nextEpisodeNumber: number;
     isStartingNewSeason?: boolean;
+    isReleasedToday?: boolean;
   }[] = [];
 
   const waitingShows: {
@@ -98,7 +112,7 @@ export default function ContinueWatchingRow({
     curEpisode: number;
     totalInSeason: number;
     meta?: SeriesMetaInfo;
-    rel: { isFuture: boolean; label: string };
+    rel: RelativeAirDate;
     nextSeasonNumber?: number;
     isWaitingForEpisode?: boolean;
     waitingEpisodeNumber?: number;
@@ -118,8 +132,9 @@ export default function ContinueWatchingRow({
     if (isSeasonComplete) {
       // Check if next season exists and has already aired/started
       const nextSeasonObj = meta?.seasons?.find((s) => s.season_number === curSeason + 1);
+      const nextSeasonRel = nextSeasonObj?.air_date ? formatRelativeAirDate(nextSeasonObj.air_date) : null;
       const nextSeasonHasAiredDate = nextSeasonObj?.air_date
-        ? new Date(nextSeasonObj.air_date).getTime() <= nowMs
+        ? (nextSeasonRel?.isToday || !nextSeasonRel?.isFuture)
         : false;
       const hasAiredInNextSeason =
         (meta?.last_episode && meta.last_episode.season_number >= curSeason + 1) ||
@@ -139,6 +154,7 @@ export default function ContinueWatchingRow({
           epsLeft: nextSeasonTotal,
           nextEpisodeNumber: 1,
           isStartingNewSeason: true,
+          isReleasedToday: Boolean(nextSeasonRel?.isToday),
         });
       } else {
         // Waiting for next season
@@ -164,15 +180,27 @@ export default function ContinueWatchingRow({
       const nextEpisodeNumber = curEpisode + 1;
 
       // Check if next episode hasn't aired yet (caught up with currently broadcast weekly episodes)
-      const isNextEpisodePending =
+      const isNextEpisodePending = Boolean(
         meta?.next_episode &&
         meta.next_episode.season_number === curSeason &&
-        meta.next_episode.episode_number === nextEpisodeNumber;
+        meta.next_episode.episode_number === nextEpisodeNumber
+      );
 
-      const epRel = isNextEpisodePending ? formatRelativeAirDate(meta?.next_episode?.air_date) : { isFuture: false, label: '' };
+      const epRel = isNextEpisodePending
+        ? formatRelativeAirDate(meta?.next_episode?.air_date)
+        : { isFuture: false, isToday: false, label: '' };
+
+      const isLastEpisodeToday = Boolean(
+        meta?.last_episode &&
+        meta.last_episode.season_number === curSeason &&
+        meta.last_episode.episode_number === nextEpisodeNumber &&
+        formatRelativeAirDate(meta.last_episode.air_date).isToday
+      );
+
+      const isReleasedToday = epRel.isToday || isLastEpisodeToday;
 
       if (isNextEpisodePending && epRel.isFuture) {
-        // Caught up with the currently broadcast episodes of this ongoing season!
+        // Caught up with the currently broadcast episodes of this ongoing season! (Future date: tomorrow or later)
         waitingShows.push({
           show,
           curSeason,
@@ -184,7 +212,7 @@ export default function ContinueWatchingRow({
           waitingEpisodeNumber: nextEpisodeNumber,
         });
       } else {
-        // Normal watchable episode
+        // Normal watchable episode OR released today!
         const progressPct = Math.min(100, Math.round((curEpisode / totalInSeason) * 100));
         const epsLeft = Math.max(0, totalInSeason - curEpisode);
         actionableShows.push({
@@ -196,9 +224,17 @@ export default function ContinueWatchingRow({
           epsLeft,
           nextEpisodeNumber,
           isStartingNewSeason: false,
+          isReleasedToday,
         });
       }
     }
+  });
+
+  // Prioritize shows with episodes/seasons releasing today at the front of Continue Watching
+  actionableShows.sort((a, b) => {
+    if (a.isReleasedToday && !b.isReleasedToday) return -1;
+    if (!a.isReleasedToday && b.isReleasedToday) return 1;
+    return 0;
   });
 
   const handleActionClick = async (show: UserMediaRecord, season: number, episode: number) => {
@@ -228,19 +264,23 @@ export default function ContinueWatchingRow({
 
           {/* Horizontal scroll row */}
           <div className="flex items-stretch gap-3 sm:gap-4 overflow-x-auto pb-3 pt-1 scrollbar-thin scrollbar-thumb-[#2B3443] focus:outline-none overscroll-x-contain">
-            {actionableShows.map(({ show, curSeason, curEpisode, totalInSeason, progressPct, epsLeft, nextEpisodeNumber, isStartingNewSeason }) => {
+            {actionableShows.map(({ show, curSeason, curEpisode, totalInSeason, progressPct, epsLeft, nextEpisodeNumber, isStartingNewSeason, isReleasedToday }) => {
               const isUpdating = updatingId === show.tmdb_id;
 
               return (
                 <div
                   key={`continue-${show.tmdb_id}`}
-                  className="flex-shrink-0 w-72 xs:w-80 sm:w-88 md:w-96 p-3.5 rounded-2xl bg-[#171C25] border border-[#2B3443] hover:border-[#E9A23B]/50 transition-all flex flex-col justify-between shadow-lg"
+                  className={`flex-shrink-0 w-72 xs:w-80 sm:w-88 md:w-96 p-3.5 rounded-2xl bg-[#171C25] border transition-all flex flex-col justify-between shadow-lg ${
+                    isReleasedToday
+                      ? 'border-[#E9A23B]/60 shadow-[#E9A23B]/5 hover:border-[#E9A23B]'
+                      : 'border-[#2B3443] hover:border-[#E9A23B]/50'
+                  }`}
                 >
                   {/* Top part: Poster & Title info */}
                   <div className="flex items-start gap-3.5">
                     <Link
                       href={`/tv/${show.tmdb_id}`}
-                      className="w-[74px] aspect-[2/3] rounded-xl overflow-hidden bg-[#0F1218] flex-shrink-0 border border-[#2B3443] hover:opacity-90 transition-opacity"
+                      className="relative w-[74px] aspect-[2/3] rounded-xl overflow-hidden bg-[#0F1218] flex-shrink-0 border border-[#2B3443] hover:opacity-90 transition-opacity"
                     >
                       <img
                         src={getImageUrl(show.poster_path, 'w300')}
@@ -248,6 +288,11 @@ export default function ContinueWatchingRow({
                         className="w-full h-full object-cover"
                         loading="lazy"
                       />
+                      {isReleasedToday && (
+                        <div className="absolute top-1 right-1 px-1.5 py-0.5 rounded bg-[#E9A23B] text-[#0F1218] text-[9px] font-black uppercase tracking-wider shadow">
+                          Idag
+                        </div>
+                      )}
                     </Link>
 
                     <div className="flex-1 min-w-0">
@@ -259,12 +304,20 @@ export default function ContinueWatchingRow({
                         {show.title}
                       </Link>
 
-                      {/* Position label: explicitly clear */}
-                      <p className="text-xs font-bold text-[#E9A23B] mt-0.5">
-                        {isStartingNewSeason || curEpisode === 0
-                          ? `Börja på säsong ${curSeason}`
-                          : `Nästa: S${curSeason} A${nextEpisodeNumber}`}
-                      </p>
+                      {/* Position label: explicitly clear + Släpps idag badge */}
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        <p className="text-xs font-bold text-[#E9A23B]">
+                          {isStartingNewSeason || curEpisode === 0
+                            ? `Börja på säsong ${curSeason}`
+                            : `Nästa: S${curSeason} A${nextEpisodeNumber}`}
+                        </p>
+                        {isReleasedToday && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#E9A23B]/15 text-[#E9A23B] border border-[#E9A23B]/30 text-[10px] font-bold">
+                            <Clock className="w-3 h-3 flex-shrink-0" />
+                            Släpps idag
+                          </span>
+                        )}
+                      </div>
 
                       {/* Scalable progressbar instead of dots */}
                       <div className="my-2 space-y-1">
@@ -409,20 +462,36 @@ export default function ContinueWatchingRow({
                       </div>
                     </div>
 
-                    {/* Informative muted button */}
+                    {/* Informative button (or active button if released today) */}
                     <div className="mt-3 pt-3 border-t border-[#2B3443]/60">
-                      <div className="w-full py-2 px-3 rounded-xl bg-[#0F1218] border border-[#2B3443] text-xs font-semibold text-[#9EA8B6] text-center flex items-center justify-center gap-1.5 select-none">
-                        <Clock className="w-3.5 h-3.5 text-[#9EA8B6]" />
-                        <span>
-                          {isWaitingForEpisode
-                            ? `S${curSeason} A${waitingEpisodeNumber} ${rel.label.toLowerCase()}`
-                            : rel.label
-                            ? `Säsong ${nextSeasonNumber} ${rel.label.toLowerCase()}`
-                            : isEnded
-                            ? 'Alla avsnitt sedda'
-                            : 'Väntar på ny säsong'}
-                        </span>
-                      </div>
+                      {isWaitingForEpisode && rel.isToday ? (
+                        <button
+                          type="button"
+                          onClick={() => handleActionClick(show, curSeason, waitingEpisodeNumber || curEpisode + 1)}
+                          disabled={updatingId === show.tmdb_id}
+                          className="w-full py-2 px-3 rounded-xl bg-[#E9A23B] hover:bg-[#F2B04E] active:scale-[0.98] text-[#0F1218] text-xs font-bold transition-all shadow-md shadow-[#E9A23B]/20 flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-[#E9A23B] focus-visible:outline-none disabled:opacity-50 cursor-pointer"
+                        >
+                          <Play className="w-3.5 h-3.5 fill-current" />
+                          <span>
+                            {updatingId === show.tmdb_id
+                              ? 'Sparar...'
+                              : `Markera A${waitingEpisodeNumber || curEpisode + 1} som sett`}
+                          </span>
+                        </button>
+                      ) : (
+                        <div className="w-full py-2 px-3 rounded-xl bg-[#0F1218] border border-[#2B3443] text-xs font-semibold text-[#9EA8B6] text-center flex items-center justify-center gap-1.5 select-none">
+                          <Clock className="w-3.5 h-3.5 text-[#9EA8B6]" />
+                          <span>
+                            {isWaitingForEpisode
+                              ? `S${curSeason} A${waitingEpisodeNumber} ${rel.label.toLowerCase()}`
+                              : rel.label
+                              ? `Säsong ${nextSeasonNumber} ${rel.label.toLowerCase()}`
+                              : isEnded
+                              ? 'Alla avsnitt sedda'
+                              : 'Väntar på ny säsong'}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
