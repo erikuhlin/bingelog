@@ -11,6 +11,7 @@ import NotificationBell from './NotificationBell';
 import AuthModal from './AuthModal';
 import BrandLogo from './BrandLogo';
 import SearchOverlay from './SearchOverlay';
+import { clearPageScrollState } from '@/lib/scrollRestoration';
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -62,7 +63,7 @@ export default function Navbar() {
       if (isActive) {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
-      sessionStorage.removeItem(`bingelog_scroll_${href}`);
+      clearPageScrollState(href);
     }
   };
 

@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Calendar, ChevronLeft, ChevronRight, Sparkles, Tv, Layers, ArrowRight } from 'lucide-react';
 import { MediaItem } from '@/lib/types';
 import MediaCard from './MediaCard';
+import { useHorizontalScroll } from '@/lib/scrollRestoration';
 
 interface UpcomingShowsSectionProps {
   upcomingSeasons: MediaItem[];
@@ -17,8 +18,6 @@ export default function UpcomingShowsSection({
   upcomingSeasons,
   upcomingNewShows,
 }: UpcomingShowsSectionProps) {
-  const rowRef = useRef<HTMLDivElement>(null);
-
   // Default to all
   const defaultTab: UpcomingTab = 'all';
   const [activeTab, setActiveTab] = useState<UpcomingTab>(defaultTab);
@@ -48,17 +47,17 @@ export default function UpcomingShowsSection({
     }
   }, [activeTab, upcomingSeasons, upcomingNewShows, allUpcoming]);
 
-  const scrollLeft = () => {
-    if (rowRef.current) {
-      rowRef.current.scrollBy({ left: -340, behavior: 'smooth' });
-    }
-  };
-
-  const scrollRight = () => {
-    if (rowRef.current) {
-      rowRef.current.scrollBy({ left: 340, behavior: 'smooth' });
-    }
-  };
+  const {
+    rowRef,
+    handleScroll,
+    handlePointerDown,
+    saveScroll,
+    scrollLeftBy,
+    scrollRightBy,
+  } = useHorizontalScroll({
+    rowId: `upcoming_shows_${activeTab}`,
+    itemsCount: currentItems?.length || 0,
+  });
 
   if (allUpcoming.length === 0) return null;
 
@@ -154,7 +153,7 @@ export default function UpcomingShowsSection({
           <div className="hidden md:flex items-center gap-1.5">
             <button
               type="button"
-              onClick={scrollLeft}
+              onClick={() => scrollLeftBy(340)}
               aria-label="Scrolla vänster"
               className="w-7 h-7 rounded-xl bg-[#171C25] hover:bg-[#1E2531] text-[#8D97A8] hover:text-[#ECE9E3] border border-[#2B3443] flex items-center justify-center transition-colors cursor-pointer"
             >
@@ -162,7 +161,7 @@ export default function UpcomingShowsSection({
             </button>
             <button
               type="button"
-              onClick={scrollRight}
+              onClick={() => scrollRightBy(340)}
               aria-label="Scrolla höger"
               className="w-7 h-7 rounded-xl bg-[#171C25] hover:bg-[#1E2531] text-[#8D97A8] hover:text-[#ECE9E3] border border-[#2B3443] flex items-center justify-center transition-colors cursor-pointer"
             >
@@ -184,6 +183,9 @@ export default function UpcomingShowsSection({
       {/* Horizontal Carousel Track */}
       <div
         ref={rowRef}
+        onScroll={handleScroll}
+        onPointerDown={handlePointerDown}
+        onClickCapture={saveScroll}
         className="w-full max-w-full flex overflow-x-auto gap-3 sm:gap-4 pb-3 scrollbar-none snap-x snap-mandatory overscroll-x-contain"
       >
         {currentItems.map((item) => (

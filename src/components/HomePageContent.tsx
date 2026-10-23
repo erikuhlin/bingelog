@@ -22,6 +22,7 @@ import ForYouSection from './ForYouSection';
 import HorizontalMediaRow from './HorizontalMediaRow';
 import ExploreFeed from './ExploreFeed';
 import AdvancedFilterBar from './AdvancedFilterBar';
+import { getCachedPageSections, setCachedPageSections } from '@/lib/scrollRestoration';
 
 interface HomePageContentProps {
   carouselItems: MediaItem[];
@@ -117,6 +118,16 @@ export default function HomePageContent({
       return;
     }
 
+    const cacheKey = `home_${selectedProviderIds.slice().sort().join(',')}`;
+    const cached = getCachedPageSections(cacheKey);
+    if (cached) {
+      setFilteredTrending(cached.trending || []);
+      setFilteredRentBuy(cached.rentBuyMovies || []);
+      setFilteredCuratedRows(cached.curatedRows || []);
+      setLoadingSections(false);
+      return;
+    }
+
     let isMounted = true;
     const fetchSections = async () => {
       setLoadingSections(true);
@@ -128,6 +139,7 @@ export default function HomePageContent({
         const res = await fetch(`/api/page-sections?${params.toString()}`);
         if (res.ok) {
           const data = await res.json();
+          setCachedPageSections(cacheKey, data);
           if (isMounted) {
             setFilteredTrending(data.trending || []);
             setFilteredRentBuy(data.rentBuyMovies || []);
@@ -407,6 +419,7 @@ export default function HomePageContent({
         <div className="space-y-8 sm:space-y-10">
           {theatricalMovies.length > 0 && (
             <HorizontalMediaRow
+              rowId="home_theatrical"
               title="Bioaktuella filmer just nu"
               description="Filmer som visas på biografer i Sverige just nu"
               badge="På bio"
@@ -421,6 +434,7 @@ export default function HomePageContent({
         <div className="space-y-8 sm:space-y-10">
           {filteredRentBuy.length > 0 && (
             <HorizontalMediaRow
+              rowId="home_rent_buy"
               title={
                 isFilteredByProvider
                   ? `Hyr & köp på ${providerLabel}`
@@ -458,6 +472,7 @@ export default function HomePageContent({
           {/* 6. "Trendar i veckan" / "Populärt på valda tjänster" */}
           {activeTrendingList.length > 0 && (
             <HorizontalMediaRow
+              rowId="home_trending"
               title={
                 isFilteredByProvider
                   ? `Trendar & populärt på ${providerLabel}`
@@ -477,6 +492,7 @@ export default function HomePageContent({
           {/* 7. "Bioaktuella filmer" - Visas som default, försvinner när man filtrerar på streamingtjänster eller väljer endast serier */}
           {!isFilteredByProvider && homeMode !== 'tv' && theatricalMovies.length > 0 && (
             <HorizontalMediaRow
+              rowId="home_theatrical"
               title="Bioaktuella filmer just nu"
               description="Filmer som går på svenska biografer just nu"
               badge="På bio"
@@ -489,6 +505,7 @@ export default function HomePageContent({
           {/* 8. "Nytt att hyra & köpa" - Visas om inte endast serier är valt */}
           {homeMode !== 'tv' && filteredRentBuy.length > 0 && (
             <HorizontalMediaRow
+              rowId="home_rent_buy"
               title={
                 isFilteredByProvider
                   ? `Hyr & köp på ${providerLabel}`
@@ -509,6 +526,7 @@ export default function HomePageContent({
           {/* 9. "Kommande premiärer" - Filtreras efter valda streamingtjänster */}
           {activeUpcoming.length > 0 && (
             <HorizontalMediaRow
+              rowId="home_upcoming"
               title={
                 isFilteredByProvider
                   ? `Kommande på ${providerLabel}`
@@ -534,6 +552,7 @@ export default function HomePageContent({
             {filteredCuratedRows.map((row) => (
               <HorizontalMediaRow
                 key={`home-row-${row.id}`}
+                rowId={`home_curated_${row.id}`}
                 title={isFilteredByProvider ? `${row.title} • ${providerLabel}` : row.title}
                 description={row.description}
                 badge={row.badge}

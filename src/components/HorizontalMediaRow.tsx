@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useRef } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { Film, Tv, Sparkles, Calendar, Clock, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { MediaItem } from '@/lib/types';
 import MediaCard from './MediaCard';
+import { useHorizontalScroll } from '@/lib/scrollRestoration';
 
 interface HorizontalMediaRowProps {
+  rowId?: string;
   title: string;
   description?: string;
   badge?: string;
@@ -20,6 +22,7 @@ interface HorizontalMediaRowProps {
 }
 
 export default function HorizontalMediaRow({
+  rowId,
   title,
   description,
   badge,
@@ -28,7 +31,17 @@ export default function HorizontalMediaRow({
   items,
   moreLink,
 }: HorizontalMediaRowProps) {
-  const rowRef = useRef<HTMLDivElement>(null);
+  const {
+    rowRef,
+    handleScroll,
+    handlePointerDown,
+    saveScroll,
+    scrollLeftBy,
+    scrollRightBy,
+  } = useHorizontalScroll({
+    rowId: rowId || title,
+    itemsCount: items?.length || 0,
+  });
 
   const IconComponent =
     iconType === 'film'
@@ -42,18 +55,6 @@ export default function HorizontalMediaRow({
       : iconType === 'clock'
       ? Clock
       : null;
-
-  const scrollLeft = () => {
-    if (rowRef.current) {
-      rowRef.current.scrollBy({ left: -340, behavior: 'smooth' });
-    }
-  };
-
-  const scrollRight = () => {
-    if (rowRef.current) {
-      rowRef.current.scrollBy({ left: 340, behavior: 'smooth' });
-    }
-  };
 
   if (!items || items.length === 0) return null;
 
@@ -83,7 +84,7 @@ export default function HorizontalMediaRow({
           <div className="hidden md:flex items-center gap-1.5">
             <button
               type="button"
-              onClick={scrollLeft}
+              onClick={() => scrollLeftBy(340)}
               aria-label="Scrolla vänster"
               className="w-7 h-7 rounded-xl bg-[#171C25] hover:bg-[#1E2531] text-[#8D97A8] hover:text-[#ECE9E3] border border-[#2B3443] flex items-center justify-center transition-colors cursor-pointer"
             >
@@ -91,7 +92,7 @@ export default function HorizontalMediaRow({
             </button>
             <button
               type="button"
-              onClick={scrollRight}
+              onClick={() => scrollRightBy(340)}
               aria-label="Scrolla höger"
               className="w-7 h-7 rounded-xl bg-[#171C25] hover:bg-[#1E2531] text-[#8D97A8] hover:text-[#ECE9E3] border border-[#2B3443] flex items-center justify-center transition-colors cursor-pointer"
             >
@@ -114,6 +115,9 @@ export default function HorizontalMediaRow({
       {/* Horizontal Scroll Track */}
       <div
         ref={rowRef}
+        onScroll={handleScroll}
+        onPointerDown={handlePointerDown}
+        onClickCapture={saveScroll}
         className="w-full max-w-full flex overflow-x-auto gap-3 sm:gap-4 pb-3 scrollbar-none snap-x snap-mandatory overscroll-x-contain"
       >
         {items.map((item) => (

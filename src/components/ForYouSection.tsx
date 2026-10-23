@@ -126,6 +126,7 @@ export default function ForYouSection({ selectedProviderIds = [] }: ForYouSectio
 
   return (
     <HorizontalMediaRow
+      rowId="for_you"
       title={rowTitle}
       description={rowDesc}
       badge="Skräddarsytt"

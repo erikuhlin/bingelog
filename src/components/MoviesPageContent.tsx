@@ -19,6 +19,7 @@ import StreamingNewsRow from './StreamingNewsRow';
 import HorizontalMediaRow from './HorizontalMediaRow';
 import ExploreFeed from './ExploreFeed';
 import AdvancedFilterBar from './AdvancedFilterBar';
+import { getCachedPageSections, setCachedPageSections } from '@/lib/scrollRestoration';
 
 interface MoviesPageContentProps {
   popularMovies: MediaItem[];
@@ -106,6 +107,16 @@ export default function MoviesPageContent({
       return;
     }
 
+    const cacheKey = `movies_${selectedProviderIds.slice().sort().join(',')}`;
+    const cached = getCachedPageSections(cacheKey);
+    if (cached) {
+      setFilteredPopular(cached.popularMovies || []);
+      setFilteredRentBuy(cached.rentBuyMovies || []);
+      setFilteredCuratedRows(cached.curatedRows || []);
+      setLoadingSections(false);
+      return;
+    }
+
     let isMounted = true;
     const fetchMovieSections = async () => {
       setLoadingSections(true);
@@ -117,6 +128,7 @@ export default function MoviesPageContent({
         const res = await fetch(`/api/page-sections?${params.toString()}`);
         if (res.ok) {
           const data = await res.json();
+          setCachedPageSections(cacheKey, data);
           if (isMounted) {
             setFilteredPopular(data.popularMovies || []);
             setFilteredRentBuy(data.rentBuyMovies || []);
@@ -349,6 +361,7 @@ export default function MoviesPageContent({
         <>
           {theatricalMovies.length > 0 && (
             <HorizontalMediaRow
+              rowId="movies_theatrical"
               title="Bioaktuella filmer just nu"
               description="Filmer som visas på biografer i Sverige just nu"
               badge="På bio"
@@ -365,6 +378,7 @@ export default function MoviesPageContent({
         <>
           {filteredRentBuy.length > 0 && (
             <HorizontalMediaRow
+              rowId="movies_rent_buy"
               title={isFilteredByProvider ? `Hyr & köp på ${providerLabel}` : 'Nytt att hyra & köpa digitalt'}
               description={
                 isFilteredByProvider
@@ -393,6 +407,7 @@ export default function MoviesPageContent({
           {/* 3. Horizontal Row: "Populära filmer" */}
           {filteredPopular.length > 0 && (
             <HorizontalMediaRow
+              rowId="movies_popular"
               title={
                 isFilteredByProvider
                   ? `Populära filmer på ${providerLabel}`
@@ -412,6 +427,7 @@ export default function MoviesPageContent({
           {/* 4. Horizontal Row: "Bioaktuella filmer" - Visas endast om ej filtrerat på abonnemangstjänst och läget är Alla */}
           {!isStreamingOnly && theatricalMovies.length > 0 && (
             <HorizontalMediaRow
+              rowId="movies_theatrical"
               title="Bioaktuella filmer just nu"
               description="Filmer som visas på biografer i Sverige just nu"
               badge="På bio"
@@ -424,6 +440,7 @@ export default function MoviesPageContent({
           {/* 5. Horizontal Row: "Nytt att hyra & köpa" */}
           {!isStreamingOnly && filteredRentBuy.length > 0 && (
             <HorizontalMediaRow
+              rowId="movies_rent_buy"
               title={
                 isFilteredByProvider
                   ? `Hyr & köp på ${providerLabel}`
@@ -444,6 +461,7 @@ export default function MoviesPageContent({
           {/* 6. Kommande filmer */}
           {activeUpcomingMovies.length > 0 && (
             <HorizontalMediaRow
+              rowId="movies_upcoming"
               title={
                 isFilteredByProvider
                   ? `Kommande filmer på ${providerLabel}`
@@ -469,6 +487,7 @@ export default function MoviesPageContent({
             {filteredCuratedRows.map((row) => (
               <HorizontalMediaRow
                 key={`movie-row-${row.id}`}
+                rowId={`movies_curated_${row.id}`}
                 title={isFilteredByProvider ? `${row.title} • ${providerLabel}` : row.title}
                 description={row.description}
                 badge={row.badge}

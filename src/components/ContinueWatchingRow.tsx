@@ -6,6 +6,7 @@ import { Play, Sparkles, Calendar, Clock, CheckCircle2 } from 'lucide-react';
 import { UserMediaRecord } from '@/lib/types';
 import { getImageUrl } from '@/lib/tmdb';
 import { getShowProgress } from '@/lib/storage';
+import { useHorizontalScroll } from '@/lib/scrollRestoration';
 
 export interface SeriesMetaInfo {
   episode_count: number;
@@ -250,6 +251,16 @@ export default function ContinueWatchingRow({
     }
   };
 
+  const actionableScroll = useHorizontalScroll({
+    rowId: 'continue_watching_actionable',
+    itemsCount: actionableShows.length,
+  });
+
+  const waitingScroll = useHorizontalScroll({
+    rowId: 'continue_watching_waiting',
+    itemsCount: waitingShows.length,
+  });
+
   return (
     <div className="space-y-8 mb-10">
       {/* 1. Actively Watchable Shows ("Fortsätt titta") */}
@@ -266,7 +277,13 @@ export default function ContinueWatchingRow({
           </div>
 
           {/* Horizontal scroll row */}
-          <div className="flex items-stretch gap-3 sm:gap-4 overflow-x-auto pb-3 pt-1 scrollbar-thin scrollbar-thumb-[#2B3443] focus:outline-none overscroll-x-contain">
+          <div
+            ref={actionableScroll.rowRef}
+            onScroll={actionableScroll.handleScroll}
+            onPointerDown={actionableScroll.handlePointerDown}
+            onClickCapture={actionableScroll.saveScroll}
+            className="flex items-stretch gap-3 sm:gap-4 overflow-x-auto pb-3 pt-1 scrollbar-thin scrollbar-thumb-[#2B3443] focus:outline-none overscroll-x-contain"
+          >
             {actionableShows.map(({ show, curSeason, curEpisode, totalInSeason, progressPct, epsLeft, nextEpisodeNumber, isStartingNewSeason, isReleasedToday }) => {
               const isUpdating = updatingId === show.tmdb_id;
 
@@ -383,7 +400,13 @@ export default function ContinueWatchingRow({
             </span>
           </div>
 
-          <div className="flex items-stretch gap-3 sm:gap-4 overflow-x-auto pb-3 pt-1 scrollbar-thin scrollbar-thumb-[#2B3443] focus:outline-none overscroll-x-contain">
+          <div
+            ref={waitingScroll.rowRef}
+            onScroll={waitingScroll.handleScroll}
+            onPointerDown={waitingScroll.handlePointerDown}
+            onClickCapture={waitingScroll.saveScroll}
+            className="flex items-stretch gap-3 sm:gap-4 overflow-x-auto pb-3 pt-1 scrollbar-thin scrollbar-thumb-[#2B3443] focus:outline-none overscroll-x-contain"
+          >
             {waitingShows.map(
               ({
                 show,

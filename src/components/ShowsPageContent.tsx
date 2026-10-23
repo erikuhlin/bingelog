@@ -11,6 +11,7 @@ import UpcomingShowsSection from './UpcomingShowsSection';
 import HorizontalMediaRow from './HorizontalMediaRow';
 import ExploreFeed from './ExploreFeed';
 import AdvancedFilterBar from './AdvancedFilterBar';
+import { getCachedPageSections, setCachedPageSections } from '@/lib/scrollRestoration';
 
 interface ShowsPageContentProps {
   popularShows: MediaItem[];
@@ -93,6 +94,15 @@ export default function ShowsPageContent({
       return;
     }
 
+    const cacheKey = `shows_${selectedProviderIds.slice().sort().join(',')}`;
+    const cached = getCachedPageSections(cacheKey);
+    if (cached) {
+      setFilteredPopular(cached.popularShows || []);
+      setFilteredCuratedRows(cached.curatedRows || []);
+      setLoadingSections(false);
+      return;
+    }
+
     let isMounted = true;
     const fetchShowSections = async () => {
       setLoadingSections(true);
@@ -104,6 +114,7 @@ export default function ShowsPageContent({
         const res = await fetch(`/api/page-sections?${params.toString()}`);
         if (res.ok) {
           const data = await res.json();
+          setCachedPageSections(cacheKey, data);
           if (isMounted) {
             setFilteredPopular(data.popularShows || []);
             setFilteredCuratedRows(data.curatedRows || []);
@@ -268,6 +279,7 @@ export default function ShowsPageContent({
       {/* 3. Horizontal Row: "Populära & trendande serier" (reacts to selected streaming services) */}
       {filteredPopular.length > 0 && (
         <HorizontalMediaRow
+          rowId="shows_popular"
           title={
             isFilteredByProvider
               ? `Populärt & trendar på ${providerLabel}`
@@ -295,6 +307,7 @@ export default function ShowsPageContent({
         {filteredCuratedRows.map((row) => (
           <HorizontalMediaRow
             key={`show-row-${row.id}`}
+            rowId={`shows_curated_${row.id}`}
             title={isFilteredByProvider ? `${row.title} • ${providerLabel}` : row.title}
             description={row.description}
             badge={row.badge}
