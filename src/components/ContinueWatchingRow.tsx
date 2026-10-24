@@ -281,7 +281,7 @@ export default function ContinueWatchingRow({
             ref={actionableScroll.rowRef}
             onScroll={actionableScroll.handleScroll}
             onPointerDown={actionableScroll.handlePointerDown}
-            onClickCapture={actionableScroll.saveScroll}
+            onClickCapture={actionableScroll.handleClickCapture}
             className="flex items-stretch gap-3 sm:gap-4 overflow-x-auto pb-3 pt-1 scrollbar-thin scrollbar-thumb-[#2B3443] focus:outline-none overscroll-x-contain"
           >
             {actionableShows.map(({ show, curSeason, curEpisode, totalInSeason, progressPct, epsLeft, nextEpisodeNumber, isStartingNewSeason, isReleasedToday }) => {
@@ -404,7 +404,7 @@ export default function ContinueWatchingRow({
             ref={waitingScroll.rowRef}
             onScroll={waitingScroll.handleScroll}
             onPointerDown={waitingScroll.handlePointerDown}
-            onClickCapture={waitingScroll.saveScroll}
+            onClickCapture={waitingScroll.handleClickCapture}
             className="flex items-stretch gap-3 sm:gap-4 overflow-x-auto pb-3 pt-1 scrollbar-thin scrollbar-thumb-[#2B3443] focus:outline-none overscroll-x-contain"
           >
             {waitingShows.map(

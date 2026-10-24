@@ -7,6 +7,7 @@ import { getUserMediaList, getShowProgress } from '@/lib/storage';
 import { UserMediaRecord } from '@/lib/types';
 import { getImageUrl } from '@/lib/tmdb';
 import { useAuth } from '@/context/AuthContext';
+import { getCachedContinueWatching, setCachedContinueWatching } from '@/lib/scrollRestoration';
 
 interface SeriesMeta {
   episode_count: number;
@@ -18,8 +19,9 @@ interface SeriesMeta {
 
 export default function ContinueWatchingSection() {
   const { user } = useAuth();
-  const [watchingShows, setWatchingShows] = useState<UserMediaRecord[]>([]);
-  const [seriesMeta, setSeriesMeta] = useState<Record<number, SeriesMeta>>({});
+  const cached = getCachedContinueWatching();
+  const [watchingShows, setWatchingShows] = useState<UserMediaRecord[]>(() => cached?.active || []);
+  const [seriesMeta, setSeriesMeta] = useState<Record<number, SeriesMeta>>(() => cached?.meta || {});
 
   const loadWatching = async () => {
     const list = await getUserMediaList();
@@ -41,11 +43,20 @@ export default function ContinueWatchingSection() {
               seasons: data.seasons || [],
             };
           });
-          setSeriesMeta((prev) => ({ ...prev, ...metaMap }));
+          setSeriesMeta((prev) => {
+            const updated = { ...prev, ...metaMap };
+            setCachedContinueWatching({ active, meta: updated });
+            return updated;
+          });
+        } else {
+          setCachedContinueWatching({ active, meta: seriesMeta });
         }
       } catch (err) {
         console.warn('Could not fetch series cache for ContinueWatchingSection:', err);
+        setCachedContinueWatching({ active, meta: seriesMeta });
       }
+    } else {
+      setCachedContinueWatching({ active: [], meta: {} });
     }
   };
 

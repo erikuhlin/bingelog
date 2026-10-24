@@ -51,7 +51,7 @@ export default function UpcomingShowsSection({
     rowRef,
     handleScroll,
     handlePointerDown,
-    saveScroll,
+    handleClickCapture,
     scrollLeftBy,
     scrollRightBy,
   } = useHorizontalScroll({
@@ -185,7 +185,7 @@ export default function UpcomingShowsSection({
         ref={rowRef}
         onScroll={handleScroll}
         onPointerDown={handlePointerDown}
-        onClickCapture={saveScroll}
+        onClickCapture={handleClickCapture}
         className="w-full max-w-full flex overflow-x-auto gap-3 sm:gap-4 pb-3 scrollbar-none snap-x snap-mandatory overscroll-x-contain"
       >
         {currentItems.map((item) => (

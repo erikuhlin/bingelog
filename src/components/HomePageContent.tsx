@@ -45,7 +45,19 @@ export default function HomePageContent({
   initialCuratedRows,
   popularCombined,
 }: HomePageContentProps) {
-  const [selectedProviderIds, setSelectedProviderIds] = useState<number[]>([]);
+  const [selectedProviderIds, setSelectedProviderIds] = useState<number[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const saved = sessionStorage.getItem('bingelog_selected_providers');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {
+      // ignore
+    }
+    return [];
+  });
   const [homeMode, setHomeMode] = useState<'all' | 'movie' | 'tv' | 'theatrical' | 'rent_buy'>('all');
   const [genreId, setGenreId] = useState<number | null>(null);
   const [minRating, setMinRating] = useState<number | null>(null);
@@ -54,25 +66,13 @@ export default function HomePageContent({
   const [sortBy, setSortBy] = useState<string>('popularity.desc');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-  const [filteredTrending, setFilteredTrending] = useState<MediaItem[]>([]);
-  const [filteredRentBuy, setFilteredRentBuy] = useState<MediaItem[]>(initialRentBuyMovies);
-  const [filteredCuratedRows, setFilteredCuratedRows] = useState<CuratedCategoryRow[]>(initialCuratedRows);
-  const [loadingSections, setLoadingSections] = useState(false);
+  const initialProviderKey = selectedProviderIds.length > 0 ? `home_${selectedProviderIds.slice().sort().join(',')}` : '';
+  const initialCached = initialProviderKey ? getCachedPageSections(initialProviderKey) : null;
 
-  // Restore saved provider filter from sessionStorage on mount
-  useEffect(() => {
-    try {
-      const saved = sessionStorage.getItem('bingelog_selected_providers');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setSelectedProviderIds(parsed);
-        }
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
+  const [filteredTrending, setFilteredTrending] = useState<MediaItem[]>(() => initialCached?.trending || []);
+  const [filteredRentBuy, setFilteredRentBuy] = useState<MediaItem[]>(() => initialCached?.rentBuyMovies || initialRentBuyMovies);
+  const [filteredCuratedRows, setFilteredCuratedRows] = useState<CuratedCategoryRow[]>(() => initialCached?.curatedRows || initialCuratedRows);
+  const [loadingSections, setLoadingSections] = useState(false);
 
   const handleSelectProviders = (ids: number[]) => {
     setSelectedProviderIds(ids);

@@ -8,6 +8,7 @@ import { getUserMediaList } from '@/lib/storage';
 import { MediaItem } from '@/lib/types';
 import { SWEDISH_STREAMING_PROVIDERS } from '@/lib/tmdb';
 import HorizontalMediaRow from './HorizontalMediaRow';
+import { getCachedForYou, setCachedForYou } from '@/lib/scrollRestoration';
 
 interface ForYouSectionProps {
   selectedProviderIds?: number[];
@@ -15,9 +16,10 @@ interface ForYouSectionProps {
 
 export default function ForYouSection({ selectedProviderIds = [] }: ForYouSectionProps) {
   const { user } = useAuth();
-  const [recommendations, setRecommendations] = useState<MediaItem[]>([]);
+  const cached = getCachedForYou();
+  const [recommendations, setRecommendations] = useState<MediaItem[]>(() => cached?.items || []);
   const [, setLoading] = useState(false);
-  const [libraryCount, setLibraryCount] = useState<number | null>(null);
+  const [libraryCount, setLibraryCount] = useState<number | null>(() => cached?.libraryCount ?? null);
 
   const selectedProviderNames = selectedProviderIds
     .map((id) => SWEDISH_STREAMING_PROVIDERS.find((p) => p.id === id)?.name)
@@ -54,7 +56,9 @@ export default function ForYouSection({ selectedProviderIds = [] }: ForYouSectio
         if (res.ok) {
           const data = await res.json();
           if (isMounted) {
-            setRecommendations(data.recommendations || []);
+            const items = data.recommendations || [];
+            setRecommendations(items);
+            setCachedForYou({ items, libraryCount: library.length });
           }
         }
       } catch (err) {

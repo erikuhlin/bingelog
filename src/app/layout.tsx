@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import Navbar from '@/components/Navbar';
+import ScrollRestorer from '@/components/ScrollRestorer';
 import { AuthProvider } from '@/context/AuthContext';
 
 export const viewport: Viewport = {
@@ -36,6 +37,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen flex flex-col bg-zinc-950 text-zinc-100 antialiased selection:bg-rose-600 selection:text-white w-full max-w-full overflow-x-hidden overflow-x-clip">
         <AuthProvider>
+          <ScrollRestorer />
           <div className="flex flex-col min-h-screen w-full max-w-full overflow-x-hidden overflow-x-clip relative">
             <Navbar />
             <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8 pb-24 md:pb-8 min-w-0 overflow-hidden">
