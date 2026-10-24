@@ -243,7 +243,6 @@ export default function ExploreFeed({
   const handleReset = () => {
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem(storageKey);
-      sessionStorage.removeItem(`bingelog_scroll_${window.location.pathname}`);
     }
     setSelectedProviderIds([]);
     setMonetizationType('all');
@@ -712,11 +711,6 @@ export default function ExploreFeed({
                 <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
                   <Link
                     href={detailUrl}
-                    onClick={() => {
-                      if (typeof window !== 'undefined') {
-                        sessionStorage.setItem(`bingelog_scroll_${window.location.pathname}`, String(window.scrollY));
-                      }
-                    }}
                     className="relative w-14 sm:w-16 aspect-[2/3] rounded-xl overflow-hidden bg-[#0F1218] border border-[#2B3443] flex-shrink-0"
                   >
                     <img
@@ -765,11 +759,6 @@ export default function ExploreFeed({
 
                     <Link
                       href={detailUrl}
-                      onClick={() => {
-                        if (typeof window !== 'undefined') {
-                          sessionStorage.setItem(`bingelog_scroll_${window.location.pathname}`, String(window.scrollY));
-                        }
-                      }}
                       className="block group"
                     >
                       <h4 className="text-sm font-bold text-[#ECE9E3] group-hover:text-[#E9A23B] transition-colors truncate">

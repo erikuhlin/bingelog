@@ -54,6 +54,8 @@ export interface UseHorizontalScrollOptions {
  * Hook to manage horizontal scroll state persistence and restoration for carousels / side-scrolling rows.
  * Remembers scrollLeft in sessionStorage so when a user navigates to a movie/show and returns,
  * the row restores immediately to the exact item they were looking at.
+ *
+ * Restores once cleanly on mount without loops or timer locks, ensuring smooth native gestures.
  */
 export function useHorizontalScroll({ rowId, itemsCount = 0 }: UseHorizontalScrollOptions) {
   const rowRef = useRef<HTMLDivElement>(null);
@@ -61,14 +63,14 @@ export function useHorizontalScroll({ rowId, itemsCount = 0 }: UseHorizontalScro
   const cleanRowId = (rowId || 'row').toLowerCase().replace(/[^a-z0-9_-]+/g, '_');
   const storageKey = `bingelog_hscroll_${pathname}_${cleanRowId}`;
 
-  const isRestoringRef = useRef(false);
-  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const restoredRef = useRef(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const saveScroll = useCallback(() => {
-    if (typeof window === 'undefined' || !rowRef.current || isRestoringRef.current) return;
+    if (typeof window === 'undefined' || !rowRef.current) return;
     const scrollLeft = rowRef.current.scrollLeft;
     try {
-      if (scrollLeft > 0) {
+      if (scrollLeft > 5) {
         sessionStorage.setItem(storageKey, String(Math.round(scrollLeft)));
       } else {
         sessionStorage.removeItem(storageKey);
@@ -79,11 +81,10 @@ export function useHorizontalScroll({ rowId, itemsCount = 0 }: UseHorizontalScro
   }, [storageKey]);
 
   const handleScroll = useCallback(() => {
-    if (isRestoringRef.current) return;
-    if (scrollTimeoutRef.current) {
-      clearTimeout(scrollTimeoutRef.current);
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
     }
-    scrollTimeoutRef.current = setTimeout(saveScroll, 100);
+    saveTimeoutRef.current = setTimeout(saveScroll, 60);
   }, [saveScroll]);
 
   // Immediate save on click / pointer down to capture position before route transition starts
@@ -91,7 +92,7 @@ export function useHorizontalScroll({ rowId, itemsCount = 0 }: UseHorizontalScro
     saveScroll();
   }, [saveScroll]);
 
-  // Restore scroll position whenever component mounts or items become available
+  // Restore scroll position once on mount or when items first become available
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -103,38 +104,30 @@ export function useHorizontalScroll({ rowId, itemsCount = 0 }: UseHorizontalScro
     }
 
     if (!saved) return;
-    const scrollLeft = parseFloat(saved);
-    if (isNaN(scrollLeft) || scrollLeft <= 0) return;
+    const targetScrollLeft = parseFloat(saved);
+    if (isNaN(targetScrollLeft) || targetScrollLeft <= 0) return;
+
+    if (restoredRef.current) return;
 
     const el = rowRef.current;
     if (!el) return;
 
-    isRestoringRef.current = true;
+    // Apply scroll position immediately
+    el.scrollLeft = targetScrollLeft;
+    restoredRef.current = true;
 
-    const restore = () => {
-      if (rowRef.current) {
-        rowRef.current.scrollLeft = scrollLeft;
+    // A single animation frame safety check in case items flex layout settled on the next frame
+    const rafId = requestAnimationFrame(() => {
+      if (rowRef.current && Math.abs(rowRef.current.scrollLeft - targetScrollLeft) > 10) {
+        rowRef.current.scrollLeft = targetScrollLeft;
       }
-    };
-
-    // Attempt instant restore across consecutive frames to handle CSS snap layout settling
-    restore();
-    const raf1 = requestAnimationFrame(restore);
-    const raf2 = requestAnimationFrame(() => {
-      requestAnimationFrame(restore);
     });
 
-    const timer1 = setTimeout(restore, 60);
-    const timer2 = setTimeout(() => {
-      restore();
-      isRestoringRef.current = false;
-    }, 150);
-
     return () => {
-      cancelAnimationFrame(raf1);
-      cancelAnimationFrame(raf2);
-      clearTimeout(timer1);
-      clearTimeout(timer2);
+      cancelAnimationFrame(rafId);
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
     };
   }, [storageKey, itemsCount]);
 
@@ -158,71 +151,4 @@ export function useHorizontalScroll({ rowId, itemsCount = 0 }: UseHorizontalScro
     scrollLeftBy,
     scrollRightBy,
   };
-}
-
-/**
- * Restores and records window vertical scroll position (scrollY) per pathname.
- * Ensures the user stays on the exact same vertical section of the page after navigating back.
- */
-export function usePageScrollRestoration() {
-  const pathname = usePathname();
-  const isRestoringRef = useRef(false);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    if ('scrollRestoration' in window.history) {
-      window.history.scrollRestoration = 'manual';
-    }
-
-    const scrollKey = `bingelog_scroll_${pathname}`;
-    let raw = '';
-    try {
-      raw = sessionStorage.getItem(scrollKey) || '';
-    } catch {
-      return;
-    }
-
-    if (!raw) return;
-    const savedY = parseFloat(raw);
-    if (isNaN(savedY) || savedY <= 0) return;
-
-    isRestoringRef.current = true;
-
-    const restore = () => {
-      if (isRestoringRef.current) {
-        window.scrollTo({ top: savedY, behavior: 'instant' });
-      }
-    };
-
-    restore();
-    const raf1 = requestAnimationFrame(restore);
-    const raf2 = requestAnimationFrame(() => {
-      requestAnimationFrame(restore);
-    });
-    const timer1 = setTimeout(restore, 60);
-    const timer2 = setTimeout(restore, 160);
-    const timer3 = setTimeout(restore, 320);
-    const timerEnd = setTimeout(() => {
-      restore();
-      isRestoringRef.current = false;
-    }, 500);
-
-    const cancel = () => {
-      isRestoringRef.current = false;
-    };
-    window.addEventListener('wheel', cancel, { passive: true, once: true });
-    window.addEventListener('touchmove', cancel, { passive: true, once: true });
-
-    return () => {
-      cancelAnimationFrame(raf1);
-      cancelAnimationFrame(raf2);
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(timer3);
-      clearTimeout(timerEnd);
-      window.removeEventListener('wheel', cancel);
-      window.removeEventListener('touchmove', cancel);
-    };
-  }, [pathname]);
 }
