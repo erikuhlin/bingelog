@@ -175,47 +175,12 @@ export default function ExploreFeed({
           if (saved.originalLanguage !== undefined) setOriginalLanguage(saved.originalLanguage);
           if (saved.sortBy !== undefined) setSortBy(saved.sortBy);
           if (saved.viewMode !== undefined) setViewMode(saved.viewMode);
-
-          const savedScroll =
-            saved.scrollY ||
-            (typeof window !== 'undefined'
-              ? Number(sessionStorage.getItem(`bingelog_scroll_${window.location.pathname}`))
-              : 0) ||
-            0;
-
-          if (savedScroll > 0) {
-            requestAnimationFrame(() => {
-              setTimeout(() => {
-                window.scrollTo({ top: savedScroll, behavior: 'instant' });
-              }, 40);
-            });
-          }
         }
       }
     } catch (err) {
       console.warn('Could not restore feed state:', err);
     }
   }, [storageKey]);
-
-  // Continuously track scroll position throttled
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const onScroll = () => {
-      if (timer) return;
-      timer = setTimeout(() => {
-        timer = null;
-        if (typeof window !== 'undefined') {
-          sessionStorage.setItem(`bingelog_scroll_${window.location.pathname}`, String(window.scrollY));
-        }
-      }, 150);
-    };
-
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', onScroll);
-      if (timer) clearTimeout(timer);
-    };
-  }, []);
 
   const isFiltered =
     selectedProviderIds.length > 0 ||
@@ -244,7 +209,6 @@ export default function ExploreFeed({
         originalLanguage,
         sortBy,
         viewMode,
-        scrollY: typeof window !== 'undefined' ? window.scrollY : 0,
       };
       sessionStorage.setItem(storageKey, JSON.stringify(stateToSave));
     } catch {

@@ -168,9 +168,12 @@ export function usePageScrollRestoration() {
   const pathname = usePathname();
   const isRestoringRef = useRef(false);
 
-  // Restore scroll position
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
 
     const scrollKey = `bingelog_scroll_${pathname}`;
     let raw = '';
@@ -187,7 +190,9 @@ export function usePageScrollRestoration() {
     isRestoringRef.current = true;
 
     const restore = () => {
-      window.scrollTo({ top: savedY, behavior: 'instant' });
+      if (isRestoringRef.current) {
+        window.scrollTo({ top: savedY, behavior: 'instant' });
+      }
     };
 
     restore();
@@ -195,46 +200,29 @@ export function usePageScrollRestoration() {
     const raf2 = requestAnimationFrame(() => {
       requestAnimationFrame(restore);
     });
-    const timer1 = setTimeout(restore, 70);
-    const timer2 = setTimeout(() => {
+    const timer1 = setTimeout(restore, 60);
+    const timer2 = setTimeout(restore, 160);
+    const timer3 = setTimeout(restore, 320);
+    const timerEnd = setTimeout(() => {
       restore();
       isRestoringRef.current = false;
-    }, 200);
+    }, 500);
+
+    const cancel = () => {
+      isRestoringRef.current = false;
+    };
+    window.addEventListener('wheel', cancel, { passive: true, once: true });
+    window.addEventListener('touchmove', cancel, { passive: true, once: true });
 
     return () => {
       cancelAnimationFrame(raf1);
       cancelAnimationFrame(raf2);
       clearTimeout(timer1);
       clearTimeout(timer2);
-    };
-  }, [pathname]);
-
-  // Continuously record scroll position (debounced)
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const scrollKey = `bingelog_scroll_${pathname}`;
-
-    let timer: NodeJS.Timeout;
-    const handleScroll = () => {
-      if (isRestoringRef.current) return;
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        try {
-          if (window.scrollY > 0) {
-            sessionStorage.setItem(scrollKey, String(Math.round(window.scrollY)));
-          } else {
-            sessionStorage.removeItem(scrollKey);
-          }
-        } catch {
-          // ignore
-        }
-      }, 100);
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener('scroll', handleScroll);
+      clearTimeout(timer3);
+      clearTimeout(timerEnd);
+      window.removeEventListener('wheel', cancel);
+      window.removeEventListener('touchmove', cancel);
     };
   }, [pathname]);
 }
