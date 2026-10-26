@@ -125,8 +125,8 @@ function getTvShowStatusInfo(
   }
 
   if (item.status === 'dropped') {
-    // "Sedd delvis"
-    let text = 'Sedd delvis';
+    // "Sett delvis"
+    let text = 'Sett delvis';
     if (curEp > 0) {
       if (isSeasonComplete) {
         if (curSeason === 1) {
@@ -140,7 +140,7 @@ function getTvShowStatusInfo(
     } else if (curSeason > 1) {
       text = totalAiredSeasons > curSeason - 1 ? `S${curSeason - 1} sedd · fler finns` : `S${curSeason - 1} sedd`;
     } else if (totalAiredSeasons > 1) {
-      text = 'Sedd delvis · fler säsonger finns';
+      text = 'Sett delvis · fler säsonger finns';
     }
 
     return {
@@ -559,7 +559,7 @@ function LibraryContent() {
                 { id: 'watching', label: 'Tittar på', count: counts.watching, icon: Eye },
                 { id: 'watchlist', label: 'Vill se', count: counts.watchlist, icon: Bookmark },
                 { id: 'completed', label: 'Har sett', count: counts.completed, icon: CheckCircle2 },
-                { id: 'dropped', label: 'Sedd delvis', count: counts.dropped, icon: BookmarkCheck },
+                { id: 'dropped', label: 'Sett delvis', count: counts.dropped, icon: BookmarkCheck },
               ].map((tab) => {
                 const Icon = tab.icon;
                 const isSelected = statusParam === tab.id;

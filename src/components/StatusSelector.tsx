@@ -162,7 +162,7 @@ export default function StatusSelector({
       bg: 'bg-[#6FA98A]/15',
     },
     dropped: {
-      label: 'Sedd delvis',
+      label: 'Sett delvis',
       desc: 'Sett vissa säsonger eller avsnitt, fler finns',
       icon: BookmarkCheck,
       color: 'text-[#9EA8B6]',
